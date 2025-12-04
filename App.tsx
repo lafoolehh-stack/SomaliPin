@@ -1,0 +1,989 @@
+import * as React from 'react';
+import { useState, useEffect } from 'react';
+import { Search, MapPin, ChevronLeft, Building2, User, BookOpen, Upload, FileText, Image as ImageIcon, Award, PieChart, Newspaper, Globe, Calendar, Clock, Activity, Lock, Plus, Trash2, Edit2, Save, X } from 'lucide-react';
+import { BrandPin, VerifiedBadge, HeroBadge, GoldenBadge, StandardBadge } from './components/Icons';
+import ProfileCard from './components/ProfileCard';
+import Timeline from './components/Timeline';
+import VerificationCertificate from './components/VerificationCertificate';
+import { getProfiles, UI_TEXT } from './constants';
+import { Profile, Category, ArchiveItem, NewsItem, VerificationLevel, Language, DossierDB, ProfileStatus } from './types';
+import { askArchive } from './services/geminiService';
+import { supabase, isSupabaseConfigured } from './services/supabaseClient';
+
+const App = () => {
+  const [view, setView] = useState<'home' | 'profile' | 'admin'>('home');
+  const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'archive' | 'news' | 'influence'>('archive');
+  const [language, setLanguage] = useState<Language>('en');
+  
+  // Certificate State
+  const [showCertificate, setShowCertificate] = useState(false);
+  
+  // Dynamic Data State
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Admin State
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState<Partial<DossierDB>>({});
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  // Fetch Data from Supabase
+  const fetchDossiers = async () => {
+    setIsLoading(true);
+
+    if (!isSupabaseConfigured) {
+      console.log('Supabase is not configured. Loading local mock data.');
+      setProfiles(getProfiles(language));
+      setIsLoading(false);
+      return;
+    }
+
+    const { data, error } = await supabase.from('dossiers').select('*');
+    
+    if (error) {
+      console.error('Error fetching dossiers:', error.message || error);
+      // Fallback to constants if DB fails or is empty for demo purposes
+      setProfiles(getProfiles(language)); 
+    } else if (data && data.length > 0) {
+      // Map DB rows to Frontend Profile Interface
+      const mappedProfiles: Profile[] = data.map((d: DossierDB) => ({
+        id: d.id,
+        name: d.full_name,
+        title: d.role,
+        category: d.category as Category,
+        categoryLabel: UI_TEXT[language][getCategoryKey(d.category as Category)] || d.category,
+        verified: d.status === 'Verified',
+        verificationLevel: d.verification_level as VerificationLevel,
+        imageUrl: d.image_url,
+        shortBio: d.bio,
+        fullBio: d.details?.fullBio?.[language] || d.details?.fullBio?.en || d.bio,
+        timeline: d.details?.timeline?.[language] || d.details?.timeline?.en || [],
+        location: d.details?.location,
+        archives: d.details?.archives || [],
+        news: d.details?.news || [],
+        influence: { support: d.reputation_score, neutral: 100 - d.reputation_score, opposition: 0 },
+        isOrganization: d.details?.isOrganization || false,
+        status: d.details?.status || 'ACTIVE',
+        dateStart: d.details?.dateStart || 'Unknown',
+        dateEnd: d.details?.dateEnd
+      }));
+      setProfiles(mappedProfiles);
+    } else {
+      setProfiles(getProfiles(language));
+    }
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    fetchDossiers();
+  }, [language]); // Refetch when language changes to re-map localized content
+
+  // Update document direction based on language
+  useEffect(() => {
+    if (language === 'ar') {
+      document.dir = 'rtl';
+      document.documentElement.lang = 'ar';
+    } else {
+      document.dir = 'ltr';
+      document.documentElement.lang = language;
+    }
+  }, [language]);
+
+  const t = UI_TEXT[language];
+
+  const filteredProfiles = profiles.filter(p => 
+    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (p.categoryLabel && p.categoryLabel.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    p.category.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleProfileClick = (profile: Profile) => {
+    setSelectedProfile(profile);
+    setAiSummary(null);
+    setView('profile');
+    setActiveTab('archive'); 
+    setShowCertificate(false);
+    window.scrollTo(0, 0);
+  };
+
+  const handleBack = () => {
+    setView('home');
+    setSelectedProfile(null);
+    setAiSummary(null);
+  };
+
+  // --- ADMIN FUNCTIONS ---
+
+  const handleAdminLogin = () => {
+    // Simple mock auth for demonstration. In prod, use supabase.auth.signInWithPassword
+    if (adminPassword === 'admin123') {
+      setIsAdminLoggedIn(true);
+      setAdminPassword('');
+    } else {
+      alert('Invalid password');
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    
+    if (!isSupabaseConfigured) {
+      alert('Supabase is not configured. Cannot upload images.');
+      return;
+    }
+
+    setUploadingImage(true);
+    const file = e.target.files[0];
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random()}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('dossier-images')
+      .upload(filePath, file);
+
+    if (uploadError) {
+      alert('Error uploading image: ' + uploadError.message);
+      console.error(uploadError);
+    } else {
+      const { data } = supabase.storage.from('dossier-images').getPublicUrl(filePath);
+      setEditForm({ ...editForm, image_url: data.publicUrl });
+    }
+    setUploadingImage(false);
+  };
+
+  const handleSaveDossier = async () => {
+    if (!isSupabaseConfigured) {
+      alert('Supabase is not configured. Changes cannot be saved.');
+      return;
+    }
+
+    if (!editForm.full_name || !editForm.category) {
+      alert('Name and Category are required');
+      return;
+    }
+
+    const dossierData = {
+      full_name: editForm.full_name,
+      role: editForm.role,
+      bio: editForm.bio,
+      status: editForm.status || 'Unverified',
+      reputation_score: editForm.reputation_score || 0,
+      image_url: editForm.image_url,
+      category: editForm.category,
+      verification_level: editForm.verification_level || 'Standard',
+      details: editForm.details || {}
+    };
+
+    let error;
+    if (editForm.id) {
+      // Update
+      const res = await supabase.from('dossiers').update(dossierData).eq('id', editForm.id);
+      error = res.error;
+    } else {
+      // Insert
+      const res = await supabase.from('dossiers').insert([dossierData]);
+      error = res.error;
+    }
+
+    if (error) {
+      console.error('Error saving:', error);
+      alert('Failed to save dossier: ' + error.message);
+    } else {
+      await fetchDossiers();
+      setIsEditing(false);
+      setEditForm({});
+    }
+  };
+
+  const handleDeleteDossier = async (id: string) => {
+    if (!isSupabaseConfigured) {
+      alert('Supabase is not configured. Cannot delete.');
+      return;
+    }
+
+    if (window.confirm('Are you sure you want to delete this dossier?')) {
+      const { error } = await supabase.from('dossiers').delete().eq('id', id);
+      if (error) {
+        alert('Error deleting: ' + error.message);
+      } else {
+        await fetchDossiers();
+      }
+    }
+  };
+
+  const openEditModal = (profile?: Profile) => {
+    if (profile) {
+      // Map Profile back to DB structure for editing
+      setEditForm({
+        id: profile.id,
+        full_name: profile.name,
+        role: profile.title,
+        bio: profile.shortBio,
+        status: profile.verified ? 'Verified' : 'Unverified',
+        reputation_score: profile.influence?.support,
+        image_url: profile.imageUrl,
+        category: profile.category,
+        verification_level: profile.verificationLevel,
+        details: {
+          isOrganization: profile.isOrganization,
+          status: profile.status,
+          dateStart: profile.dateStart,
+          fullBio: { en: profile.fullBio } // Simplified for demo
+        }
+      });
+    } else {
+      setEditForm({
+        status: 'Unverified',
+        reputation_score: 50,
+        verification_level: 'Standard',
+        details: { isOrganization: false, status: 'ACTIVE' }
+      });
+    }
+    setIsEditing(true);
+  };
+
+  const handleSearchSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+
+    const hasLocalResults = profiles.some(p => 
+      p.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    if (!hasLocalResults) {
+      setIsAiLoading(true);
+      const summary = await askArchive(searchQuery, language);
+      setAiSummary(summary);
+      setIsAiLoading(false);
+    } else {
+        setAiSummary(null);
+    }
+  };
+
+  const handleFileUpload = () => {
+      alert("System Integration: Files uploaded here would be encrypted and stored in the secure archive database.");
+  };
+
+  const getVerificationIcon = (level?: VerificationLevel) => {
+      switch (level) {
+          case VerificationLevel.HERO: return <HeroBadge className="h-8 w-8 text-red-700" />;
+          case VerificationLevel.GOLDEN: return <GoldenBadge className="h-8 w-8 text-gold" />;
+          case VerificationLevel.STANDARD: return <StandardBadge className="h-8 w-8 text-navy-light" />;
+          default: return <VerifiedBadge className="h-8 w-8 text-gray-400" />;
+      }
+  };
+
+  const getVerificationLabel = (level?: VerificationLevel) => {
+      switch (level) {
+          case VerificationLevel.HERO: return t.lvl_hero;
+          case VerificationLevel.GOLDEN: return t.lvl_golden;
+          case VerificationLevel.STANDARD: return t.lvl_standard;
+          default: return t.lvl_unverified;
+      }
+  };
+
+  const getCategoryKey = (cat: Category) => {
+    if (cat === Category.POLITICS) return 'nav_politics';
+    if (cat === Category.BUSINESS) return 'nav_business';
+    if (cat === Category.HISTORY) return 'nav_history';
+    if (cat === Category.ARTS) return 'nav_arts';
+    return 'nav_politics';
+  };
+
+  const getCategoryLabel = (cat: Category) => {
+      const key = getCategoryKey(cat);
+      return t[key as keyof typeof t] || cat;
+  };
+
+  const getStatusLabel = (profile: Profile) => {
+    switch (profile.status) {
+        case 'ACTIVE': return t.status_active;
+        case 'DECEASED': return t.status_deceased;
+        case 'RETIRED': return t.status_retired;
+        case 'CLOSED': return t.status_closed;
+        default: return profile.status;
+    }
+  };
+
+  // --- ADMIN VIEW RENDER ---
+  if (view === 'admin') {
+    return (
+      <div className="min-h-screen bg-slate p-8 font-sans">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex justify-between items-center mb-8">
+            <h1 className="text-3xl font-serif font-bold text-navy">Admin Dashboard</h1>
+            <button onClick={() => setView('home')} className="text-navy hover:text-gold flex items-center">
+              <ChevronLeft className="w-4 h-4 mr-2" /> Back to Site
+            </button>
+          </div>
+
+          {!isAdminLoggedIn ? (
+            <div className="max-w-md mx-auto bg-white p-8 rounded-sm shadow-md">
+              <h2 className="text-xl font-bold mb-4">Admin Login</h2>
+              <input 
+                type="password" 
+                placeholder="Enter password (admin123)" 
+                className="w-full border p-2 mb-4 rounded-sm"
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+              />
+              <button 
+                onClick={handleAdminLogin}
+                className="w-full bg-navy text-white py-2 rounded-sm hover:bg-navy-light"
+              >
+                Login
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="bg-white rounded-sm shadow-sm p-6 mb-8">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-bold text-gray-700">Dossier Management</h2>
+                  <div className="flex space-x-4">
+                    {!isSupabaseConfigured && (
+                       <span className="text-red-600 bg-red-100 px-3 py-1 rounded text-sm flex items-center">
+                         ⚠️ DB Not Configured
+                       </span>
+                    )}
+                    <button 
+                      onClick={() => openEditModal()}
+                      className="bg-green-600 text-white px-4 py-2 rounded-sm flex items-center hover:bg-green-700"
+                    >
+                      <Plus className="w-4 h-4 mr-2" /> Add New
+                    </button>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-gray-100 text-gray-600 text-sm uppercase">
+                        <th className="p-3">Name</th>
+                        <th className="p-3">Category</th>
+                        <th className="p-3">Status</th>
+                        <th className="p-3">Verification</th>
+                        <th className="p-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {profiles.map(p => (
+                        <tr key={p.id} className="border-b border-gray-100 hover:bg-gray-50">
+                          <td className="p-3 font-medium text-navy">{p.name}</td>
+                          <td className="p-3 text-sm text-gray-500">{p.category}</td>
+                          <td className="p-3">
+                            <span className={`px-2 py-1 text-xs rounded-full ${p.verified ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'}`}>
+                              {p.verified ? 'Verified' : 'Unverified'}
+                            </span>
+                          </td>
+                          <td className="p-3 text-sm">{p.verificationLevel}</td>
+                          <td className="p-3 text-right space-x-2">
+                            <button onClick={() => openEditModal(p)} className="text-blue-600 hover:text-blue-800">
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => handleDeleteDossier(p.id)} className="text-red-600 hover:text-red-800">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Edit Modal */}
+          {isEditing && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-sm p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-serif font-bold text-navy">
+                    {editForm.id ? 'Edit Dossier' : 'New Dossier'}
+                  </h2>
+                  <button onClick={() => setIsEditing(false)}><X className="w-6 h-6 text-gray-400" /></button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Full Name</label>
+                      <input 
+                        type="text" 
+                        className="w-full border p-2 rounded-sm"
+                        value={editForm.full_name || ''}
+                        onChange={(e) => setEditForm({...editForm, full_name: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Role/Title</label>
+                      <input 
+                        type="text" 
+                        className="w-full border p-2 rounded-sm"
+                        value={editForm.role || ''}
+                        onChange={(e) => setEditForm({...editForm, role: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Category</label>
+                      <select 
+                        className="w-full border p-2 rounded-sm"
+                        value={editForm.category || Category.POLITICS}
+                        onChange={(e) => setEditForm({...editForm, category: e.target.value})}
+                      >
+                        {Object.values(Category).map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Lifecycle Status</label>
+                        <select 
+                            className="w-full border p-2 rounded-sm"
+                            value={editForm.details?.status || 'ACTIVE'}
+                            onChange={(e) => setEditForm({
+                                ...editForm, 
+                                details: { ...editForm.details, status: e.target.value }
+                            })}
+                        >
+                            <option value="ACTIVE">Active</option>
+                            <option value="DECEASED">Deceased</option>
+                            <option value="RETIRED">Retired</option>
+                            <option value="CLOSED">Closed (Business)</option>
+                        </select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                     <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Verification Status</label>
+                      <select 
+                        className="w-full border p-2 rounded-sm"
+                        value={editForm.status || 'Unverified'}
+                        onChange={(e) => setEditForm({...editForm, status: e.target.value as 'Verified' | 'Unverified'})}
+                      >
+                        <option value="Unverified">Unverified</option>
+                        <option value="Verified">Verified</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Verification Level</label>
+                      <select 
+                        className="w-full border p-2 rounded-sm"
+                        value={editForm.verification_level || 'Standard'}
+                        onChange={(e) => setEditForm({...editForm, verification_level: e.target.value})}
+                      >
+                        <option value="Standard">Standard</option>
+                        <option value="Golden">Golden</option>
+                        <option value="Hero">Hero</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Reputation Score (0-100)</label>
+                      <input 
+                        type="number" 
+                        className="w-full border p-2 rounded-sm"
+                        value={editForm.reputation_score || 0}
+                        onChange={(e) => setEditForm({...editForm, reputation_score: parseInt(e.target.value)})}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Profile Image</label>
+                      <div className="flex items-center space-x-2">
+                        {editForm.image_url && (
+                          <img src={editForm.image_url} alt="Preview" className="w-10 h-10 object-cover rounded" />
+                        )}
+                        <input 
+                          type="file" 
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="text-sm"
+                        />
+                      </div>
+                      {uploadingImage && <span className="text-xs text-gold">Uploading...</span>}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6">
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Bio</label>
+                  <textarea 
+                    className="w-full border p-2 rounded-sm h-24"
+                    value={editForm.bio || ''}
+                    onChange={(e) => setEditForm({...editForm, bio: e.target.value})}
+                  />
+                </div>
+
+                <div className="mt-8 flex justify-end space-x-4">
+                  <button 
+                    onClick={() => setIsEditing(false)}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={handleSaveDossier}
+                    className="bg-navy text-white px-6 py-2 rounded-sm hover:bg-navy-light flex items-center"
+                  >
+                    <Save className="w-4 h-4 mr-2" /> Save Changes
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // --- MAIN APP RENDER ---
+  return (
+    <div className={`min-h-screen bg-slate flex flex-col font-sans text-gray-800 ${language === 'ar' ? 'font-arabic' : ''}`}>
+      
+      {/* Certificate Modal */}
+      {showCertificate && selectedProfile && (
+        <VerificationCertificate 
+          profile={selectedProfile} 
+          lang={language} 
+          onClose={() => setShowCertificate(false)} 
+        />
+      )}
+
+      {/* Navigation - Sticky */}
+      <nav className="sticky top-0 z-50 bg-navy text-white shadow-lg border-b border-navy-light">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-20">
+            <div 
+              className="flex items-center space-x-3 rtl:space-x-reverse cursor-pointer group"
+              onClick={handleBack}
+            >
+              <BrandPin className="h-8 w-8 text-gold group-hover:text-white transition-colors" />
+              <div className="flex flex-col">
+                <span className="text-2xl font-serif font-bold tracking-tight">SomaliPin</span>
+                <span className="text-[10px] text-gray-400 uppercase tracking-widest">{t.subtitle}</span>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-6 rtl:space-x-reverse">
+                {/* Desktop Nav Links */}
+                <div className="hidden md:flex space-x-8 rtl:space-x-reverse text-sm font-medium text-gray-300">
+                    <span className="hover:text-gold cursor-pointer transition-colors">{t.nav_politics}</span>
+                    <span className="hover:text-gold cursor-pointer transition-colors">{t.nav_business}</span>
+                    <span className="hover:text-gold cursor-pointer transition-colors">{t.nav_history}</span>
+                </div>
+
+                {/* Language Switcher */}
+                <div className="flex items-center bg-navy-light/50 rounded-full px-1 py-1 border border-navy-light">
+                    <button 
+                        onClick={() => setLanguage('en')}
+                        className={`px-3 py-1 text-xs font-bold rounded-full transition-all ${language === 'en' ? 'bg-gold text-navy shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                    >
+                        EN
+                    </button>
+                    <button 
+                        onClick={() => setLanguage('so')}
+                        className={`px-3 py-1 text-xs font-bold rounded-full transition-all ${language === 'so' ? 'bg-gold text-navy shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                    >
+                        SO
+                    </button>
+                    <button 
+                        onClick={() => setLanguage('ar')}
+                        className={`px-3 py-1 text-xs font-bold rounded-full transition-all ${language === 'ar' ? 'bg-gold text-navy shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                    >
+                        AR
+                    </button>
+                </div>
+
+                <div className="hidden md:block">
+                     <span className="border border-gold text-gold px-4 py-1.5 rounded-sm hover:bg-gold hover:text-navy transition-all cursor-pointer text-sm font-medium">
+                        {t.nav_login}
+                     </span>
+                </div>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* Main Content Area */}
+      <main className="flex-grow">
+        {view === 'home' ? (
+          <>
+            {/* Hero Section */}
+            <section className="bg-navy pb-16 pt-10 px-4 text-center border-b border-gold/20">
+              <div className="max-w-3xl mx-auto space-y-6">
+                <h1 className="text-4xl md:text-6xl font-serif font-bold text-white leading-tight">
+                  {t.hero_title_1} <br />
+                  <span className="text-gold italic">{t.hero_title_2}</span>
+                </h1>
+                <p className="text-gray-300 text-lg md:text-xl font-light max-w-2xl mx-auto">
+                  {t.hero_desc}
+                </p>
+                
+                {/* Search Bar */}
+                <form onSubmit={handleSearchSubmit} className="relative max-w-xl mx-auto mt-8">
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-4 rtl:pl-0 rtl:right-0 rtl:pr-4 flex items-center pointer-events-none">
+                      <Search className="h-5 w-5 text-gray-400 group-focus-within:text-navy transition-colors" />
+                    </div>
+                    <input
+                      type="text"
+                      className="block w-full pl-11 pr-4 rtl:pl-4 rtl:pr-11 py-4 bg-white border-0 rounded-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gold focus:outline-none shadow-xl text-lg"
+                      placeholder={t.search_placeholder}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                    <button 
+                        type="submit"
+                        className="absolute right-2 rtl:right-auto rtl:left-2 top-2 bottom-2 bg-navy text-gold px-4 rounded-sm font-medium hover:bg-navy-light transition-colors"
+                    >
+                        {t.search_btn}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </section>
+
+            {/* AI Search Result */}
+            {aiSummary && (
+                <section className="max-w-6xl mx-auto px-4 -mt-8 mb-12 relative z-10">
+                    <div className="bg-white p-8 rounded-sm shadow-xl border-t-4 border-gold">
+                        <div className="flex items-center space-x-2 rtl:space-x-reverse mb-4">
+                            <BrandPin className="h-6 w-6 text-navy" />
+                            <h2 className="text-xl font-serif font-bold text-navy">{t.archive_result}</h2>
+                        </div>
+                        <div className="prose prose-lg text-gray-600 rtl:text-right">
+                             <p className="leading-relaxed">{aiSummary}</p>
+                        </div>
+                        <div className="mt-4 text-xs text-gray-400 italic text-right rtl:text-left">
+                            {t.generated_by}
+                        </div>
+                    </div>
+                </section>
+            )}
+
+            {/* Directory Grid */}
+            <section className="max-w-6xl mx-auto px-4 py-12 border-b border-gray-200">
+               {!aiSummary && searchQuery && filteredProfiles.length === 0 && (
+                   <div className="text-center py-12">
+                       <p className="text-gray-500 text-lg">{t.no_profiles}</p>
+                       <p className="text-sm text-gold mt-2 cursor-pointer hover:underline" onClick={handleSearchSubmit}>{t.click_search}</p>
+                   </div>
+               )}
+
+              <div className="flex justify-between items-end mb-8 border-b border-gray-200 pb-4">
+                <h2 className="text-3xl font-serif font-bold text-navy">{t.featured_dossiers}</h2>
+                <div className="hidden md:flex space-x-2 rtl:space-x-reverse">
+                   {Object.values(Category).map((cat) => (
+                       <button key={cat} className="text-sm px-3 py-1 text-gray-500 hover:text-navy font-medium">
+                           {getCategoryLabel(cat)}
+                       </button>
+                   ))}
+                </div>
+              </div>
+
+              {isLoading ? (
+                <div className="flex justify-center py-12">
+                  <div className="animate-spin h-8 w-8 border-4 border-gold border-t-transparent rounded-full"></div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {filteredProfiles.map((profile) => (
+                    <ProfileCard 
+                      key={profile.id} 
+                      profile={profile} 
+                      onClick={handleProfileClick} 
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* Services */}
+            <section className="max-w-6xl mx-auto px-4 py-12">
+               <h2 className="text-3xl font-serif font-bold text-navy mb-8">{t.section_what_we_do}</h2>
+               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                 <div className="bg-white p-6 rounded-sm shadow-sm border-t-4 border-gold hover:shadow-md transition-all">
+                    <div className="mb-4 text-gold"><User className="h-8 w-8" /></div>
+                    <h3 className="text-xl font-serif font-bold text-navy mb-3">{t.service_1_title}</h3>
+                    <p className="text-sm text-gray-600 leading-relaxed font-sans">{t.service_1_desc}</p>
+                 </div>
+                 <div className="bg-white p-6 rounded-sm shadow-sm border-t-4 border-gold hover:shadow-md transition-all">
+                    <div className="mb-4 text-gold"><VerifiedBadge className="h-8 w-8" /></div>
+                    <h3 className="text-xl font-serif font-bold text-navy mb-3">{t.service_2_title}</h3>
+                    <p className="text-sm text-gray-600 leading-relaxed font-sans">{t.service_2_desc}</p>
+                 </div>
+                 <div className="bg-white p-6 rounded-sm shadow-sm border-t-4 border-gold hover:shadow-md transition-all">
+                    <div className="mb-4 text-gold"><BookOpen className="h-8 w-8" /></div>
+                    <h3 className="text-xl font-serif font-bold text-navy mb-3">{t.service_3_title}</h3>
+                    <p className="text-sm text-gray-600 leading-relaxed font-sans">{t.service_3_desc}</p>
+                 </div>
+                 <div className="bg-white p-6 rounded-sm shadow-sm border-t-4 border-gold hover:shadow-md transition-all">
+                    <div className="mb-4 text-gold"><Search className="h-8 w-8" /></div>
+                    <h3 className="text-xl font-serif font-bold text-navy mb-3">{t.service_4_title}</h3>
+                    <p className="text-sm text-gray-600 leading-relaxed font-sans">{t.service_4_desc}</p>
+                 </div>
+               </div>
+            </section>
+          </>
+        ) : (
+          /* Profile Detail View */
+          <div className="max-w-5xl mx-auto px-4 py-12 animate-fade-in">
+            <button 
+              onClick={handleBack}
+              className="group flex items-center text-navy font-medium mb-8 hover:text-gold transition-colors rtl:flex-row-reverse"
+            >
+              <ChevronLeft className="h-5 w-5 mr-1 group-hover:-translate-x-1 transition-transform rtl:rotate-180 rtl:ml-1 rtl:mr-0" />
+              {t.back_directory}
+            </button>
+
+            {selectedProfile && (
+              <div className="bg-white shadow-xl rounded-sm overflow-hidden mb-12">
+                <div className={`h-48 relative ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'bg-red-900' : 'bg-navy'}`}>
+                    <div className="absolute inset-0 bg-black/20 pattern-grid-lg"></div>
+                </div>
+
+                <div className="px-8 pb-12">
+                    <div className="relative flex justify-between items-end -mt-20 mb-8">
+                        <div className="relative">
+                            <img 
+                                src={selectedProfile.imageUrl} 
+                                alt={selectedProfile.name}
+                                className={`w-40 h-40 object-cover rounded-sm border-4 border-white shadow-md ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'grayscale-0' : ''}`}
+                            />
+                            {selectedProfile.verified && (
+                                <div 
+                                  className="absolute -bottom-3 -right-3 rtl:-left-3 rtl:right-auto bg-white p-1 rounded-full shadow-sm cursor-pointer hover:scale-110 transition-transform"
+                                  onClick={() => setShowCertificate(true)}
+                                  title="Click to view Official Certificate"
+                                >
+                                    {getVerificationIcon(selectedProfile.verificationLevel)}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+                        <div className="lg:col-span-2">
+                            <div className="mb-8">
+                                <span className={`text-sm font-bold tracking-widest uppercase mb-2 block
+                                    ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'text-red-700' : 'text-gold'}
+                                `}>
+                                    {selectedProfile.categoryLabel || selectedProfile.category}
+                                </span>
+                                <h1 className="text-4xl font-serif font-bold text-navy mb-2">
+                                    {selectedProfile.name}
+                                </h1>
+                                <p className="text-xl text-gray-500 font-light">
+                                    {selectedProfile.title}
+                                </p>
+                                {selectedProfile.location && (
+                                    <div className="flex items-center text-gray-400 text-sm mt-3">
+                                        <MapPin className="h-4 w-4 mr-1 rtl:ml-1 rtl:mr-0" />
+                                        {selectedProfile.location}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="prose prose-slate max-w-none rtl:text-right">
+                                <h3 className="text-navy font-serif text-xl border-b border-gray-200 pb-2 mb-4">{t.about}</h3>
+                                <p className="text-gray-700 leading-relaxed text-lg">
+                                    {selectedProfile.fullBio}
+                                </p>
+                            </div>
+
+                            <div className="mt-12">
+                                <h3 className="text-navy font-serif text-xl border-b border-gray-200 pb-2 mb-4">{t.timeline}</h3>
+                                <Timeline events={selectedProfile.timeline} />
+                            </div>
+                        </div>
+
+                        {/* Sidebar Stats */}
+                        <div className="space-y-6">
+                            <div className="bg-slate p-6 rounded-sm border border-gray-200">
+                                <h4 className="font-serif font-bold text-navy mb-4">{t.key_info}</h4>
+                                <div className="space-y-4 text-sm">
+                                    
+                                    {/* Lifecycle Dates */}
+                                    <div className="flex items-center">
+                                        <Calendar className={`h-5 w-5 mr-3 rtl:ml-3 rtl:mr-0 ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'text-red-700' : 'text-gold'}`} />
+                                        <div>
+                                            <span className="block text-gray-400 text-xs uppercase">{selectedProfile.isOrganization ? t.lbl_est : t.lbl_born}</span>
+                                            <span className="font-medium text-gray-800">{selectedProfile.dateStart}</span>
+                                        </div>
+                                    </div>
+
+                                    {selectedProfile.dateEnd && (
+                                        <div className="flex items-center">
+                                            <Clock className={`h-5 w-5 mr-3 rtl:ml-3 rtl:mr-0 ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'text-red-700' : 'text-gold'}`} />
+                                            <div>
+                                                <span className="block text-gray-400 text-xs uppercase">{selectedProfile.isOrganization ? t.lbl_closed : t.lbl_died}</span>
+                                                <span className="font-medium text-gray-800">{selectedProfile.dateEnd}</span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Status */}
+                                    <div className="flex items-center">
+                                        <Activity className={`h-5 w-5 mr-3 rtl:ml-3 rtl:mr-0 ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'text-red-700' : 'text-gold'}`} />
+                                        <div>
+                                            <span className="block text-gray-400 text-xs uppercase">{t.lbl_status}</span>
+                                            <span className={`font-medium px-2 py-0.5 rounded text-xs inline-block mt-0.5 ${
+                                                selectedProfile.status === 'ACTIVE' ? 'bg-green-100 text-green-800' :
+                                                selectedProfile.status === 'DECEASED' ? 'bg-gray-200 text-gray-800' :
+                                                selectedProfile.status === 'RETIRED' ? 'bg-orange-100 text-orange-800' :
+                                                'bg-red-100 text-red-800'
+                                            }`}>
+                                                {getStatusLabel(selectedProfile)}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div className="w-full h-px bg-gray-200 my-2"></div>
+
+                                    <div className="flex items-center">
+                                        <Building2 className={`h-5 w-5 mr-3 rtl:ml-3 rtl:mr-0 ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'text-red-700' : 'text-gold'}`} />
+                                        <div>
+                                            <span className="block text-gray-400 text-xs uppercase">{t.label_affiliation}</span>
+                                            <span className="font-medium text-gray-800">{getVerificationLabel(selectedProfile.verificationLevel)}</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center">
+                                        <User className={`h-5 w-5 mr-3 rtl:ml-3 rtl:mr-0 ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'text-red-700' : 'text-gold'}`} />
+                                        <div>
+                                            <span className="block text-gray-400 text-xs uppercase">{t.label_role}</span>
+                                            <span className="font-medium text-gray-800">{selectedProfile.categoryLabel || selectedProfile.category}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Tabbed Section (Archive, News, Influence) */}
+                <div className="bg-slate/30 border-t border-gray-200 px-8 py-8">
+                    <div className="flex space-x-8 rtl:space-x-reverse border-b border-gray-300 mb-8 overflow-x-auto">
+                        {['archive', 'news', 'influence'].map((tab) => (
+                           <button
+                                key={tab}
+                                onClick={() => setActiveTab(tab as any)}
+                                className={`pb-4 text-sm font-bold tracking-widest transition-colors relative whitespace-nowrap ${
+                                    activeTab === tab ? 'text-navy' : 'text-gray-400 hover:text-gray-600'
+                                }`}
+                            >
+                                {tab === 'archive' ? t.tab_archive : tab === 'news' ? t.tab_news : t.tab_influence}
+                                {activeTab === tab && <span className="absolute bottom-0 left-0 w-full h-1 bg-gold rounded-t-sm"></span>}
+                            </button> 
+                        ))}
+                    </div>
+
+                    {activeTab === 'archive' && (
+                        <div className="animate-fade-in">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                {(selectedProfile.archives && selectedProfile.archives.length > 0) ? (
+                                    selectedProfile.archives.map((file) => (
+                                        <div key={file.id} className="bg-white p-4 rounded-sm border border-gray-100 flex items-start space-x-3 rtl:space-x-reverse hover:shadow-md transition-shadow">
+                                            <div className="bg-slate p-2 rounded-sm text-navy">
+                                                {file.type === 'PDF' && <FileText className="h-5 w-5" />}
+                                                {file.type === 'IMAGE' && <ImageIcon className="h-5 w-5" />}
+                                                {file.type === 'AWARD' && <Award className="h-5 w-5 text-gold" />}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-bold text-gray-800 truncate">{file.title}</p>
+                                                <div className="flex justify-between items-center mt-1">
+                                                    <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 rounded">{file.type}</span>
+                                                    <span className="text-[10px] text-gray-400">{file.date}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <p className="col-span-3 text-center text-gray-400 italic text-sm py-4">{t.no_docs}</p>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'news' && (
+                        <div className="animate-fade-in space-y-4">
+                            {(selectedProfile.news && selectedProfile.news.length > 0) ? (
+                                selectedProfile.news.map((news) => (
+                                    <div key={news.id} className="bg-white p-5 rounded-sm border-l-4 rtl:border-l-0 rtl:border-r-4 border-gold shadow-sm">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <h4 className="font-bold text-navy text-base">{news.title}</h4>
+                                            <span className="text-xs text-gray-400 whitespace-nowrap ml-4">{news.date}</span>
+                                        </div>
+                                        <div className="flex items-center text-xs text-gold font-bold uppercase tracking-wider mb-3">
+                                            <Newspaper className="h-3 w-3 mr-1 rtl:ml-1 rtl:mr-0" /> {news.source}
+                                        </div>
+                                        <p className="text-sm text-gray-600 leading-relaxed">{news.summary}</p>
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="text-center text-gray-400 italic text-sm py-4">{t.no_news}</p>
+                            )}
+                        </div>
+                    )}
+                    
+                    {activeTab === 'influence' && (
+                         <div className="animate-fade-in max-w-2xl mx-auto bg-white p-8 rounded-sm shadow-sm border border-gray-100">
+                             {/* ... existing influence chart code ... */}
+                             {selectedProfile.influence ? (
+                                <>
+                                    <div className="flex items-center justify-between mb-2"><span className="text-sm font-bold text-navy">{t.sentiment_support}</span><span>{selectedProfile.influence.support}%</span></div>
+                                    <div className="w-full bg-gray-100 rounded-full h-3 mb-6"><div className="bg-navy h-3 rounded-full" style={{ width: `${selectedProfile.influence.support}%` }}></div></div>
+                                    
+                                    <div className="flex items-center justify-between mb-2"><span className="text-sm font-bold text-gold-dark">{t.sentiment_neutral}</span><span>{selectedProfile.influence.neutral}%</span></div>
+                                    <div className="w-full bg-gray-100 rounded-full h-3 mb-6"><div className="bg-gold h-3 rounded-full" style={{ width: `${selectedProfile.influence.neutral}%` }}></div></div>
+
+                                    <div className="flex items-center justify-between mb-2"><span className="text-sm font-bold text-red-900">{t.sentiment_oppose}</span><span>{selectedProfile.influence.opposition}%</span></div>
+                                    <div className="w-full bg-gray-100 rounded-full h-3 mb-2"><div className="bg-red-900 h-3 rounded-full" style={{ width: `${selectedProfile.influence.opposition}%` }}></div></div>
+                                </>
+                             ) : <p className="text-center text-gray-400">No data available.</p>}
+                         </div>
+                    )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-navy text-white pt-16 pb-8 border-t border-gold relative">
+        <div className="max-w-6xl mx-auto px-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+                <div className="space-y-4">
+                    <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                         <BrandPin className="h-6 w-6 text-gold" />
+                         <span className="text-xl font-serif font-bold">SomaliPin</span>
+                    </div>
+                    <p className="text-gray-400 text-sm leading-relaxed">{t.footer_desc}</p>
+                </div>
+                {/* ... other footer columns ... */}
+                <div>
+                     {/* Secret Admin Entry */}
+                     <h5 
+                        className="font-serif font-bold mb-4 text-gold cursor-pointer hover:text-white"
+                        onClick={() => setView('admin')}
+                    >
+                        {t.footer_platform}
+                     </h5>
+                     {/* ... links ... */}
+                </div>
+            </div>
+            <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center text-xs text-gray-500">
+                <p>&copy; {new Date().getFullYear()} {t.rights}</p>
+            </div>
+        </div>
+      </footer>
+    </div>
+  );
+};
+
+export default App;
