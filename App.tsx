@@ -1,13 +1,13 @@
 
 import * as React from 'react';
 import { useState, useEffect } from 'react';
-import { Search, MapPin, ChevronLeft, Building2, User, BookOpen, Upload, FileText, Image as ImageIcon, Award, PieChart, Newspaper, Globe, Calendar, Clock, Activity, Lock, Plus, Trash2, Edit2, Save, X, Database } from 'lucide-react';
+import { Search, MapPin, ChevronLeft, Building2, User, BookOpen, Upload, FileText, Image as ImageIcon, Award, PieChart, Newspaper, Globe, Calendar, Clock, Activity, Lock, Plus, Trash2, Edit2, Save, X, Database, Link as LinkIcon, AlertCircle } from 'lucide-react';
 import { BrandPin, VerifiedBadge, HeroBadge, GoldenBadge, StandardBadge } from './components/Icons';
 import ProfileCard from './components/ProfileCard';
 import Timeline from './components/Timeline';
 import VerificationCertificate from './components/VerificationCertificate';
 import { getProfiles, UI_TEXT } from './constants';
-import { Profile, Category, ArchiveItem, NewsItem, VerificationLevel, Language, DossierDB, ProfileStatus } from './types';
+import { Profile, Category, ArchiveItem, NewsItem, VerificationLevel, Language, DossierDB, ProfileStatus, TimelineEvent } from './types';
 import { askArchive } from './services/geminiService';
 import { supabase, isSupabaseConfigured } from './services/supabaseClient';
 
@@ -33,21 +33,26 @@ const App = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<Partial<DossierDB>>({});
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [activeAdminTab, setActiveAdminTab] = useState<'basic' | 'timeline' | 'archive' | 'news'>('basic');
+  const [uploadingDoc, setUploadingDoc] = useState<string | null>(null); // Track which doc ID is uploading
 
   const t = UI_TEXT[language];
 
   // Helper to map DB categories to UI text
-  const getCategoryKey = (cat: Category) => {
+  const getCategoryKey = (cat: string) => {
     if (cat === Category.POLITICS) return 'nav_politics';
     if (cat === Category.BUSINESS) return 'nav_business';
     if (cat === Category.HISTORY) return 'nav_history';
     if (cat === Category.ARTS) return 'nav_arts';
-    return 'nav_politics';
+    return null; 
   };
 
-  const getCategoryLabel = (cat: Category) => {
+  const getCategoryLabel = (cat: string) => {
       const key = getCategoryKey(cat);
-      return t[key as keyof typeof t] || cat;
+      if (key) {
+        return t[key as keyof typeof t] || cat;
+      }
+      return cat;
   };
 
   // Fetch Data from Supabase
@@ -70,30 +75,32 @@ const App = () => {
       } else if (data) {
         // Safe mapping with defensive checks
         const mappedProfiles: Profile[] = data.map((d: DossierDB) => {
-          // Ensure details is an object, even if null in DB
           const details = d.details || {};
           
           const localizedFullBio = details.fullBio?.[language] || details.fullBio?.en || d.bio || '';
-          const localizedTimeline = details.timeline?.[language] || details.timeline?.en || [];
           
-          // Helper to safely cast category or fallback
+          // Fallback logic for dynamic arrays: check localized first, then root details, then empty
+          const timeline = details.timeline || [];
+          const archives = details.archives || [];
+          const news = details.news || [];
+          
           const rawCategory = d.category || Category.POLITICS;
 
           return {
             id: d.id || 'unknown',
             name: d.full_name || 'Unnamed Profile',
             title: d.role || '',
-            category: rawCategory as Category,
-            categoryLabel: UI_TEXT[language][getCategoryKey(rawCategory as Category)] || rawCategory,
+            category: rawCategory,
+            categoryLabel: getCategoryLabel(rawCategory),
             verified: d.status === 'Verified',
             verificationLevel: (d.verification_level as VerificationLevel) || VerificationLevel.STANDARD,
             imageUrl: d.image_url || 'https://via.placeholder.com/150',
             shortBio: d.bio || '',
             fullBio: localizedFullBio,
-            timeline: localizedTimeline,
+            timeline: timeline,
             location: details.location || '',
-            archives: details.archives || [],
-            news: details.news || [],
+            archives: archives,
+            news: news,
             influence: { support: d.reputation_score || 0, neutral: 100 - (d.reputation_score || 0), opposition: 0 },
             isOrganization: details.isOrganization || false,
             status: details.status || 'ACTIVE',
@@ -105,7 +112,6 @@ const App = () => {
       }
     } catch (err) {
       console.error('Unexpected crash in fetchDossiers:', err);
-      // Fallback to empty state instead of crashing app
       setProfiles([]);
     } finally {
       setIsLoading(false);
@@ -114,9 +120,8 @@ const App = () => {
 
   useEffect(() => {
     fetchDossiers();
-  }, [language]); // Refetch/Remap when language changes
+  }, [language]);
 
-  // Update document direction based on language
   useEffect(() => {
     if (language === 'ar') {
       document.dir = 'rtl';
@@ -147,6 +152,12 @@ const App = () => {
     setSelectedProfile(null);
     setAiSummary(null);
   };
+  
+  const handleVerifyClick = (e: React.MouseEvent, profile: Profile) => {
+    e.stopPropagation();
+    setSelectedProfile(profile);
+    setShowCertificate(true);
+  };
 
   // --- ADMIN FUNCTIONS ---
 
@@ -167,27 +178,107 @@ const App = () => {
       const file = e.target.files[0];
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const filePath = `${fileName}`;
+      const filePath = `profile_${fileName}`;
 
-      // Upload to 'dossier-images' bucket
       const { error: uploadError } = await supabase.storage
         .from('dossier-images')
         .upload(filePath, file);
 
       if (uploadError) {
         alert('Error uploading image: ' + uploadError.message);
-        console.error(uploadError);
       } else {
-        // Get Public URL
         const { data } = supabase.storage.from('dossier-images').getPublicUrl(filePath);
         setEditForm({ ...editForm, image_url: data.publicUrl });
       }
     } catch (err) {
       console.error('Image upload crash:', err);
-      alert('Failed to upload image due to an unexpected error.');
     } finally {
       setUploadingImage(false);
     }
+  };
+
+  const handleArchiveUpload = async (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+      if (!e.target.files || e.target.files.length === 0) return;
+      
+      const file = e.target.files[0];
+      const archives = [...(editForm.details?.archives || [])];
+      const currentItem = archives[index];
+      setUploadingDoc(currentItem.id || 'new');
+
+      try {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `doc_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+        
+        const { error } = await supabase.storage.from('dossier-images').upload(fileName, file);
+        
+        if (error) throw error;
+
+        const { data } = supabase.storage.from('dossier-images').getPublicUrl(fileName);
+        
+        // Update the specific archive item url
+        archives[index] = { ...currentItem, url: data.publicUrl, size: '2MB' }; // Mock size for now
+        setEditForm({ ...editForm, details: { ...editForm.details, archives }});
+      } catch (err: any) {
+          alert('Upload failed: ' + err.message);
+      } finally {
+          setUploadingDoc(null);
+      }
+  };
+
+  // --- Dynamic Array Handlers ---
+
+  const addTimelineEvent = () => {
+      const current = editForm.details?.timeline || [];
+      const newItem: TimelineEvent = { year: '', title: '', description: '' };
+      setEditForm({ ...editForm, details: { ...editForm.details, timeline: [...current, newItem] } });
+  };
+
+  const removeTimelineEvent = (idx: number) => {
+      const current = [...(editForm.details?.timeline || [])];
+      current.splice(idx, 1);
+      setEditForm({ ...editForm, details: { ...editForm.details, timeline: current } });
+  };
+
+  const updateTimelineEvent = (idx: number, field: keyof TimelineEvent, value: string) => {
+      const current = [...(editForm.details?.timeline || [])];
+      current[idx] = { ...current[idx], [field]: value };
+      setEditForm({ ...editForm, details: { ...editForm.details, timeline: current } });
+  };
+
+  const addArchiveItem = () => {
+      const current = editForm.details?.archives || [];
+      const newItem: ArchiveItem = { id: Date.now().toString(), type: 'PDF', title: '', date: '', url: '' };
+      setEditForm({ ...editForm, details: { ...editForm.details, archives: [...current, newItem] } });
+  };
+
+  const removeArchiveItem = (idx: number) => {
+      const current = [...(editForm.details?.archives || [])];
+      current.splice(idx, 1);
+      setEditForm({ ...editForm, details: { ...editForm.details, archives: current } });
+  };
+
+  const updateArchiveItem = (idx: number, field: keyof ArchiveItem, value: string) => {
+      const current = [...(editForm.details?.archives || [])];
+      current[idx] = { ...current[idx], [field]: value };
+      setEditForm({ ...editForm, details: { ...editForm.details, archives: current } });
+  };
+
+  const addNewsItem = () => {
+      const current = editForm.details?.news || [];
+      const newItem: NewsItem = { id: Date.now().toString(), title: '', source: '', date: '', summary: '', url: '' };
+      setEditForm({ ...editForm, details: { ...editForm.details, news: [...current, newItem] } });
+  };
+
+  const removeNewsItem = (idx: number) => {
+      const current = [...(editForm.details?.news || [])];
+      current.splice(idx, 1);
+      setEditForm({ ...editForm, details: { ...editForm.details, news: current } });
+  };
+
+  const updateNewsItem = (idx: number, field: keyof NewsItem, value: string) => {
+      const current = [...(editForm.details?.news || [])];
+      current[idx] = { ...current[idx], [field]: value };
+      setEditForm({ ...editForm, details: { ...editForm.details, news: current } });
   };
 
   const handleSaveDossier = async () => {
@@ -197,20 +288,18 @@ const App = () => {
         return;
       }
 
-      // Construct the payload. We ensure 'details' has the structure our app expects.
       const currentFullBio = editForm.details?.fullBio || {};
-      
       if (editForm.details?.tempFullBio) {
           currentFullBio['en'] = editForm.details.tempFullBio;
-          // Also copy to other langs for fallback in this demo
-          currentFullBio['so'] = editForm.details.tempFullBio;
-          currentFullBio['ar'] = editForm.details.tempFullBio;
+          // Simple fallback for other languages to ensure data exists
+          if (!currentFullBio['so']) currentFullBio['so'] = editForm.details.tempFullBio;
+          if (!currentFullBio['ar']) currentFullBio['ar'] = editForm.details.tempFullBio;
       }
 
       const dossierData = {
         full_name: editForm.full_name,
         role: editForm.role,
-        bio: editForm.bio, // Short bio
+        bio: editForm.bio, 
         status: editForm.status || 'Unverified',
         reputation_score: editForm.reputation_score || 0,
         image_url: editForm.image_url,
@@ -222,24 +311,18 @@ const App = () => {
         }
       };
 
-      // Clean up temp field before saving
-      if (dossierData.details.tempFullBio) {
-        delete dossierData.details.tempFullBio;
-      }
+      if (dossierData.details.tempFullBio) delete dossierData.details.tempFullBio;
 
       let error;
       if (editForm.id) {
-        // Update
         const res = await supabase.from('dossiers').update(dossierData).eq('id', editForm.id);
         error = res.error;
       } else {
-        // Insert
         const res = await supabase.from('dossiers').insert([dossierData]);
         error = res.error;
       }
 
       if (error) {
-        console.error('Error saving:', error);
         alert('Failed to save dossier: ' + error.message);
       } else {
         await fetchDossiers();
@@ -264,8 +347,8 @@ const App = () => {
   };
 
   const openEditModal = (profile?: Profile) => {
+    setActiveAdminTab('basic');
     if (profile) {
-      // Map Profile back to DB structure for editing
       setEditForm({
         id: profile.id,
         full_name: profile.name,
@@ -282,11 +365,13 @@ const App = () => {
           dateStart: profile.dateStart,
           dateEnd: profile.dateEnd,
           location: profile.location,
-          tempFullBio: profile.fullBio // Load current full bio into temp field
+          tempFullBio: profile.fullBio,
+          timeline: profile.timeline || [],
+          archives: profile.archives || [],
+          news: profile.news || []
         }
       });
     } else {
-      // Defaults for new profile
       setEditForm({
         status: 'Unverified',
         reputation_score: 50,
@@ -294,7 +379,10 @@ const App = () => {
         details: { 
             isOrganization: false, 
             status: 'ACTIVE',
-            tempFullBio: ''
+            tempFullBio: '',
+            timeline: [],
+            archives: [],
+            news: []
         }
       });
     }
@@ -441,191 +529,391 @@ const App = () => {
           {/* Edit Modal */}
           {isEditing && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-sm p-6">
-                <div className="flex justify-between items-center mb-6">
+              <div className="bg-white w-full max-w-4xl max-h-[95vh] overflow-y-auto rounded-sm flex flex-col">
+                <div className="p-6 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white z-10">
                   <h2 className="text-2xl font-serif font-bold text-navy">
                     {editForm.id ? 'Edit Dossier' : 'New Dossier'}
                   </h2>
                   <button onClick={() => setIsEditing(false)}><X className="w-6 h-6 text-gray-400" /></button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-1">Full Name</label>
-                      <input 
-                        type="text" 
-                        className="w-full border p-2 rounded-sm"
-                        value={editForm.full_name || ''}
-                        onChange={(e) => setEditForm({...editForm, full_name: e.target.value})}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-1">Role/Title</label>
-                      <input 
-                        type="text" 
-                        className="w-full border p-2 rounded-sm"
-                        value={editForm.role || ''}
-                        onChange={(e) => setEditForm({...editForm, role: e.target.value})}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-1">Location</label>
-                      <input 
-                        type="text" 
-                        className="w-full border p-2 rounded-sm"
-                        value={editForm.details?.location || ''}
-                        onChange={(e) => setEditForm({
-                            ...editForm, 
-                            details: { ...editForm.details, location: e.target.value }
-                        })}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-1">Category</label>
-                      <select 
-                        className="w-full border p-2 rounded-sm"
-                        value={editForm.category || Category.POLITICS}
-                        onChange={(e) => setEditForm({...editForm, category: e.target.value})}
-                      >
-                        {Object.values(Category).map(c => <option key={c} value={c}>{c}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-1">Lifecycle Status</label>
-                        <select 
-                            className="w-full border p-2 rounded-sm"
-                            value={editForm.details?.status || 'ACTIVE'}
-                            onChange={(e) => setEditForm({
-                                ...editForm, 
-                                details: { ...editForm.details, status: e.target.value }
-                            })}
-                        >
-                            <option value="ACTIVE">Active</option>
-                            <option value="DECEASED">Deceased</option>
-                            <option value="RETIRED">Retired</option>
-                            <option value="CLOSED">Closed (Business)</option>
-                        </select>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1">Date Start/Born</label>
-                            <input 
-                                type="text" 
-                                placeholder="e.g. 1960"
-                                className="w-full border p-2 rounded-sm"
-                                value={editForm.details?.dateStart || ''}
-                                onChange={(e) => setEditForm({
-                                    ...editForm, 
-                                    details: { ...editForm.details, dateStart: e.target.value }
-                                })}
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1">Date End/Died</label>
-                            <input 
-                                type="text" 
-                                placeholder="e.g. 2020"
-                                className="w-full border p-2 rounded-sm"
-                                value={editForm.details?.dateEnd || ''}
-                                onChange={(e) => setEditForm({
-                                    ...editForm, 
-                                    details: { ...editForm.details, dateEnd: e.target.value }
-                                })}
-                            />
-                        </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                     <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-1">Verification Status</label>
-                      <select 
-                        className="w-full border p-2 rounded-sm"
-                        value={editForm.status || 'Unverified'}
-                        onChange={(e) => setEditForm({...editForm, status: e.target.value as 'Verified' | 'Unverified'})}
-                      >
-                        <option value="Unverified">Unverified</option>
-                        <option value="Verified">Verified</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-1">Verification Level</label>
-                      <select 
-                        className="w-full border p-2 rounded-sm"
-                        value={editForm.verification_level || 'Standard'}
-                        onChange={(e) => setEditForm({...editForm, verification_level: e.target.value})}
-                      >
-                        <option value="Standard">Standard</option>
-                        <option value="Golden">Golden</option>
-                        <option value="Hero">Hero</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-1">Reputation Score (0-100)</label>
-                      <input 
-                        type="number" 
-                        className="w-full border p-2 rounded-sm"
-                        value={editForm.reputation_score || 0}
-                        onChange={(e) => setEditForm({...editForm, reputation_score: parseInt(e.target.value)})}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-1">Profile Image</label>
-                      <div className="flex items-center space-x-2">
-                        {editForm.image_url && (
-                          <img src={editForm.image_url} alt="Preview" className="w-10 h-10 object-cover rounded" />
-                        )}
-                        <input 
-                          type="file" 
-                          accept="image/*"
-                          onChange={handleImageUpload}
-                          className="text-sm"
-                        />
-                      </div>
-                      {uploadingImage && <span className="text-xs text-gold">Uploading...</span>}
-                    </div>
-                    <div>
-                        <label className="flex items-center space-x-2 mt-4 cursor-pointer">
-                            <input 
-                                type="checkbox"
-                                checked={editForm.details?.isOrganization || false}
-                                onChange={(e) => setEditForm({
-                                    ...editForm, 
-                                    details: { ...editForm.details, isOrganization: e.target.checked }
-                                })}
-                                className="h-4 w-4"
-                            />
-                            <span className="text-sm font-bold text-gray-700">Is Organization/Company?</span>
-                        </label>
-                    </div>
-                  </div>
+                {/* Tabs */}
+                <div className="flex border-b border-gray-200 px-6 bg-gray-50">
+                    <button 
+                        className={`py-3 px-4 text-sm font-bold border-b-2 transition-colors ${activeAdminTab === 'basic' ? 'border-navy text-navy' : 'border-transparent text-gray-500 hover:text-navy'}`}
+                        onClick={() => setActiveAdminTab('basic')}
+                    >
+                        Basic Info
+                    </button>
+                    <button 
+                        className={`py-3 px-4 text-sm font-bold border-b-2 transition-colors ${activeAdminTab === 'timeline' ? 'border-navy text-navy' : 'border-transparent text-gray-500 hover:text-navy'}`}
+                        onClick={() => setActiveAdminTab('timeline')}
+                    >
+                        Timeline
+                    </button>
+                    <button 
+                        className={`py-3 px-4 text-sm font-bold border-b-2 transition-colors ${activeAdminTab === 'archive' ? 'border-navy text-navy' : 'border-transparent text-gray-500 hover:text-navy'}`}
+                        onClick={() => setActiveAdminTab('archive')}
+                    >
+                        Archives (Docs)
+                    </button>
+                    <button 
+                        className={`py-3 px-4 text-sm font-bold border-b-2 transition-colors ${activeAdminTab === 'news' ? 'border-navy text-navy' : 'border-transparent text-gray-500 hover:text-navy'}`}
+                        onClick={() => setActiveAdminTab('news')}
+                    >
+                        News
+                    </button>
                 </div>
 
-                <div className="mt-6 space-y-4">
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Short Bio (Card Summary)</label>
-                    <textarea 
-                        className="w-full border p-2 rounded-sm h-20"
-                        value={editForm.bio || ''}
-                        onChange={(e) => setEditForm({...editForm, bio: e.target.value})}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Full Biography (Detailed Page)</label>
-                    <textarea 
-                        className="w-full border p-2 rounded-sm h-40 font-serif"
-                        value={editForm.details?.tempFullBio || ''}
-                        onChange={(e) => setEditForm({
-                            ...editForm,
-                            details: { ...editForm.details, tempFullBio: e.target.value }
-                        })}
-                        placeholder="Write the detailed biography here..."
-                    />
-                  </div>
+                <div className="p-6">
+                    {activeAdminTab === 'basic' && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-4">
+                                <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Full Name</label>
+                                <input 
+                                    type="text" 
+                                    className="w-full border p-2 rounded-sm"
+                                    value={editForm.full_name || ''}
+                                    onChange={(e) => setEditForm({...editForm, full_name: e.target.value})}
+                                />
+                                </div>
+                                <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Role/Title</label>
+                                <input 
+                                    type="text" 
+                                    className="w-full border p-2 rounded-sm"
+                                    value={editForm.role || ''}
+                                    onChange={(e) => setEditForm({...editForm, role: e.target.value})}
+                                />
+                                </div>
+                                <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Location</label>
+                                <input 
+                                    type="text" 
+                                    className="w-full border p-2 rounded-sm"
+                                    value={editForm.details?.location || ''}
+                                    onChange={(e) => setEditForm({
+                                        ...editForm, 
+                                        details: { ...editForm.details, location: e.target.value }
+                                    })}
+                                />
+                                </div>
+                                <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Category</label>
+                                <input 
+                                    type="text" 
+                                    placeholder="e.g. Politics, Business, Sports"
+                                    className="w-full border p-2 rounded-sm"
+                                    value={editForm.category || ''}
+                                    onChange={(e) => setEditForm({...editForm, category: e.target.value})}
+                                />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">Lifecycle Status</label>
+                                    <select 
+                                        className="w-full border p-2 rounded-sm"
+                                        value={editForm.details?.status || 'ACTIVE'}
+                                        onChange={(e) => setEditForm({
+                                            ...editForm, 
+                                            details: { ...editForm.details, status: e.target.value }
+                                        })}
+                                    >
+                                        <option value="ACTIVE">Active</option>
+                                        <option value="DECEASED">Deceased</option>
+                                        <option value="RETIRED">Retired</option>
+                                        <option value="CLOSED">Closed (Business)</option>
+                                    </select>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-1">Date Start/Born</label>
+                                        <input 
+                                            type="text" 
+                                            placeholder="e.g. 1960"
+                                            className="w-full border p-2 rounded-sm"
+                                            value={editForm.details?.dateStart || ''}
+                                            onChange={(e) => setEditForm({
+                                                ...editForm, 
+                                                details: { ...editForm.details, dateStart: e.target.value }
+                                            })}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-1">Date End/Died</label>
+                                        <input 
+                                            type="text" 
+                                            placeholder="e.g. 2020"
+                                            className="w-full border p-2 rounded-sm"
+                                            value={editForm.details?.dateEnd || ''}
+                                            onChange={(e) => setEditForm({
+                                                ...editForm, 
+                                                details: { ...editForm.details, dateEnd: e.target.value }
+                                            })}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Verification Status</label>
+                                <select 
+                                    className="w-full border p-2 rounded-sm"
+                                    value={editForm.status || 'Unverified'}
+                                    onChange={(e) => setEditForm({...editForm, status: e.target.value as 'Verified' | 'Unverified'})}
+                                >
+                                    <option value="Unverified">Unverified</option>
+                                    <option value="Verified">Verified</option>
+                                </select>
+                                </div>
+                                <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Verification Level</label>
+                                <select 
+                                    className="w-full border p-2 rounded-sm"
+                                    value={editForm.verification_level || 'Standard'}
+                                    onChange={(e) => setEditForm({...editForm, verification_level: e.target.value})}
+                                >
+                                    <option value="Standard">Standard</option>
+                                    <option value="Golden">Golden</option>
+                                    <option value="Hero">Hero</option>
+                                </select>
+                                </div>
+                                <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Reputation Score (0-100)</label>
+                                <input 
+                                    type="number" 
+                                    className="w-full border p-2 rounded-sm"
+                                    value={editForm.reputation_score || 0}
+                                    onChange={(e) => setEditForm({...editForm, reputation_score: parseInt(e.target.value)})}
+                                />
+                                </div>
+                                <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Profile Image</label>
+                                <div className="flex items-center space-x-2">
+                                    {editForm.image_url && (
+                                    <img src={editForm.image_url} alt="Preview" className="w-10 h-10 object-cover rounded" />
+                                    )}
+                                    <input 
+                                    type="file" 
+                                    accept="image/*"
+                                    onChange={handleImageUpload}
+                                    className="text-sm"
+                                    />
+                                </div>
+                                {uploadingImage && <span className="text-xs text-gold">Uploading...</span>}
+                                </div>
+                                <div>
+                                    <label className="flex items-center space-x-2 mt-4 cursor-pointer">
+                                        <input 
+                                            type="checkbox"
+                                            checked={editForm.details?.isOrganization || false}
+                                            onChange={(e) => setEditForm({
+                                                ...editForm, 
+                                                details: { ...editForm.details, isOrganization: e.target.checked }
+                                            })}
+                                            className="h-4 w-4"
+                                        />
+                                        <span className="text-sm font-bold text-gray-700">Is Organization/Company?</span>
+                                    </label>
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">Short Bio</label>
+                                    <textarea 
+                                        className="w-full border p-2 rounded-sm h-20"
+                                        value={editForm.bio || ''}
+                                        onChange={(e) => setEditForm({...editForm, bio: e.target.value})}
+                                    />
+                                </div>
+                            </div>
+                            
+                            <div className="md:col-span-2">
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Full Biography</label>
+                                <textarea 
+                                    className="w-full border p-2 rounded-sm h-40 font-serif"
+                                    value={editForm.details?.tempFullBio || ''}
+                                    onChange={(e) => setEditForm({
+                                        ...editForm,
+                                        details: { ...editForm.details, tempFullBio: e.target.value }
+                                    })}
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    {activeAdminTab === 'timeline' && (
+                        <div>
+                             <div className="flex justify-between items-center mb-4">
+                                <h3 className="font-bold text-lg">Timeline Events</h3>
+                                <button onClick={addTimelineEvent} className="text-sm bg-navy text-white px-3 py-1 rounded-sm flex items-center">
+                                    <Plus className="w-3 h-3 mr-1" /> Add Event
+                                </button>
+                            </div>
+                            <div className="space-y-4">
+                                {editForm.details?.timeline?.map((event: TimelineEvent, idx: number) => (
+                                    <div key={idx} className="flex gap-2 items-start border p-3 rounded-sm bg-gray-50">
+                                        <input 
+                                            placeholder="Year" 
+                                            className="w-20 border p-1 rounded-sm"
+                                            value={event.year} 
+                                            onChange={e => updateTimelineEvent(idx, 'year', e.target.value)}
+                                        />
+                                        <input 
+                                            placeholder="Title" 
+                                            className="w-1/3 border p-1 rounded-sm font-bold"
+                                            value={event.title} 
+                                            onChange={e => updateTimelineEvent(idx, 'title', e.target.value)}
+                                        />
+                                        <textarea 
+                                            placeholder="Description" 
+                                            className="flex-1 border p-1 rounded-sm"
+                                            value={event.description} 
+                                            onChange={e => updateTimelineEvent(idx, 'description', e.target.value)}
+                                        />
+                                        <button onClick={() => removeTimelineEvent(idx)} className="text-red-500 hover:text-red-700 p-1">
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                ))}
+                                {(!editForm.details?.timeline || editForm.details.timeline.length === 0) && (
+                                    <p className="text-gray-400 italic text-center py-4">No timeline events added.</p>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {activeAdminTab === 'archive' && (
+                        <div>
+                             <div className="flex justify-between items-center mb-4">
+                                <h3 className="font-bold text-lg">Archives & Documents</h3>
+                                <button onClick={addArchiveItem} className="text-sm bg-navy text-white px-3 py-1 rounded-sm flex items-center">
+                                    <Plus className="w-3 h-3 mr-1" /> Add Document
+                                </button>
+                            </div>
+                            <div className="space-y-4">
+                                {editForm.details?.archives?.map((item: ArchiveItem, idx: number) => (
+                                    <div key={idx} className="border p-4 rounded-sm bg-gray-50 flex flex-col gap-3">
+                                        <div className="flex gap-2">
+                                            <select 
+                                                className="border p-1 rounded-sm w-24"
+                                                value={item.type}
+                                                onChange={e => updateArchiveItem(idx, 'type', e.target.value as any)}
+                                            >
+                                                <option value="PDF">PDF</option>
+                                                <option value="IMAGE">IMAGE</option>
+                                                <option value="AWARD">AWARD</option>
+                                            </select>
+                                            <input 
+                                                placeholder="Document Title" 
+                                                className="flex-1 border p-1 rounded-sm font-bold"
+                                                value={item.title} 
+                                                onChange={e => updateArchiveItem(idx, 'title', e.target.value)}
+                                            />
+                                            <input 
+                                                placeholder="Date (e.g. 1990)" 
+                                                className="w-24 border p-1 rounded-sm"
+                                                value={item.date} 
+                                                onChange={e => updateArchiveItem(idx, 'date', e.target.value)}
+                                            />
+                                             <button onClick={() => removeArchiveItem(idx)} className="text-red-500 hover:text-red-700">
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                        <div className="flex items-center gap-4 text-sm">
+                                            {item.url ? (
+                                                <a href={item.url} target="_blank" className="text-blue-600 flex items-center hover:underline">
+                                                    <LinkIcon className="w-3 h-3 mr-1" /> View Uploaded File
+                                                </a>
+                                            ) : (
+                                                <span className="text-orange-500 flex items-center"><AlertCircle className="w-3 h-3 mr-1"/> No file uploaded</span>
+                                            )}
+                                            
+                                            <label className="cursor-pointer bg-white border border-gray-300 px-2 py-1 rounded-sm hover:bg-gray-50 flex items-center">
+                                                <Upload className="w-3 h-3 mr-1" /> 
+                                                {uploadingDoc === item.id ? 'Uploading...' : 'Upload File'}
+                                                <input 
+                                                    type="file" 
+                                                    className="hidden" 
+                                                    onChange={(e) => handleArchiveUpload(e, idx)} 
+                                                />
+                                            </label>
+                                            <input 
+                                                placeholder="Or paste URL here" 
+                                                className="flex-1 border p-1 rounded-sm text-gray-500 text-xs"
+                                                value={item.url || ''} 
+                                                onChange={e => updateArchiveItem(idx, 'url', e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
+                                 {(!editForm.details?.archives || editForm.details.archives.length === 0) && (
+                                    <p className="text-gray-400 italic text-center py-4">No documents added.</p>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {activeAdminTab === 'news' && (
+                        <div>
+                             <div className="flex justify-between items-center mb-4">
+                                <h3 className="font-bold text-lg">News & Reports</h3>
+                                <button onClick={addNewsItem} className="text-sm bg-navy text-white px-3 py-1 rounded-sm flex items-center">
+                                    <Plus className="w-3 h-3 mr-1" /> Add Article
+                                </button>
+                            </div>
+                            <div className="space-y-4">
+                                {editForm.details?.news?.map((item: NewsItem, idx: number) => (
+                                    <div key={idx} className="flex flex-col gap-2 border p-3 rounded-sm bg-gray-50">
+                                        <div className="flex gap-2">
+                                            <input 
+                                                placeholder="Article Title" 
+                                                className="flex-1 border p-1 rounded-sm font-bold"
+                                                value={item.title} 
+                                                onChange={e => updateNewsItem(idx, 'title', e.target.value)}
+                                            />
+                                            <button onClick={() => removeNewsItem(idx)} className="text-red-500 hover:text-red-700">
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <input 
+                                                placeholder="Source (e.g. BBC)" 
+                                                className="w-1/3 border p-1 rounded-sm"
+                                                value={item.source} 
+                                                onChange={e => updateNewsItem(idx, 'source', e.target.value)}
+                                            />
+                                            <input 
+                                                placeholder="Date" 
+                                                className="w-1/3 border p-1 rounded-sm"
+                                                value={item.date} 
+                                                onChange={e => updateNewsItem(idx, 'date', e.target.value)}
+                                            />
+                                            <input 
+                                                placeholder="Link URL" 
+                                                className="w-1/3 border p-1 rounded-sm text-blue-600"
+                                                value={item.url || ''} 
+                                                onChange={e => updateNewsItem(idx, 'url', e.target.value)}
+                                            />
+                                        </div>
+                                        <textarea 
+                                            placeholder="Summary" 
+                                            className="w-full border p-1 rounded-sm h-16"
+                                            value={item.summary} 
+                                            onChange={e => updateNewsItem(idx, 'summary', e.target.value)}
+                                        />
+                                    </div>
+                                ))}
+                                {(!editForm.details?.news || editForm.details.news.length === 0) && (
+                                    <p className="text-gray-400 italic text-center py-4">No news items added.</p>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
                 </div>
 
-                <div className="mt-8 flex justify-end space-x-4">
+                <div className="p-6 border-t border-gray-100 flex justify-end space-x-4 sticky bottom-0 bg-white">
                   <button 
                     onClick={() => setIsEditing(false)}
                     className="px-4 py-2 text-gray-600 hover:text-gray-800"
@@ -805,6 +1093,7 @@ const App = () => {
                             key={profile.id} 
                             profile={profile} 
                             onClick={handleProfileClick} 
+                            onVerify={(e) => handleVerifyClick(e, profile)}
                             />
                         ))}
                         </div>
@@ -894,11 +1183,31 @@ const App = () => {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
                         <div className="lg:col-span-2">
                             <div className="mb-8">
-                                <span className={`text-sm font-bold tracking-widest uppercase mb-2 block
-                                    ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'text-red-700' : 'text-gold'}
-                                `}>
-                                    {selectedProfile.categoryLabel || selectedProfile.category}
-                                </span>
+                                <div className="flex flex-wrap items-center gap-3 mb-4">
+                                     <span className={`text-sm font-bold tracking-widest uppercase
+                                        ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'text-red-700' : 'text-gold'}
+                                    `}>
+                                        {selectedProfile.categoryLabel || selectedProfile.category}
+                                    </span>
+                                    
+                                    {/* NEW BUTTON */}
+                                    {selectedProfile.verified && (
+                                         <button 
+                                            onClick={() => setShowCertificate(true)}
+                                            className={`flex items-center px-3 py-1 rounded-full border text-xs font-bold uppercase tracking-wider transition-all
+                                                ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'bg-red-50 text-red-800 border-red-200 hover:bg-red-100' : 
+                                                  selectedProfile.verificationLevel === VerificationLevel.GOLDEN ? 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100' : 
+                                                  'bg-blue-50 text-navy-light border-blue-100 hover:bg-blue-100'}
+                                            `}
+                                         >
+                                            {selectedProfile.verificationLevel === VerificationLevel.HERO && <HeroBadge className="w-4 h-4 mr-2" />}
+                                            {selectedProfile.verificationLevel === VerificationLevel.GOLDEN && <GoldenBadge className="w-4 h-4 mr-2" />}
+                                            {selectedProfile.verificationLevel === VerificationLevel.STANDARD && <StandardBadge className="w-4 h-4 mr-2" />}
+                                            
+                                            {getVerificationLabel(selectedProfile.verificationLevel)}
+                                         </button>
+                                    )}
+                                </div>
                                 <h1 className="text-4xl font-serif font-bold text-navy mb-2">
                                     {selectedProfile.name}
                                 </h1>
@@ -973,11 +1282,11 @@ const App = () => {
 
                                     <div className="w-full h-px bg-gray-200 my-2"></div>
 
-                                    <div className="flex items-center">
+                                    <div className="flex items-center cursor-pointer hover:bg-gray-100 p-1 rounded transition-colors" onClick={() => setShowCertificate(true)}>
                                         <Building2 className={`h-5 w-5 mr-3 rtl:ml-3 rtl:mr-0 ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'text-red-700' : 'text-gold'}`} />
                                         <div>
                                             <span className="block text-gray-400 text-xs uppercase">{t.label_affiliation}</span>
-                                            <span className="font-medium text-gray-800">{getVerificationLabel(selectedProfile.verificationLevel)}</span>
+                                            <span className="font-medium text-gray-800 underline decoration-dotted">{getVerificationLabel(selectedProfile.verificationLevel)}</span>
                                         </div>
                                     </div>
                                     <div className="flex items-center">
@@ -1015,7 +1324,12 @@ const App = () => {
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                                 {(selectedProfile.archives && selectedProfile.archives.length > 0) ? (
                                     selectedProfile.archives.map((file) => (
-                                        <div key={file.id} className="bg-white p-4 rounded-sm border border-gray-100 flex items-start space-x-3 rtl:space-x-reverse hover:shadow-md transition-shadow">
+                                        <a 
+                                            key={file.id} 
+                                            href={file.url || '#'}
+                                            target="_blank"
+                                            className="bg-white p-4 rounded-sm border border-gray-100 flex items-start space-x-3 rtl:space-x-reverse hover:shadow-md transition-shadow cursor-pointer"
+                                        >
                                             <div className="bg-slate p-2 rounded-sm text-navy">
                                                 {file.type === 'PDF' && <FileText className="h-5 w-5" />}
                                                 {file.type === 'IMAGE' && <ImageIcon className="h-5 w-5" />}
@@ -1028,7 +1342,7 @@ const App = () => {
                                                     <span className="text-[10px] text-gray-400">{file.date}</span>
                                                 </div>
                                             </div>
-                                        </div>
+                                        </a>
                                     ))
                                 ) : (
                                     <p className="col-span-3 text-center text-gray-400 italic text-sm py-4">{t.no_docs}</p>
@@ -1041,7 +1355,7 @@ const App = () => {
                         <div className="animate-fade-in space-y-4">
                             {(selectedProfile.news && selectedProfile.news.length > 0) ? (
                                 selectedProfile.news.map((news) => (
-                                    <div key={news.id} className="bg-white p-5 rounded-sm border-l-4 rtl:border-l-0 rtl:border-r-4 border-gold shadow-sm">
+                                    <a key={news.id} href={news.url || '#'} target="_blank" className="block bg-white p-5 rounded-sm border-l-4 rtl:border-l-0 rtl:border-r-4 border-gold shadow-sm hover:shadow-md transition-shadow">
                                         <div className="flex justify-between items-start mb-2">
                                             <h4 className="font-bold text-navy text-base">{news.title}</h4>
                                             <span className="text-xs text-gray-400 whitespace-nowrap ml-4">{news.date}</span>
@@ -1050,7 +1364,7 @@ const App = () => {
                                             <Newspaper className="h-3 w-3 mr-1 rtl:ml-1 rtl:mr-0" /> {news.source}
                                         </div>
                                         <p className="text-sm text-gray-600 leading-relaxed">{news.summary}</p>
-                                    </div>
+                                    </a>
                                 ))
                             ) : (
                                 <p className="text-center text-gray-400 italic text-sm py-4">{t.no_news}</p>

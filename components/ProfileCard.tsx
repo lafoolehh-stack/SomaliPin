@@ -1,14 +1,15 @@
 import * as React from 'react';
-import { Share2, Check, Copy } from 'lucide-react';
+import { Share2, Check, Copy, ShieldCheck } from 'lucide-react';
 import { Profile, VerificationLevel } from '../types';
 import { GoldenBadge, HeroBadge, StandardBadge } from './Icons';
 
 interface ProfileCardProps {
   profile: Profile;
   onClick: (profile: Profile) => void;
+  onVerify?: (e: React.MouseEvent) => void;
 }
 
-const ProfileCard: React.FC<ProfileCardProps> = ({ profile, onClick }) => {
+const ProfileCard: React.FC<ProfileCardProps> = ({ profile, onClick, onVerify }) => {
   const [isCopied, setIsCopied] = React.useState(false);
   
   const renderBadge = () => {
@@ -129,17 +130,30 @@ const ProfileCard: React.FC<ProfileCardProps> = ({ profile, onClick }) => {
             <span className="hidden rtl:inline">عرض الملف <span className="mr-2">←</span></span>
           </div>
 
-          <button
-            onClick={handleShare}
-            className="p-2 text-gray-400 hover:text-gold hover:bg-navy/5 rounded-full transition-all relative z-10"
-            title="Share Dossier"
-          >
-            {isCopied ? (
-              <Check className="w-4 h-4 text-green-600" />
-            ) : (
-              <Share2 className="w-4 h-4" />
+          <div className="flex items-center space-x-2 relative z-10">
+            {profile.verified && onVerify && (
+              <button
+                onClick={onVerify}
+                className="flex items-center space-x-1 text-[10px] font-bold text-navy hover:text-gold border border-navy/10 hover:border-gold px-2 py-1.5 rounded-sm transition-all bg-slate hover:bg-white uppercase tracking-wider"
+                title="Verify Authenticity"
+              >
+                <ShieldCheck className="w-3 h-3" />
+                <span>Verify</span>
+              </button>
             )}
-          </button>
+
+            <button
+              onClick={handleShare}
+              className="p-2 text-gray-400 hover:text-gold hover:bg-navy/5 rounded-full transition-all"
+              title="Share Dossier"
+            >
+              {isCopied ? (
+                <Check className="w-4 h-4 text-green-600" />
+              ) : (
+                <Share2 className="w-4 h-4" />
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>

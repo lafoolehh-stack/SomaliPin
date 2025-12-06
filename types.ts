@@ -1,3 +1,4 @@
+
 export enum Category {
     POLITICS = 'Politics',
     BUSINESS = 'Business',
@@ -27,6 +28,7 @@ export enum Category {
     title: string;
     date: string;
     size?: string;
+    url?: string; // Added URL field for file links
   }
   
   export interface NewsItem {
@@ -35,6 +37,7 @@ export enum Category {
     source: string;
     date: string;
     summary: string;
+    url?: string; // Added URL field for news links
   }
   
   export interface InfluenceStats {
@@ -48,7 +51,7 @@ export enum Category {
     id: string;
     name: string;
     title: string;
-    category: Category;
+    category: string; // Changed from Category enum to string to allow manual input
     categoryLabel?: string; 
     verified: boolean;
     verificationLevel?: VerificationLevel;
