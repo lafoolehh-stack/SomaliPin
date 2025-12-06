@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useState, useEffect } from 'react';
 import { Search, MapPin, ChevronLeft, Building2, User, BookOpen, Upload, FileText, Image as ImageIcon, Award, PieChart, Newspaper, Globe, Calendar, Clock, Activity, Lock, Plus, Trash2, Edit2, Save, X } from 'lucide-react';
-import { BrandPin, VerifiedBadge, HeroBadge, GoldenBadge, StandardBadge } from './components/Icons';
+import { BrandPin, VerifiedBadge, HeroBadge, GoldenBadge, StandardBadge, QrCode } from './components/Icons';
 import ProfileCard from './components/ProfileCard';
 import Timeline from './components/Timeline';
 import VerificationCertificate from './components/VerificationCertificate';
@@ -17,7 +17,7 @@ const App = () => {
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'archive' | 'news' | 'influence'>('archive');
-  const [language, setLanguage] = useState<Language>('en');
+  const [language, setLanguage] = useState<Language>('so');
   
   // Certificate State
   const [showCertificate, setShowCertificate] = useState(false);
@@ -32,6 +32,9 @@ const App = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<Partial<DossierDB>>({});
   const [uploadingImage, setUploadingImage] = useState(false);
+
+  // Logo State
+  const [logoError, setLogoError] = useState(false);
 
   // Fetch Data from Supabase
   const fetchDossiers = async () => {
@@ -133,8 +136,11 @@ const App = () => {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     
+    // Fix: Allow local preview if Supabase is not configured (Mock Upload)
     if (!isSupabaseConfigured) {
-      alert('Supabase is not configured. Cannot upload images.');
+      const file = e.target.files[0];
+      const objectUrl = URL.createObjectURL(file);
+      setEditForm({ ...editForm, image_url: objectUrl });
       return;
     }
 
@@ -159,8 +165,13 @@ const App = () => {
   };
 
   const handleSaveDossier = async () => {
+    // Fix: Allow mock save if Supabase is not configured
     if (!isSupabaseConfigured) {
-      alert('Supabase is not configured. Changes cannot be saved.');
+      console.log('Mock Save (Supabase not configured):', editForm);
+      alert('Saved locally (Demo Mode: Supabase not connected)');
+      setIsEditing(false);
+      setEditForm({});
+      // Optionally update local state here if needed for demo fluidity
       return;
     }
 
@@ -203,8 +214,12 @@ const App = () => {
   };
 
   const handleDeleteDossier = async (id: string) => {
+    // Fix: Allow mock delete if Supabase is not configured
     if (!isSupabaseConfigured) {
-      alert('Supabase is not configured. Cannot delete.');
+      if (window.confirm('Are you sure you want to delete this dossier? (Demo Mode)')) {
+          alert('Deleted locally (Demo Mode: Supabase not connected)');
+          // For a better demo, we could filter it out of `profiles` state here
+      }
       return;
     }
 
@@ -562,11 +577,22 @@ const App = () => {
               className="flex items-center space-x-3 rtl:space-x-reverse cursor-pointer group"
               onClick={handleBack}
             >
-              <BrandPin className="h-8 w-8 text-gold group-hover:text-white transition-colors" />
-              <div className="flex flex-col">
-                <span className="text-2xl font-serif font-bold tracking-tight">SomaliPin</span>
-                <span className="text-[10px] text-gray-400 uppercase tracking-widest">{t.subtitle}</span>
-              </div>
+              {!logoError ? (
+                  <img 
+                      src="/logo.png" 
+                      alt="SomaliPin Logo" 
+                      className="h-14 w-auto object-contain"
+                      onError={() => setLogoError(true)}
+                  />
+              ) : (
+                  <div className="flex items-center space-x-3 rtl:space-x-reverse">
+                      <BrandPin className="h-8 w-8 text-gold group-hover:text-white transition-colors" />
+                      <div className="flex flex-col">
+                        <span className="text-2xl font-serif font-bold tracking-tight">SomaliPin</span>
+                        <span className="text-[10px] text-gray-400 uppercase tracking-widest">{t.subtitle}</span>
+                      </div>
+                  </div>
+              )}
             </div>
             
             <div className="flex items-center space-x-6 rtl:space-x-reverse">
@@ -692,7 +718,7 @@ const App = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {filteredProfiles.map((profile) => (
+                  {filteredProfiles.map(profile => (
                     <ProfileCard 
                       key={profile.id} 
                       profile={profile} 
@@ -703,283 +729,368 @@ const App = () => {
               )}
             </section>
 
-            {/* Services */}
+             {/* What We Do Section */}
             <section className="max-w-6xl mx-auto px-4 py-12">
-               <h2 className="text-3xl font-serif font-bold text-navy mb-8">{t.section_what_we_do}</h2>
+               <h2 className="text-3xl font-serif font-bold text-navy mb-8 text-center">{t.section_what_we_do}</h2>
                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                 <div className="bg-white p-6 rounded-sm shadow-sm border-t-4 border-gold hover:shadow-md transition-all">
-                    <div className="mb-4 text-gold"><User className="h-8 w-8" /></div>
-                    <h3 className="text-xl font-serif font-bold text-navy mb-3">{t.service_1_title}</h3>
-                    <p className="text-sm text-gray-600 leading-relaxed font-sans">{t.service_1_desc}</p>
-                 </div>
-                 <div className="bg-white p-6 rounded-sm shadow-sm border-t-4 border-gold hover:shadow-md transition-all">
-                    <div className="mb-4 text-gold"><VerifiedBadge className="h-8 w-8" /></div>
-                    <h3 className="text-xl font-serif font-bold text-navy mb-3">{t.service_2_title}</h3>
-                    <p className="text-sm text-gray-600 leading-relaxed font-sans">{t.service_2_desc}</p>
-                 </div>
-                 <div className="bg-white p-6 rounded-sm shadow-sm border-t-4 border-gold hover:shadow-md transition-all">
-                    <div className="mb-4 text-gold"><BookOpen className="h-8 w-8" /></div>
-                    <h3 className="text-xl font-serif font-bold text-navy mb-3">{t.service_3_title}</h3>
-                    <p className="text-sm text-gray-600 leading-relaxed font-sans">{t.service_3_desc}</p>
-                 </div>
-                 <div className="bg-white p-6 rounded-sm shadow-sm border-t-4 border-gold hover:shadow-md transition-all">
-                    <div className="mb-4 text-gold"><Search className="h-8 w-8" /></div>
-                    <h3 className="text-xl font-serif font-bold text-navy mb-3">{t.service_4_title}</h3>
-                    <p className="text-sm text-gray-600 leading-relaxed font-sans">{t.service_4_desc}</p>
-                 </div>
+                   <div className="bg-white p-6 rounded-sm shadow-sm border-t-4 border-gold hover:shadow-lg transition-shadow">
+                        <User className="h-8 w-8 text-gold mb-4" />
+                        <h3 className="text-xl font-serif font-bold text-navy mb-2">{t.service_1_title}</h3>
+                        <p className="text-sm text-gray-600 leading-relaxed">{t.service_1_desc}</p>
+                   </div>
+                   <div className="bg-white p-6 rounded-sm shadow-sm border-t-4 border-gold hover:shadow-lg transition-shadow">
+                        <VerifiedBadge className="h-8 w-8 text-gold mb-4" />
+                        <h3 className="text-xl font-serif font-bold text-navy mb-2">{t.service_2_title}</h3>
+                        <p className="text-sm text-gray-600 leading-relaxed">{t.service_2_desc}</p>
+                   </div>
+                   <div className="bg-white p-6 rounded-sm shadow-sm border-t-4 border-gold hover:shadow-lg transition-shadow">
+                        <BookOpen className="h-8 w-8 text-gold mb-4" />
+                        <h3 className="text-xl font-serif font-bold text-navy mb-2">{t.service_3_title}</h3>
+                        <p className="text-sm text-gray-600 leading-relaxed">{t.service_3_desc}</p>
+                   </div>
+                   <div className="bg-white p-6 rounded-sm shadow-sm border-t-4 border-gold hover:shadow-lg transition-shadow">
+                        <Search className="h-8 w-8 text-gold mb-4" />
+                        <h3 className="text-xl font-serif font-bold text-navy mb-2">{t.service_4_title}</h3>
+                        <p className="text-sm text-gray-600 leading-relaxed">{t.service_4_desc}</p>
+                   </div>
                </div>
             </section>
           </>
-        ) : (
-          /* Profile Detail View */
-          <div className="max-w-5xl mx-auto px-4 py-12 animate-fade-in">
-            <button 
-              onClick={handleBack}
-              className="group flex items-center text-navy font-medium mb-8 hover:text-gold transition-colors rtl:flex-row-reverse"
-            >
-              <ChevronLeft className="h-5 w-5 mr-1 group-hover:-translate-x-1 transition-transform rtl:rotate-180 rtl:ml-1 rtl:mr-0" />
-              {t.back_directory}
-            </button>
+        ) : view === 'profile' && selectedProfile ? (
+          <div className="bg-white min-h-screen pb-12">
+            {/* Profile Header */}
+            <div className="bg-navy pt-8 pb-16">
+              <div className="max-w-6xl mx-auto px-4">
+                <button 
+                  onClick={handleBack}
+                  className="text-gold hover:text-white flex items-center mb-6 transition-colors"
+                >
+                  <ChevronLeft className="w-5 h-5 mr-1" /> {t.back_directory}
+                </button>
+                
+                <div className="flex flex-col md:flex-row gap-8 items-start">
+                  <div className="relative">
+                     <img 
+                        src={selectedProfile.imageUrl} 
+                        alt={selectedProfile.name} 
+                        className={`w-40 h-40 md:w-56 md:h-56 object-cover rounded-sm border-4 shadow-2xl relative z-10
+                            ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'border-red-800' : 'border-gold'}
+                        `}
+                      />
+                      <div className={`absolute inset-0 bg-gradient-to-t from-black/50 to-transparent z-10 rounded-sm`}></div>
+                  </div>
+                  
+                  <div className="flex-1 space-y-3">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className={`px-3 py-1 rounded-sm text-xs font-bold tracking-widest uppercase bg-white/10 text-gold border border-gold/30`}>
+                        {selectedProfile.categoryLabel || selectedProfile.category}
+                      </span>
+                      {selectedProfile.verified && (
+                        <div 
+                          className="flex items-center space-x-1 cursor-pointer hover:bg-white/10 p-1 rounded transition-colors" 
+                          title={getVerificationLabel(selectedProfile.verificationLevel)}
+                          onClick={() => setShowCertificate(true)}
+                        >
+                          {getVerificationIcon(selectedProfile.verificationLevel)}
+                          <span className={`text-sm font-bold ${
+                             selectedProfile.verificationLevel === VerificationLevel.HERO ? 'text-red-400' : 
+                             selectedProfile.verificationLevel === VerificationLevel.STANDARD ? 'text-blue-300' : 'text-gold'
+                          }`}>
+                            {getVerificationLabel(selectedProfile.verificationLevel)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <h1 className="text-4xl md:text-5xl font-serif font-bold text-white leading-tight">
+                      {selectedProfile.name}
+                    </h1>
+                    <p className="text-xl text-gray-300 font-light">{selectedProfile.title}</p>
+                    
+                    <div className="flex items-center text-gray-400 text-sm mt-2">
+                      <MapPin className="w-4 h-4 mr-2 text-gold" />
+                      {selectedProfile.location}
+                    </div>
+                  </div>
 
-            {selectedProfile && (
-              <div className="bg-white shadow-xl rounded-sm overflow-hidden mb-12">
-                <div className={`h-48 relative ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'bg-red-900' : 'bg-navy'}`}>
-                    <div className="absolute inset-0 bg-black/20 pattern-grid-lg"></div>
+                  <div className="flex space-x-4 self-start md:self-center">
+                      <button className="bg-gold text-navy px-6 py-3 rounded-sm font-bold shadow-lg hover:bg-white transition-colors flex items-center">
+                          <Building2 className="w-5 h-5 mr-2" />
+                          {t.contact_office}
+                      </button>
+                  </div>
                 </div>
+              </div>
+            </div>
 
-                <div className="px-8 pb-12">
-                    <div className="relative flex justify-between items-end -mt-20 mb-8">
-                        <div className="relative">
-                            <img 
-                                src={selectedProfile.imageUrl} 
-                                alt={selectedProfile.name}
-                                className={`w-40 h-40 object-cover rounded-sm border-4 border-white shadow-md ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'grayscale-0' : ''}`}
-                            />
-                            {selectedProfile.verified && (
-                                <div 
-                                  className="absolute -bottom-3 -right-3 rtl:-left-3 rtl:right-auto bg-white p-1 rounded-full shadow-sm cursor-pointer hover:scale-110 transition-transform"
-                                  onClick={() => setShowCertificate(true)}
-                                  title="Click to view Official Certificate"
-                                >
-                                    {getVerificationIcon(selectedProfile.verificationLevel)}
-                                </div>
-                            )}
+            {/* Profile Content */}
+            <div className="max-w-6xl mx-auto px-4 -mt-8 relative z-20 flex flex-col md:flex-row gap-8">
+              
+              {/* Sidebar */}
+              <div className="md:w-1/3 flex flex-col gap-6">
+                <div className="bg-white p-6 rounded-sm shadow-lg border-t-4 border-navy">
+                  <h3 className="text-lg font-serif font-bold text-navy mb-6 pb-2 border-b border-gray-100">
+                    {t.key_info}
+                  </h3>
+                  
+                  <div className="space-y-6">
+                    <div className="flex items-start">
+                        <Building2 className="w-5 h-5 text-red-700 mr-4 mt-1" />
+                        <div>
+                            <span className="block text-xs font-bold text-gray-400 uppercase tracking-widest">{t.label_affiliation}</span>
+                            <p className="text-navy font-medium text-lg">{selectedProfile.categoryLabel || selectedProfile.category}</p>
                         </div>
                     </div>
+                    <div className="flex items-start">
+                        <User className="w-5 h-5 text-red-700 mr-4 mt-1" />
+                         <div>
+                            <span className="block text-xs font-bold text-gray-400 uppercase tracking-widest">{t.label_role}</span>
+                            <p className="text-navy font-medium">{selectedProfile.title}</p>
+                        </div>
+                    </div>
+                    
+                    {/* Lifecycle & Status */}
+                    <div className="flex items-start">
+                       <Activity className={`w-5 h-5 mr-4 mt-1 ${selectedProfile.status === 'ACTIVE' ? 'text-green-600' : 'text-gray-500'}`} />
+                       <div>
+                           <span className="block text-xs font-bold text-gray-400 uppercase tracking-widest">{t.lbl_status}</span>
+                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1
+                                ${selectedProfile.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 
+                                  selectedProfile.status === 'DECEASED' ? 'bg-gray-100 text-gray-800' :
+                                  selectedProfile.status === 'CLOSED' ? 'bg-red-100 text-red-800' : 'bg-orange-100 text-orange-800'
+                                }`}>
+                                {getStatusLabel(selectedProfile)}
+                           </span>
+                       </div>
+                    </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-                        <div className="lg:col-span-2">
-                            <div className="mb-8">
-                                <span className={`text-sm font-bold tracking-widest uppercase mb-2 block
-                                    ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'text-red-700' : 'text-gold'}
-                                `}>
-                                    {selectedProfile.categoryLabel || selectedProfile.category}
-                                </span>
-                                <h1 className="text-4xl font-serif font-bold text-navy mb-2">
-                                    {selectedProfile.name}
-                                </h1>
-                                <p className="text-xl text-gray-500 font-light">
-                                    {selectedProfile.title}
-                                </p>
-                                {selectedProfile.location && (
-                                    <div className="flex items-center text-gray-400 text-sm mt-3">
-                                        <MapPin className="h-4 w-4 mr-1 rtl:ml-1 rtl:mr-0" />
-                                        {selectedProfile.location}
+                    <div className="flex items-start">
+                        <Calendar className="w-5 h-5 text-red-700 mr-4 mt-1" />
+                        <div className="w-full">
+                            <div className="flex justify-between mb-2">
+                                <div>
+                                    <span className="block text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                        {selectedProfile.isOrganization ? t.lbl_est : t.lbl_born}
+                                    </span>
+                                    <p className="text-navy font-medium">{selectedProfile.dateStart}</p>
+                                </div>
+                                {selectedProfile.dateEnd && (
+                                    <div className="text-right">
+                                        <span className="block text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                             {selectedProfile.isOrganization ? t.lbl_closed : t.lbl_died}
+                                        </span>
+                                        <p className="text-navy font-medium">{selectedProfile.dateEnd}</p>
                                     </div>
                                 )}
                             </div>
-
-                            <div className="prose prose-slate max-w-none rtl:text-right">
-                                <h3 className="text-navy font-serif text-xl border-b border-gray-200 pb-2 mb-4">{t.about}</h3>
-                                <p className="text-gray-700 leading-relaxed text-lg">
-                                    {selectedProfile.fullBio}
-                                </p>
-                            </div>
-
-                            <div className="mt-12">
-                                <h3 className="text-navy font-serif text-xl border-b border-gray-200 pb-2 mb-4">{t.timeline}</h3>
-                                <Timeline events={selectedProfile.timeline} />
-                            </div>
                         </div>
+                    </div>
 
-                        {/* Sidebar Stats */}
-                        <div className="space-y-6">
-                            <div className="bg-slate p-6 rounded-sm border border-gray-200">
-                                <h4 className="font-serif font-bold text-navy mb-4">{t.key_info}</h4>
-                                <div className="space-y-4 text-sm">
-                                    
-                                    {/* Lifecycle Dates */}
-                                    <div className="flex items-center">
-                                        <Calendar className={`h-5 w-5 mr-3 rtl:ml-3 rtl:mr-0 ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'text-red-700' : 'text-gold'}`} />
-                                        <div>
-                                            <span className="block text-gray-400 text-xs uppercase">{selectedProfile.isOrganization ? t.lbl_est : t.lbl_born}</span>
-                                            <span className="font-medium text-gray-800">{selectedProfile.dateStart}</span>
-                                        </div>
-                                    </div>
-
-                                    {selectedProfile.dateEnd && (
-                                        <div className="flex items-center">
-                                            <Clock className={`h-5 w-5 mr-3 rtl:ml-3 rtl:mr-0 ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'text-red-700' : 'text-gold'}`} />
-                                            <div>
-                                                <span className="block text-gray-400 text-xs uppercase">{selectedProfile.isOrganization ? t.lbl_closed : t.lbl_died}</span>
-                                                <span className="font-medium text-gray-800">{selectedProfile.dateEnd}</span>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Status */}
-                                    <div className="flex items-center">
-                                        <Activity className={`h-5 w-5 mr-3 rtl:ml-3 rtl:mr-0 ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'text-red-700' : 'text-gold'}`} />
-                                        <div>
-                                            <span className="block text-gray-400 text-xs uppercase">{t.lbl_status}</span>
-                                            <span className={`font-medium px-2 py-0.5 rounded text-xs inline-block mt-0.5 ${
-                                                selectedProfile.status === 'ACTIVE' ? 'bg-green-100 text-green-800' :
-                                                selectedProfile.status === 'DECEASED' ? 'bg-gray-200 text-gray-800' :
-                                                selectedProfile.status === 'RETIRED' ? 'bg-orange-100 text-orange-800' :
-                                                'bg-red-100 text-red-800'
-                                            }`}>
-                                                {getStatusLabel(selectedProfile)}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <div className="w-full h-px bg-gray-200 my-2"></div>
-
-                                    <div className="flex items-center">
-                                        <Building2 className={`h-5 w-5 mr-3 rtl:ml-3 rtl:mr-0 ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'text-red-700' : 'text-gold'}`} />
-                                        <div>
-                                            <span className="block text-gray-400 text-xs uppercase">{t.label_affiliation}</span>
-                                            <span className="font-medium text-gray-800">{getVerificationLabel(selectedProfile.verificationLevel)}</span>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center">
-                                        <User className={`h-5 w-5 mr-3 rtl:ml-3 rtl:mr-0 ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'text-red-700' : 'text-gold'}`} />
-                                        <div>
-                                            <span className="block text-gray-400 text-xs uppercase">{t.label_role}</span>
-                                            <span className="font-medium text-gray-800">{selectedProfile.categoryLabel || selectedProfile.category}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                    <div className="flex items-start">
+                        <BookOpen className="w-5 h-5 text-red-700 mr-4 mt-1" />
+                         <div>
+                            <span className="block text-xs font-bold text-gray-400 uppercase tracking-widest">{t.label_id}</span>
+                            <p className="text-navy font-mono">SOM-{selectedProfile.id.padStart(4, '0')}</p>
                         </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Verification/QR Code - Pushed to Bottom */}
+                <div className="mt-auto bg-white p-6 rounded-sm shadow-lg border-t-4 border-navy text-center cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => setShowCertificate(true)}>
+                    <h4 className="font-serif font-bold text-navy mb-1">{t.verify_title}</h4>
+                    <p className="text-xs text-gray-500 mb-3">{t.verify_desc}</p>
+                    <QrCode className="w-24 h-24 mx-auto text-navy" />
+                </div>
+              </div>
+
+              {/* Main Info */}
+              <div className="md:w-2/3 space-y-8">
+                
+                {/* About Section */}
+                <div className="bg-white p-8 rounded-sm shadow-sm">
+                    <h2 className="text-2xl font-serif font-bold text-navy mb-4 border-l-4 border-gold pl-4">
+                        {t.about}
+                    </h2>
+                    <div className="prose prose-lg text-gray-600">
+                        <p className="leading-relaxed">{selectedProfile.fullBio}</p>
                     </div>
                 </div>
 
-                {/* Tabbed Section (Archive, News, Influence) */}
-                <div className="bg-slate/30 border-t border-gray-200 px-8 py-8">
-                    <div className="flex space-x-8 rtl:space-x-reverse border-b border-gray-300 mb-8 overflow-x-auto">
-                        {['archive', 'news', 'influence'].map((tab) => (
-                           <button
-                                key={tab}
-                                onClick={() => setActiveTab(tab as any)}
-                                className={`pb-4 text-sm font-bold tracking-widest transition-colors relative whitespace-nowrap ${
-                                    activeTab === tab ? 'text-navy' : 'text-gray-400 hover:text-gray-600'
-                                }`}
-                            >
-                                {tab === 'archive' ? t.tab_archive : tab === 'news' ? t.tab_news : t.tab_influence}
-                                {activeTab === tab && <span className="absolute bottom-0 left-0 w-full h-1 bg-gold rounded-t-sm"></span>}
-                            </button> 
-                        ))}
+                {/* Tabs */}
+                <div className="bg-white rounded-sm shadow-sm border-b border-gray-200">
+                    <div className="flex">
+                        <button 
+                            onClick={() => setActiveTab('archive')}
+                            className={`flex-1 py-4 text-sm font-bold tracking-widest uppercase border-b-2 transition-colors
+                                ${activeTab === 'archive' ? 'border-gold text-navy' : 'border-transparent text-gray-400 hover:text-navy'}
+                            `}
+                        >
+                            {t.tab_archive}
+                        </button>
+                         <button 
+                            onClick={() => setActiveTab('news')}
+                            className={`flex-1 py-4 text-sm font-bold tracking-widest uppercase border-b-2 transition-colors
+                                ${activeTab === 'news' ? 'border-gold text-navy' : 'border-transparent text-gray-400 hover:text-navy'}
+                            `}
+                        >
+                            {t.tab_news}
+                        </button>
+                         <button 
+                            onClick={() => setActiveTab('influence')}
+                            className={`flex-1 py-4 text-sm font-bold tracking-widest uppercase border-b-2 transition-colors
+                                ${activeTab === 'influence' ? 'border-gold text-navy' : 'border-transparent text-gray-400 hover:text-navy'}
+                            `}
+                        >
+                            {t.tab_influence}
+                        </button>
                     </div>
+                </div>
 
+                {/* Tab Content */}
+                <div className="bg-white p-8 rounded-sm shadow-sm min-h-[500px]">
                     {activeTab === 'archive' && (
                         <div className="animate-fade-in">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                                {(selectedProfile.archives && selectedProfile.archives.length > 0) ? (
-                                    selectedProfile.archives.map((file) => (
-                                        <div key={file.id} className="bg-white p-4 rounded-sm border border-gray-100 flex items-start space-x-3 rtl:space-x-reverse hover:shadow-md transition-shadow">
-                                            <div className="bg-slate p-2 rounded-sm text-navy">
-                                                {file.type === 'PDF' && <FileText className="h-5 w-5" />}
-                                                {file.type === 'IMAGE' && <ImageIcon className="h-5 w-5" />}
-                                                {file.type === 'AWARD' && <Award className="h-5 w-5 text-gold" />}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-bold text-gray-800 truncate">{file.title}</p>
-                                                <div className="flex justify-between items-center mt-1">
-                                                    <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 rounded">{file.type}</span>
-                                                    <span className="text-[10px] text-gray-400">{file.date}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <p className="col-span-3 text-center text-gray-400 italic text-sm py-4">{t.no_docs}</p>
-                                )}
+                            <h2 className="text-2xl font-serif font-bold text-navy mb-8 border-l-4 border-gold pl-4">
+                                {t.timeline}
+                            </h2>
+                            <Timeline events={selectedProfile.timeline} />
+
+                            <h3 className="text-xl font-serif font-bold text-navy mb-6 mt-12 flex items-center">
+                                <FileText className="w-5 h-5 mr-2 text-gold" />
+                                {t.upload_doc}
+                            </h3>
+
+                            {selectedProfile.archives && selectedProfile.archives.length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {selectedProfile.archives.map((doc) => (
+                                <div key={doc.id} className="flex items-center p-4 border border-gray-200 rounded-sm hover:border-gold transition-colors cursor-pointer group">
+                                    {doc.type === 'PDF' ? <FileText className="w-8 h-8 text-red-500 mr-4" /> :
+                                    doc.type === 'IMAGE' ? <ImageIcon className="w-8 h-8 text-blue-500 mr-4" /> :
+                                    <Award className="w-8 h-8 text-gold mr-4" />}
+                                    <div>
+                                    <h4 className="font-bold text-navy text-sm group-hover:text-gold transition-colors">{doc.title}</h4>
+                                    <p className="text-xs text-gray-400">{doc.date} • {doc.size}</p>
+                                    </div>
+                                </div>
+                                ))}
                             </div>
+                            ) : (
+                            <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-sm">
+                                <p className="text-gray-400 text-sm">{t.no_docs}</p>
+                            </div>
+                            )}
                         </div>
                     )}
 
                     {activeTab === 'news' && (
-                        <div className="animate-fade-in space-y-4">
-                            {(selectedProfile.news && selectedProfile.news.length > 0) ? (
-                                selectedProfile.news.map((news) => (
-                                    <div key={news.id} className="bg-white p-5 rounded-sm border-l-4 rtl:border-l-0 rtl:border-r-4 border-gold shadow-sm">
-                                        <div className="flex justify-between items-start mb-2">
-                                            <h4 className="font-bold text-navy text-base">{news.title}</h4>
-                                            <span className="text-xs text-gray-400 whitespace-nowrap ml-4">{news.date}</span>
-                                        </div>
-                                        <div className="flex items-center text-xs text-gold font-bold uppercase tracking-wider mb-3">
-                                            <Newspaper className="h-3 w-3 mr-1 rtl:ml-1 rtl:mr-0" /> {news.source}
-                                        </div>
-                                        <p className="text-sm text-gray-600 leading-relaxed">{news.summary}</p>
+                        <div className="animate-fade-in">
+                        <h2 className="text-2xl font-serif font-bold text-navy mb-8 border-l-4 border-gold pl-4">
+                            {t.related_reports}
+                        </h2>
+                        {selectedProfile.news && selectedProfile.news.length > 0 ? (
+                            <div className="space-y-6">
+                                {selectedProfile.news.map((item) => (
+                                <div key={item.id} className="border-b border-gray-100 pb-6 last:border-0">
+                                    <div className="flex justify-between items-start mb-2">
+                                    <h3 className="text-lg font-bold text-navy hover:text-gold cursor-pointer">{item.title}</h3>
+                                    <span className="text-xs text-gray-400 whitespace-nowrap ml-4">{item.date}</span>
                                     </div>
-                                ))
-                            ) : (
-                                <p className="text-center text-gray-400 italic text-sm py-4">{t.no_news}</p>
-                            )}
+                                    <p className="text-sm text-gold font-medium mb-2 uppercase tracking-wide">{item.source}</p>
+                                    <p className="text-gray-600 leading-relaxed">{item.summary}</p>
+                                </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-12 bg-gray-50 rounded-sm">
+                                <Newspaper className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                                <p className="text-gray-500">{t.no_news}</p>
+                            </div>
+                        )}
                         </div>
                     )}
-                    
-                    {activeTab === 'influence' && (
-                         <div className="animate-fade-in max-w-2xl mx-auto bg-white p-8 rounded-sm shadow-sm border border-gray-100">
-                             {/* ... existing influence chart code ... */}
-                             {selectedProfile.influence ? (
-                                <>
-                                    <div className="flex items-center justify-between mb-2"><span className="text-sm font-bold text-navy">{t.sentiment_support}</span><span>{selectedProfile.influence.support}%</span></div>
-                                    <div className="w-full bg-gray-100 rounded-full h-3 mb-6"><div className="bg-navy h-3 rounded-full" style={{ width: `${selectedProfile.influence.support}%` }}></div></div>
-                                    
-                                    <div className="flex items-center justify-between mb-2"><span className="text-sm font-bold text-gold-dark">{t.sentiment_neutral}</span><span>{selectedProfile.influence.neutral}%</span></div>
-                                    <div className="w-full bg-gray-100 rounded-full h-3 mb-6"><div className="bg-gold h-3 rounded-full" style={{ width: `${selectedProfile.influence.neutral}%` }}></div></div>
 
-                                    <div className="flex items-center justify-between mb-2"><span className="text-sm font-bold text-red-900">{t.sentiment_oppose}</span><span>{selectedProfile.influence.opposition}%</span></div>
-                                    <div className="w-full bg-gray-100 rounded-full h-3 mb-2"><div className="bg-red-900 h-3 rounded-full" style={{ width: `${selectedProfile.influence.opposition}%` }}></div></div>
-                                </>
-                             ) : <p className="text-center text-gray-400">No data available.</p>}
-                         </div>
+                    {activeTab === 'influence' && (
+                        <div className="animate-fade-in">
+                            <h2 className="text-2xl font-serif font-bold text-navy mb-8 border-l-4 border-gold pl-4">
+                            {t.sentiment_title}
+                            </h2>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                                <div className="bg-green-50 p-6 rounded-sm text-center border border-green-100">
+                                    <span className="block text-3xl font-bold text-green-700 mb-2">{selectedProfile.influence?.support}%</span>
+                                    <span className="text-sm text-green-800 font-medium uppercase tracking-widest">{t.sentiment_support}</span>
+                                </div>
+                                <div className="bg-gray-50 p-6 rounded-sm text-center border border-gray-200">
+                                    <span className="block text-3xl font-bold text-gray-600 mb-2">{selectedProfile.influence?.neutral}%</span>
+                                    <span className="text-sm text-gray-500 font-medium uppercase tracking-widest">{t.sentiment_neutral}</span>
+                                </div>
+                                <div className="bg-red-50 p-6 rounded-sm text-center border border-red-100">
+                                    <span className="block text-3xl font-bold text-red-700 mb-2">{selectedProfile.influence?.opposition}%</span>
+                                    <span className="text-sm text-red-800 font-medium uppercase tracking-widest">{t.sentiment_oppose}</span>
+                                </div>
+                            </div>
+                            <p className="text-gray-600 italic border-t border-gray-100 pt-6">
+                                "{t.sentiment_desc}"
+                            </p>
+                        </div>
                     )}
                 </div>
               </div>
-            )}
+            </div>
           </div>
-        )}
+        ) : null}
       </main>
 
       {/* Footer */}
-      <footer className="bg-navy text-white pt-16 pb-8 border-t border-gold relative">
+      <footer className="bg-navy text-white pt-16 pb-8 border-t-4 border-gold">
         <div className="max-w-6xl mx-auto px-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
-                <div className="space-y-4">
-                    <div className="flex items-center space-x-2 rtl:space-x-reverse">
-                         <BrandPin className="h-6 w-6 text-gold" />
-                         <span className="text-xl font-serif font-bold">SomaliPin</span>
-                    </div>
-                    <p className="text-gray-400 text-sm leading-relaxed">{t.footer_desc}</p>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+            <div className="col-span-1 md:col-span-2">
+              <div className="flex items-center space-x-3 rtl:space-x-reverse mb-6">
+                <BrandPin className="h-10 w-10 text-gold" />
+                <div className="flex flex-col">
+                  <span className="text-2xl font-serif font-bold tracking-tight">SomaliPin</span>
+                  <span className="text-xs text-gray-400 uppercase tracking-widest">{t.subtitle}</span>
                 </div>
-                {/* ... other footer columns ... */}
-                <div>
-                     {/* Secret Admin Entry */}
-                     <h5 
-                        className="font-serif font-bold mb-4 text-gold cursor-pointer hover:text-white"
-                        onClick={() => setView('admin')}
-                    >
-                        {t.footer_platform}
-                     </h5>
-                     {/* ... links ... */}
-                </div>
+              </div>
+              <p className="text-gray-400 leading-relaxed max-w-sm">
+                {t.footer_desc}
+              </p>
             </div>
-            <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center text-xs text-gray-500">
-                <p>&copy; {new Date().getFullYear()} {t.rights}</p>
+            
+            <div>
+              <h4 className="font-bold text-gold uppercase tracking-widest mb-6 text-sm">{t.footer_platform}</h4>
+              <ul className="space-y-3 text-sm text-gray-400">
+                <li className="hover:text-white cursor-pointer transition-colors">{t.footer_directory}</li>
+                <li className="hover:text-white cursor-pointer transition-colors">{t.footer_verify}</li>
+                <li className="hover:text-white cursor-pointer transition-colors">{t.footer_membership}</li>
+                <li 
+                   className="hover:text-white cursor-pointer transition-colors"
+                   onClick={() => setView('admin')}
+                >
+                   Admin Login
+                </li>
+              </ul>
             </div>
+
+            <div>
+              <h4 className="font-bold text-gold uppercase tracking-widest mb-6 text-sm">{t.footer_legal}</h4>
+              <ul className="space-y-3 text-sm text-gray-400">
+                <li className="hover:text-white cursor-pointer transition-colors">{t.footer_privacy}</li>
+                <li className="hover:text-white cursor-pointer transition-colors">{t.footer_terms}</li>
+                <li className="hover:text-white cursor-pointer transition-colors">{t.footer_act}</li>
+                <li className="hover:text-white cursor-pointer transition-colors">{t.footer_contact}</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center text-xs text-gray-500">
+            <p>&copy; {new Date().getFullYear()} {t.rights}</p>
+            <div className="flex items-center mt-4 md:mt-0 space-x-2 rtl:space-x-reverse">
+              <span>{t.design_integrity}</span>
+              <Award className="w-4 h-4 text-gold" />
+            </div>
+          </div>
         </div>
       </footer>
     </div>
