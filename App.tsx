@@ -52,51 +52,64 @@ const App = () => {
 
   // Fetch Data from Supabase
   const fetchDossiers = async () => {
-    setIsLoading(true);
+    try {
+      setIsLoading(true);
 
-    if (!isSupabaseConfigured) {
-      console.log('Supabase is not configured properly.');
+      if (!isSupabaseConfigured) {
+        console.warn('Supabase is not configured properly.');
+        setProfiles([]);
+        setIsLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase.from('dossiers').select('*');
+      
+      if (error) {
+        console.error('Supabase Error fetching dossiers:', error);
+        setProfiles([]); 
+      } else if (data) {
+        // Safe mapping with defensive checks
+        const mappedProfiles: Profile[] = data.map((d: DossierDB) => {
+          // Ensure details is an object, even if null in DB
+          const details = d.details || {};
+          
+          const localizedFullBio = details.fullBio?.[language] || details.fullBio?.en || d.bio || '';
+          const localizedTimeline = details.timeline?.[language] || details.timeline?.en || [];
+          
+          // Helper to safely cast category or fallback
+          const rawCategory = d.category || Category.POLITICS;
+
+          return {
+            id: d.id || 'unknown',
+            name: d.full_name || 'Unnamed Profile',
+            title: d.role || '',
+            category: rawCategory as Category,
+            categoryLabel: UI_TEXT[language][getCategoryKey(rawCategory as Category)] || rawCategory,
+            verified: d.status === 'Verified',
+            verificationLevel: (d.verification_level as VerificationLevel) || VerificationLevel.STANDARD,
+            imageUrl: d.image_url || 'https://via.placeholder.com/150',
+            shortBio: d.bio || '',
+            fullBio: localizedFullBio,
+            timeline: localizedTimeline,
+            location: details.location || '',
+            archives: details.archives || [],
+            news: details.news || [],
+            influence: { support: d.reputation_score || 0, neutral: 100 - (d.reputation_score || 0), opposition: 0 },
+            isOrganization: details.isOrganization || false,
+            status: details.status || 'ACTIVE',
+            dateStart: details.dateStart || 'Unknown',
+            dateEnd: details.dateEnd
+          };
+        });
+        setProfiles(mappedProfiles);
+      }
+    } catch (err) {
+      console.error('Unexpected crash in fetchDossiers:', err);
+      // Fallback to empty state instead of crashing app
+      setProfiles([]);
+    } finally {
       setIsLoading(false);
-      return;
     }
-
-    const { data, error } = await supabase.from('dossiers').select('*');
-    
-    if (error) {
-      console.error('Error fetching dossiers:', error.message);
-      setProfiles([]); // Strict: if error, show nothing or empty state
-    } else if (data) {
-      // Map DB rows to Frontend Profile Interface
-      const mappedProfiles: Profile[] = data.map((d: DossierDB) => {
-        // Handle localized fullBio if present in details, else fallback to bio or empty string
-        const localizedFullBio = d.details?.fullBio?.[language] || d.details?.fullBio?.en || d.bio;
-        const localizedTimeline = d.details?.timeline?.[language] || d.details?.timeline?.en || [];
-
-        return {
-          id: d.id,
-          name: d.full_name,
-          title: d.role,
-          category: d.category as Category,
-          categoryLabel: UI_TEXT[language][getCategoryKey(d.category as Category)] || d.category,
-          verified: d.status === 'Verified',
-          verificationLevel: d.verification_level as VerificationLevel,
-          imageUrl: d.image_url,
-          shortBio: d.bio,
-          fullBio: localizedFullBio,
-          timeline: localizedTimeline,
-          location: d.details?.location,
-          archives: d.details?.archives || [],
-          news: d.details?.news || [],
-          influence: { support: d.reputation_score, neutral: 100 - d.reputation_score, opposition: 0 },
-          isOrganization: d.details?.isOrganization || false,
-          status: d.details?.status || 'ACTIVE',
-          dateStart: d.details?.dateStart || 'Unknown',
-          dateEnd: d.details?.dateEnd
-        };
-      });
-      setProfiles(mappedProfiles);
-    }
-    setIsLoading(false);
   };
 
   useEffect(() => {
@@ -147,83 +160,95 @@ const App = () => {
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-    
-    setUploadingImage(true);
-    const file = e.target.files[0];
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-    const filePath = `${fileName}`;
+    try {
+      if (!e.target.files || e.target.files.length === 0) return;
+      
+      setUploadingImage(true);
+      const file = e.target.files[0];
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `${fileName}`;
 
-    // Upload to 'dossier-images' bucket
-    const { error: uploadError } = await supabase.storage
-      .from('dossier-images')
-      .upload(filePath, file);
+      // Upload to 'dossier-images' bucket
+      const { error: uploadError } = await supabase.storage
+        .from('dossier-images')
+        .upload(filePath, file);
 
-    if (uploadError) {
-      alert('Error uploading image: ' + uploadError.message);
-      console.error(uploadError);
-    } else {
-      // Get Public URL
-      const { data } = supabase.storage.from('dossier-images').getPublicUrl(filePath);
-      setEditForm({ ...editForm, image_url: data.publicUrl });
+      if (uploadError) {
+        alert('Error uploading image: ' + uploadError.message);
+        console.error(uploadError);
+      } else {
+        // Get Public URL
+        const { data } = supabase.storage.from('dossier-images').getPublicUrl(filePath);
+        setEditForm({ ...editForm, image_url: data.publicUrl });
+      }
+    } catch (err) {
+      console.error('Image upload crash:', err);
+      alert('Failed to upload image due to an unexpected error.');
+    } finally {
+      setUploadingImage(false);
     }
-    setUploadingImage(false);
   };
 
   const handleSaveDossier = async () => {
-    if (!editForm.full_name || !editForm.category) {
-      alert('Name and Category are required');
-      return;
-    }
-
-    // Construct the payload. We ensure 'details' has the structure our app expects.
-    // In a full app, we would have UI for multiple languages. Here we default to English structure for the Full Bio.
-    const currentFullBio = editForm.details?.fullBio || {};
-    // If user edited the "Full Bio" text area, assume it's for the current language or default 'en'
-    if (editForm.details?.tempFullBio) {
-        currentFullBio['en'] = editForm.details.tempFullBio;
-        // Also copy to other langs for fallback in this demo
-        currentFullBio['so'] = editForm.details.tempFullBio;
-        currentFullBio['ar'] = editForm.details.tempFullBio;
-    }
-
-    const dossierData = {
-      full_name: editForm.full_name,
-      role: editForm.role,
-      bio: editForm.bio, // Short bio
-      status: editForm.status || 'Unverified',
-      reputation_score: editForm.reputation_score || 0,
-      image_url: editForm.image_url,
-      category: editForm.category,
-      verification_level: editForm.verification_level || 'Standard',
-      details: {
-        ...editForm.details,
-        fullBio: currentFullBio
+    try {
+      if (!editForm.full_name || !editForm.category) {
+        alert('Name and Category are required');
+        return;
       }
-    };
 
-    // Clean up temp field before saving
-    delete dossierData.details.tempFullBio;
+      // Construct the payload. We ensure 'details' has the structure our app expects.
+      const currentFullBio = editForm.details?.fullBio || {};
+      
+      if (editForm.details?.tempFullBio) {
+          currentFullBio['en'] = editForm.details.tempFullBio;
+          // Also copy to other langs for fallback in this demo
+          currentFullBio['so'] = editForm.details.tempFullBio;
+          currentFullBio['ar'] = editForm.details.tempFullBio;
+      }
 
-    let error;
-    if (editForm.id) {
-      // Update
-      const res = await supabase.from('dossiers').update(dossierData).eq('id', editForm.id);
-      error = res.error;
-    } else {
-      // Insert
-      const res = await supabase.from('dossiers').insert([dossierData]);
-      error = res.error;
-    }
+      const dossierData = {
+        full_name: editForm.full_name,
+        role: editForm.role,
+        bio: editForm.bio, // Short bio
+        status: editForm.status || 'Unverified',
+        reputation_score: editForm.reputation_score || 0,
+        image_url: editForm.image_url,
+        category: editForm.category,
+        verification_level: editForm.verification_level || 'Standard',
+        details: {
+          ...editForm.details,
+          fullBio: currentFullBio
+        }
+      };
 
-    if (error) {
-      console.error('Error saving:', error);
-      alert('Failed to save dossier: ' + error.message);
-    } else {
-      await fetchDossiers();
-      setIsEditing(false);
-      setEditForm({});
+      // Clean up temp field before saving
+      if (dossierData.details.tempFullBio) {
+        delete dossierData.details.tempFullBio;
+      }
+
+      let error;
+      if (editForm.id) {
+        // Update
+        const res = await supabase.from('dossiers').update(dossierData).eq('id', editForm.id);
+        error = res.error;
+      } else {
+        // Insert
+        const res = await supabase.from('dossiers').insert([dossierData]);
+        error = res.error;
+      }
+
+      if (error) {
+        console.error('Error saving:', error);
+        alert('Failed to save dossier: ' + error.message);
+      } else {
+        await fetchDossiers();
+        setIsEditing(false);
+        setEditForm({});
+      }
+    } catch (err) {
+      console.error('Save crash:', err);
+      alert('An unexpected error occurred while saving.');
     }
   };
 
@@ -255,6 +280,7 @@ const App = () => {
           isOrganization: profile.isOrganization,
           status: profile.status,
           dateStart: profile.dateStart,
+          dateEnd: profile.dateEnd,
           location: profile.location,
           tempFullBio: profile.fullBio // Load current full bio into temp field
         }
