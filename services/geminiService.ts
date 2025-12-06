@@ -1,10 +1,24 @@
 import { GoogleGenAI } from "@google/genai";
 import { Language } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Removed top-level initialization to prevent crash on load if API Key is missing
+// const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const askArchive = async (query: string, lang: Language): Promise<string> => {
   try {
+    // In Vite/Client-side, strictly we should use import.meta.env, but protecting process.env usage here
+    // If you have a specific VITE_API_KEY, replace process.env.API_KEY with import.meta.env.VITE_API_KEY
+    const apiKey = process.env.API_KEY;
+
+    // Safety check: If no API key, return a friendly message instead of crashing
+    if (!apiKey) {
+      console.warn("Gemini API Key is missing. AI Search is disabled.");
+      return "Archive intelligence is currently unavailable (Configuration Pending).";
+    }
+
+    // Initialize the client only when needed
+    const ai = new GoogleGenAI({ apiKey });
+
     const languageNames = {
       en: "English",
       so: "Somali",
