@@ -1,7 +1,6 @@
-
 import * as React from 'react';
 import { useState, useEffect } from 'react';
-import { Search, MapPin, ChevronLeft, Building2, User, BookOpen, Upload, FileText, Image as ImageIcon, Award, PieChart, Newspaper, Globe, Calendar, Clock, Activity, Lock, Plus, Trash2, Edit2, Save, X, Database, Link as LinkIcon, AlertCircle } from 'lucide-react';
+import { Search, MapPin, ChevronLeft, Building2, User, BookOpen, Upload, FileText, Image as ImageIcon, Award, PieChart, Newspaper, Globe, Calendar, Clock, Activity, Lock, Plus, Trash2, Edit2, Save, X, Database, Link as LinkIcon, AlertCircle, Sun, Moon } from 'lucide-react';
 import { BrandPin, VerifiedBadge, HeroBadge, GoldenBadge, StandardBadge } from './components/Icons';
 import ProfileCard from './components/ProfileCard';
 import Timeline from './components/Timeline';
@@ -19,6 +18,7 @@ const App = () => {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'archive' | 'news' | 'influence'>('archive');
   const [language, setLanguage] = useState<Language>('en');
+  const [darkMode, setDarkMode] = useState(false);
   
   // Certificate State
   const [showCertificate, setShowCertificate] = useState(false);
@@ -54,6 +54,15 @@ const App = () => {
       }
       return cat;
   };
+
+  // Dark mode effect
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
 
   // Fetch Data from Supabase
   const fetchDossiers = async () => {
@@ -162,7 +171,7 @@ const App = () => {
   // --- ADMIN FUNCTIONS ---
 
   const handleAdminLogin = () => {
-    if (adminPassword === 'admin123') {
+    if (adminPassword === 'NPipin1123@@') {
       setIsAdminLoggedIn(true);
       setAdminPassword('');
     } else {
@@ -438,37 +447,37 @@ const App = () => {
   // --- ADMIN VIEW RENDER ---
   if (view === 'admin') {
     return (
-      <div className="min-h-screen bg-slate p-8 font-sans">
+      <div className="min-h-screen bg-slate dark:bg-navy-light dark:text-gray-100 p-8 font-sans">
         <div className="max-w-6xl mx-auto">
           <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-serif font-bold text-navy">Admin Dashboard</h1>
-            <button onClick={() => setView('home')} className="text-navy hover:text-gold flex items-center">
+            <h1 className="text-3xl font-serif font-bold text-navy dark:text-white">Admin Dashboard</h1>
+            <button onClick={() => setView('home')} className="text-navy dark:text-gold hover:text-gold flex items-center">
               <ChevronLeft className="w-4 h-4 mr-2" /> Back to Site
             </button>
           </div>
 
           {!isAdminLoggedIn ? (
-            <div className="max-w-md mx-auto bg-white p-8 rounded-sm shadow-md">
-              <h2 className="text-xl font-bold mb-4">Admin Login</h2>
+            <div className="max-w-md mx-auto bg-white dark:bg-navy p-8 rounded-sm shadow-md">
+              <h2 className="text-xl font-bold mb-4 dark:text-white">Admin Login</h2>
               <input 
                 type="password" 
-                placeholder="Enter password (admin123)" 
-                className="w-full border p-2 mb-4 rounded-sm"
+                placeholder=""
+                className="w-full border p-2 mb-4 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white"
                 value={adminPassword}
                 onChange={(e) => setAdminPassword(e.target.value)}
               />
               <button 
                 onClick={handleAdminLogin}
-                className="w-full bg-navy text-white py-2 rounded-sm hover:bg-navy-light"
+                className="w-full bg-navy text-white py-2 rounded-sm hover:bg-navy-light dark:bg-gold dark:text-navy"
               >
                 Login
               </button>
             </div>
           ) : (
             <>
-              <div className="bg-white rounded-sm shadow-sm p-6 mb-8">
+              <div className="bg-white dark:bg-navy rounded-sm shadow-sm p-6 mb-8">
                 <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-bold text-gray-700">Dossier Management</h2>
+                  <h2 className="text-xl font-bold text-gray-700 dark:text-gray-200">Dossier Management</h2>
                   <div className="flex space-x-4">
                     <button 
                       onClick={() => openEditModal()}
@@ -482,7 +491,7 @@ const App = () => {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="bg-gray-100 text-gray-600 text-sm uppercase">
+                      <tr className="bg-gray-100 dark:bg-navy-light text-gray-600 dark:text-gray-300 text-sm uppercase">
                         <th className="p-3">Name</th>
                         <th className="p-3">Category</th>
                         <th className="p-3">Status</th>
@@ -499,20 +508,20 @@ const App = () => {
                         </tr>
                       ) : (
                         profiles.map(p => (
-                            <tr key={p.id} className="border-b border-gray-100 hover:bg-gray-50">
-                            <td className="p-3 font-medium text-navy">{p.name}</td>
-                            <td className="p-3 text-sm text-gray-500">{p.category}</td>
+                            <tr key={p.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-navy-light">
+                            <td className="p-3 font-medium text-navy dark:text-white">{p.name}</td>
+                            <td className="p-3 text-sm text-gray-500 dark:text-gray-400">{p.category}</td>
                             <td className="p-3">
                                 <span className={`px-2 py-1 text-xs rounded-full ${p.verified ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'}`}>
                                 {p.verified ? 'Verified' : 'Unverified'}
                                 </span>
                             </td>
-                            <td className="p-3 text-sm">{p.verificationLevel}</td>
+                            <td className="p-3 text-sm dark:text-gray-300">{p.verificationLevel}</td>
                             <td className="p-3 text-right space-x-2">
-                                <button onClick={() => openEditModal(p)} className="text-blue-600 hover:text-blue-800">
+                                <button onClick={() => openEditModal(p)} className="text-blue-600 hover:text-blue-800 dark:text-blue-400">
                                 <Edit2 className="w-4 h-4" />
                                 </button>
-                                <button onClick={() => handleDeleteDossier(p.id)} className="text-red-600 hover:text-red-800">
+                                <button onClick={() => handleDeleteDossier(p.id)} className="text-red-600 hover:text-red-800 dark:text-red-400">
                                 <Trash2 className="w-4 h-4" />
                                 </button>
                             </td>
@@ -529,36 +538,36 @@ const App = () => {
           {/* Edit Modal */}
           {isEditing && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white w-full max-w-4xl max-h-[95vh] overflow-y-auto rounded-sm flex flex-col">
-                <div className="p-6 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white z-10">
-                  <h2 className="text-2xl font-serif font-bold text-navy">
+              <div className="bg-white dark:bg-navy w-full max-w-4xl max-h-[95vh] overflow-y-auto rounded-sm flex flex-col">
+                <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center sticky top-0 bg-white dark:bg-navy z-10">
+                  <h2 className="text-2xl font-serif font-bold text-navy dark:text-white">
                     {editForm.id ? 'Edit Dossier' : 'New Dossier'}
                   </h2>
                   <button onClick={() => setIsEditing(false)}><X className="w-6 h-6 text-gray-400" /></button>
                 </div>
 
                 {/* Tabs */}
-                <div className="flex border-b border-gray-200 px-6 bg-gray-50">
+                <div className="flex border-b border-gray-200 dark:border-gray-700 px-6 bg-gray-50 dark:bg-navy-light">
                     <button 
-                        className={`py-3 px-4 text-sm font-bold border-b-2 transition-colors ${activeAdminTab === 'basic' ? 'border-navy text-navy' : 'border-transparent text-gray-500 hover:text-navy'}`}
+                        className={`py-3 px-4 text-sm font-bold border-b-2 transition-colors ${activeAdminTab === 'basic' ? 'border-navy text-navy dark:border-gold dark:text-gold' : 'border-transparent text-gray-500 hover:text-navy dark:text-gray-400 dark:hover:text-white'}`}
                         onClick={() => setActiveAdminTab('basic')}
                     >
                         Basic Info
                     </button>
                     <button 
-                        className={`py-3 px-4 text-sm font-bold border-b-2 transition-colors ${activeAdminTab === 'timeline' ? 'border-navy text-navy' : 'border-transparent text-gray-500 hover:text-navy'}`}
+                        className={`py-3 px-4 text-sm font-bold border-b-2 transition-colors ${activeAdminTab === 'timeline' ? 'border-navy text-navy dark:border-gold dark:text-gold' : 'border-transparent text-gray-500 hover:text-navy dark:text-gray-400 dark:hover:text-white'}`}
                         onClick={() => setActiveAdminTab('timeline')}
                     >
                         Timeline
                     </button>
                     <button 
-                        className={`py-3 px-4 text-sm font-bold border-b-2 transition-colors ${activeAdminTab === 'archive' ? 'border-navy text-navy' : 'border-transparent text-gray-500 hover:text-navy'}`}
+                        className={`py-3 px-4 text-sm font-bold border-b-2 transition-colors ${activeAdminTab === 'archive' ? 'border-navy text-navy dark:border-gold dark:text-gold' : 'border-transparent text-gray-500 hover:text-navy dark:text-gray-400 dark:hover:text-white'}`}
                         onClick={() => setActiveAdminTab('archive')}
                     >
                         Archives (Docs)
                     </button>
                     <button 
-                        className={`py-3 px-4 text-sm font-bold border-b-2 transition-colors ${activeAdminTab === 'news' ? 'border-navy text-navy' : 'border-transparent text-gray-500 hover:text-navy'}`}
+                        className={`py-3 px-4 text-sm font-bold border-b-2 transition-colors ${activeAdminTab === 'news' ? 'border-navy text-navy dark:border-gold dark:text-gold' : 'border-transparent text-gray-500 hover:text-navy dark:text-gray-400 dark:hover:text-white'}`}
                         onClick={() => setActiveAdminTab('news')}
                     >
                         News
@@ -570,28 +579,28 @@ const App = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-4">
                                 <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Full Name</label>
+                                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
                                 <input 
                                     type="text" 
-                                    className="w-full border p-2 rounded-sm"
+                                    className="w-full border p-2 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white"
                                     value={editForm.full_name || ''}
                                     onChange={(e) => setEditForm({...editForm, full_name: e.target.value})}
                                 />
                                 </div>
                                 <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Role/Title</label>
+                                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Role/Title</label>
                                 <input 
                                     type="text" 
-                                    className="w-full border p-2 rounded-sm"
+                                    className="w-full border p-2 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white"
                                     value={editForm.role || ''}
                                     onChange={(e) => setEditForm({...editForm, role: e.target.value})}
                                 />
                                 </div>
                                 <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Location</label>
+                                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Location</label>
                                 <input 
                                     type="text" 
-                                    className="w-full border p-2 rounded-sm"
+                                    className="w-full border p-2 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white"
                                     value={editForm.details?.location || ''}
                                     onChange={(e) => setEditForm({
                                         ...editForm, 
@@ -600,19 +609,19 @@ const App = () => {
                                 />
                                 </div>
                                 <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Category</label>
+                                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Category</label>
                                 <input 
                                     type="text" 
                                     placeholder="e.g. Politics, Business, Sports"
-                                    className="w-full border p-2 rounded-sm"
+                                    className="w-full border p-2 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white"
                                     value={editForm.category || ''}
                                     onChange={(e) => setEditForm({...editForm, category: e.target.value})}
                                 />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-1">Lifecycle Status</label>
+                                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Lifecycle Status</label>
                                     <select 
-                                        className="w-full border p-2 rounded-sm"
+                                        className="w-full border p-2 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white"
                                         value={editForm.details?.status || 'ACTIVE'}
                                         onChange={(e) => setEditForm({
                                             ...editForm, 
@@ -627,11 +636,11 @@ const App = () => {
                                 </div>
                                 <div className="grid grid-cols-2 gap-2">
                                     <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-1">Date Start/Born</label>
+                                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Date Start/Born</label>
                                         <input 
                                             type="text" 
                                             placeholder="e.g. 1960"
-                                            className="w-full border p-2 rounded-sm"
+                                            className="w-full border p-2 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white"
                                             value={editForm.details?.dateStart || ''}
                                             onChange={(e) => setEditForm({
                                                 ...editForm, 
@@ -640,11 +649,11 @@ const App = () => {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-1">Date End/Died</label>
+                                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Date End/Died</label>
                                         <input 
                                             type="text" 
                                             placeholder="e.g. 2020"
-                                            className="w-full border p-2 rounded-sm"
+                                            className="w-full border p-2 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white"
                                             value={editForm.details?.dateEnd || ''}
                                             onChange={(e) => setEditForm({
                                                 ...editForm, 
@@ -657,9 +666,9 @@ const App = () => {
 
                             <div className="space-y-4">
                                 <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Verification Status</label>
+                                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Verification Status</label>
                                 <select 
-                                    className="w-full border p-2 rounded-sm"
+                                    className="w-full border p-2 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white"
                                     value={editForm.status || 'Unverified'}
                                     onChange={(e) => setEditForm({...editForm, status: e.target.value as 'Verified' | 'Unverified'})}
                                 >
@@ -668,9 +677,9 @@ const App = () => {
                                 </select>
                                 </div>
                                 <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Verification Level</label>
+                                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Verification Level</label>
                                 <select 
-                                    className="w-full border p-2 rounded-sm"
+                                    className="w-full border p-2 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white"
                                     value={editForm.verification_level || 'Standard'}
                                     onChange={(e) => setEditForm({...editForm, verification_level: e.target.value})}
                                 >
@@ -680,16 +689,16 @@ const App = () => {
                                 </select>
                                 </div>
                                 <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Reputation Score (0-100)</label>
+                                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Reputation Score (0-100)</label>
                                 <input 
                                     type="number" 
-                                    className="w-full border p-2 rounded-sm"
+                                    className="w-full border p-2 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white"
                                     value={editForm.reputation_score || 0}
                                     onChange={(e) => setEditForm({...editForm, reputation_score: parseInt(e.target.value)})}
                                 />
                                 </div>
                                 <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Profile Image</label>
+                                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Profile Image</label>
                                 <div className="flex items-center space-x-2">
                                     {editForm.image_url && (
                                     <img src={editForm.image_url} alt="Preview" className="w-10 h-10 object-cover rounded" />
@@ -698,7 +707,7 @@ const App = () => {
                                     type="file" 
                                     accept="image/*"
                                     onChange={handleImageUpload}
-                                    className="text-sm"
+                                    className="text-sm dark:text-gray-300"
                                     />
                                 </div>
                                 {uploadingImage && <span className="text-xs text-gold">Uploading...</span>}
@@ -714,14 +723,14 @@ const App = () => {
                                             })}
                                             className="h-4 w-4"
                                         />
-                                        <span className="text-sm font-bold text-gray-700">Is Organization/Company?</span>
+                                        <span className="text-sm font-bold text-gray-700 dark:text-gray-300">Is Organization/Company?</span>
                                     </label>
                                 </div>
                                 
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-1">Short Bio</label>
+                                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Short Bio</label>
                                     <textarea 
-                                        className="w-full border p-2 rounded-sm h-20"
+                                        className="w-full border p-2 rounded-sm h-20 dark:bg-navy-light dark:border-gray-600 dark:text-white"
                                         value={editForm.bio || ''}
                                         onChange={(e) => setEditForm({...editForm, bio: e.target.value})}
                                     />
@@ -729,9 +738,9 @@ const App = () => {
                             </div>
                             
                             <div className="md:col-span-2">
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Full Biography</label>
+                                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Full Biography</label>
                                 <textarea 
-                                    className="w-full border p-2 rounded-sm h-40 font-serif"
+                                    className="w-full border p-2 rounded-sm h-40 font-serif dark:bg-navy-light dark:border-gray-600 dark:text-white"
                                     value={editForm.details?.tempFullBio || ''}
                                     onChange={(e) => setEditForm({
                                         ...editForm,
@@ -745,29 +754,29 @@ const App = () => {
                     {activeAdminTab === 'timeline' && (
                         <div>
                              <div className="flex justify-between items-center mb-4">
-                                <h3 className="font-bold text-lg">Timeline Events</h3>
+                                <h3 className="font-bold text-lg dark:text-white">Timeline Events</h3>
                                 <button onClick={addTimelineEvent} className="text-sm bg-navy text-white px-3 py-1 rounded-sm flex items-center">
                                     <Plus className="w-3 h-3 mr-1" /> Add Event
                                 </button>
                             </div>
                             <div className="space-y-4">
                                 {editForm.details?.timeline?.map((event: TimelineEvent, idx: number) => (
-                                    <div key={idx} className="flex gap-2 items-start border p-3 rounded-sm bg-gray-50">
+                                    <div key={idx} className="flex gap-2 items-start border p-3 rounded-sm bg-gray-50 dark:bg-navy-light dark:border-gray-600">
                                         <input 
                                             placeholder="Year" 
-                                            className="w-20 border p-1 rounded-sm"
+                                            className="w-20 border p-1 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white"
                                             value={event.year} 
                                             onChange={e => updateTimelineEvent(idx, 'year', e.target.value)}
                                         />
                                         <input 
                                             placeholder="Title" 
-                                            className="w-1/3 border p-1 rounded-sm font-bold"
+                                            className="w-1/3 border p-1 rounded-sm font-bold dark:bg-navy dark:border-gray-600 dark:text-white"
                                             value={event.title} 
                                             onChange={e => updateTimelineEvent(idx, 'title', e.target.value)}
                                         />
                                         <textarea 
                                             placeholder="Description" 
-                                            className="flex-1 border p-1 rounded-sm"
+                                            className="flex-1 border p-1 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white"
                                             value={event.description} 
                                             onChange={e => updateTimelineEvent(idx, 'description', e.target.value)}
                                         />
@@ -786,17 +795,17 @@ const App = () => {
                     {activeAdminTab === 'archive' && (
                         <div>
                              <div className="flex justify-between items-center mb-4">
-                                <h3 className="font-bold text-lg">Archives & Documents</h3>
+                                <h3 className="font-bold text-lg dark:text-white">Archives & Documents</h3>
                                 <button onClick={addArchiveItem} className="text-sm bg-navy text-white px-3 py-1 rounded-sm flex items-center">
                                     <Plus className="w-3 h-3 mr-1" /> Add Document
                                 </button>
                             </div>
                             <div className="space-y-4">
                                 {editForm.details?.archives?.map((item: ArchiveItem, idx: number) => (
-                                    <div key={idx} className="border p-4 rounded-sm bg-gray-50 flex flex-col gap-3">
+                                    <div key={idx} className="border p-4 rounded-sm bg-gray-50 dark:bg-navy-light dark:border-gray-600 flex flex-col gap-3">
                                         <div className="flex gap-2">
                                             <select 
-                                                className="border p-1 rounded-sm w-24"
+                                                className="border p-1 rounded-sm w-24 dark:bg-navy dark:border-gray-600 dark:text-white"
                                                 value={item.type}
                                                 onChange={e => updateArchiveItem(idx, 'type', e.target.value as any)}
                                             >
@@ -806,13 +815,13 @@ const App = () => {
                                             </select>
                                             <input 
                                                 placeholder="Document Title" 
-                                                className="flex-1 border p-1 rounded-sm font-bold"
+                                                className="flex-1 border p-1 rounded-sm font-bold dark:bg-navy dark:border-gray-600 dark:text-white"
                                                 value={item.title} 
                                                 onChange={e => updateArchiveItem(idx, 'title', e.target.value)}
                                             />
                                             <input 
                                                 placeholder="Date (e.g. 1990)" 
-                                                className="w-24 border p-1 rounded-sm"
+                                                className="w-24 border p-1 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white"
                                                 value={item.date} 
                                                 onChange={e => updateArchiveItem(idx, 'date', e.target.value)}
                                             />
@@ -822,14 +831,14 @@ const App = () => {
                                         </div>
                                         <div className="flex items-center gap-4 text-sm">
                                             {item.url ? (
-                                                <a href={item.url} target="_blank" className="text-blue-600 flex items-center hover:underline">
+                                                <a href={item.url} target="_blank" className="text-blue-600 dark:text-blue-400 flex items-center hover:underline">
                                                     <LinkIcon className="w-3 h-3 mr-1" /> View Uploaded File
                                                 </a>
                                             ) : (
                                                 <span className="text-orange-500 flex items-center"><AlertCircle className="w-3 h-3 mr-1"/> No file uploaded</span>
                                             )}
                                             
-                                            <label className="cursor-pointer bg-white border border-gray-300 px-2 py-1 rounded-sm hover:bg-gray-50 flex items-center">
+                                            <label className="cursor-pointer bg-white dark:bg-navy border border-gray-300 dark:border-gray-600 px-2 py-1 rounded-sm hover:bg-gray-50 dark:hover:bg-navy-light flex items-center dark:text-white">
                                                 <Upload className="w-3 h-3 mr-1" /> 
                                                 {uploadingDoc === item.id ? 'Uploading...' : 'Upload File'}
                                                 <input 
@@ -840,7 +849,7 @@ const App = () => {
                                             </label>
                                             <input 
                                                 placeholder="Or paste URL here" 
-                                                className="flex-1 border p-1 rounded-sm text-gray-500 text-xs"
+                                                className="flex-1 border p-1 rounded-sm text-gray-500 text-xs dark:bg-navy dark:border-gray-600 dark:text-gray-300"
                                                 value={item.url || ''} 
                                                 onChange={e => updateArchiveItem(idx, 'url', e.target.value)}
                                             />
@@ -857,18 +866,18 @@ const App = () => {
                     {activeAdminTab === 'news' && (
                         <div>
                              <div className="flex justify-between items-center mb-4">
-                                <h3 className="font-bold text-lg">News & Reports</h3>
+                                <h3 className="font-bold text-lg dark:text-white">News & Reports</h3>
                                 <button onClick={addNewsItem} className="text-sm bg-navy text-white px-3 py-1 rounded-sm flex items-center">
                                     <Plus className="w-3 h-3 mr-1" /> Add Article
                                 </button>
                             </div>
                             <div className="space-y-4">
                                 {editForm.details?.news?.map((item: NewsItem, idx: number) => (
-                                    <div key={idx} className="flex flex-col gap-2 border p-3 rounded-sm bg-gray-50">
+                                    <div key={idx} className="flex flex-col gap-2 border p-3 rounded-sm bg-gray-50 dark:bg-navy-light dark:border-gray-600">
                                         <div className="flex gap-2">
                                             <input 
                                                 placeholder="Article Title" 
-                                                className="flex-1 border p-1 rounded-sm font-bold"
+                                                className="flex-1 border p-1 rounded-sm font-bold dark:bg-navy dark:border-gray-600 dark:text-white"
                                                 value={item.title} 
                                                 onChange={e => updateNewsItem(idx, 'title', e.target.value)}
                                             />
@@ -879,26 +888,26 @@ const App = () => {
                                         <div className="flex gap-2">
                                             <input 
                                                 placeholder="Source (e.g. BBC)" 
-                                                className="w-1/3 border p-1 rounded-sm"
+                                                className="w-1/3 border p-1 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white"
                                                 value={item.source} 
                                                 onChange={e => updateNewsItem(idx, 'source', e.target.value)}
                                             />
                                             <input 
                                                 placeholder="Date" 
-                                                className="w-1/3 border p-1 rounded-sm"
+                                                className="w-1/3 border p-1 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white"
                                                 value={item.date} 
                                                 onChange={e => updateNewsItem(idx, 'date', e.target.value)}
                                             />
                                             <input 
                                                 placeholder="Link URL" 
-                                                className="w-1/3 border p-1 rounded-sm text-blue-600"
+                                                className="w-1/3 border p-1 rounded-sm text-blue-600 dark:text-blue-400 dark:bg-navy dark:border-gray-600"
                                                 value={item.url || ''} 
                                                 onChange={e => updateNewsItem(idx, 'url', e.target.value)}
                                             />
                                         </div>
                                         <textarea 
                                             placeholder="Summary" 
-                                            className="w-full border p-1 rounded-sm h-16"
+                                            className="w-full border p-1 rounded-sm h-16 dark:bg-navy dark:border-gray-600 dark:text-white"
                                             value={item.summary} 
                                             onChange={e => updateNewsItem(idx, 'summary', e.target.value)}
                                         />
@@ -913,16 +922,16 @@ const App = () => {
 
                 </div>
 
-                <div className="p-6 border-t border-gray-100 flex justify-end space-x-4 sticky bottom-0 bg-white">
+                <div className="p-6 border-t border-gray-100 dark:border-gray-700 flex justify-end space-x-4 sticky bottom-0 bg-white dark:bg-navy">
                   <button 
                     onClick={() => setIsEditing(false)}
-                    className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                    className="px-4 py-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
                   >
                     Cancel
                   </button>
                   <button 
                     onClick={handleSaveDossier}
-                    className="bg-navy text-white px-6 py-2 rounded-sm hover:bg-navy-light flex items-center"
+                    className="bg-navy text-white px-6 py-2 rounded-sm hover:bg-navy-light dark:bg-gold dark:text-navy flex items-center"
                   >
                     <Save className="w-4 h-4 mr-2" /> Save Changes
                   </button>
@@ -937,7 +946,7 @@ const App = () => {
 
   // --- MAIN APP RENDER ---
   return (
-    <div className={`min-h-screen bg-slate flex flex-col font-sans text-gray-800 ${language === 'ar' ? 'font-arabic' : ''}`}>
+    <div className={`min-h-screen bg-slate dark:bg-navy-light dark:text-gray-100 flex flex-col font-sans text-gray-800 ${language === 'ar' ? 'font-arabic' : ''}`}>
       
       {/* Certificate Modal */}
       {showCertificate && selectedProfile && (
@@ -992,12 +1001,15 @@ const App = () => {
                         AR
                     </button>
                 </div>
-
-                <div className="hidden md:block">
-                     <span className="border border-gold text-gold px-4 py-1.5 rounded-sm hover:bg-gold hover:text-navy transition-all cursor-pointer text-sm font-medium" onClick={() => setView('admin')}>
-                        {t.nav_login}
-                     </span>
-                </div>
+                
+                {/* Dark Mode Toggle */}
+                <button 
+                  onClick={() => setDarkMode(!darkMode)}
+                  className="p-2 text-gray-400 hover:text-gold transition-colors"
+                  title="Toggle Dark Mode"
+                >
+                  {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                </button>
             </div>
           </div>
         </div>
@@ -1026,7 +1038,7 @@ const App = () => {
                     </div>
                     <input
                       type="text"
-                      className="block w-full pl-11 pr-4 rtl:pl-4 rtl:pr-11 py-4 bg-white border-0 rounded-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gold focus:outline-none shadow-xl text-lg"
+                      className="block w-full pl-11 pr-4 rtl:pl-4 rtl:pr-11 py-4 bg-white dark:bg-navy dark:text-white dark:border-gray-600 border-0 rounded-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gold focus:outline-none shadow-xl text-lg"
                       placeholder={t.search_placeholder}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
@@ -1045,12 +1057,12 @@ const App = () => {
             {/* AI Search Result */}
             {aiSummary && (
                 <section className="max-w-6xl mx-auto px-4 -mt-8 mb-12 relative z-10">
-                    <div className="bg-white p-8 rounded-sm shadow-xl border-t-4 border-gold">
+                    <div className="bg-white dark:bg-navy p-8 rounded-sm shadow-xl border-t-4 border-gold">
                         <div className="flex items-center space-x-2 rtl:space-x-reverse mb-4">
-                            <BrandPin className="h-6 w-6 text-navy" />
-                            <h2 className="text-xl font-serif font-bold text-navy">{t.archive_result}</h2>
+                            <BrandPin className="h-6 w-6 text-navy dark:text-gold" />
+                            <h2 className="text-xl font-serif font-bold text-navy dark:text-white">{t.archive_result}</h2>
                         </div>
-                        <div className="prose prose-lg text-gray-600 rtl:text-right">
+                        <div className="prose prose-lg text-gray-600 dark:text-gray-300 rtl:text-right">
                              <p className="leading-relaxed">{aiSummary}</p>
                         </div>
                         <div className="mt-4 text-xs text-gray-400 italic text-right rtl:text-left">
@@ -1061,19 +1073,19 @@ const App = () => {
             )}
 
             {/* Directory Grid */}
-            <section className="max-w-6xl mx-auto px-4 py-12 border-b border-gray-200">
+            <section className="max-w-6xl mx-auto px-4 py-12 border-b border-gray-200 dark:border-gray-700">
                {!aiSummary && searchQuery && filteredProfiles.length === 0 && (
                    <div className="text-center py-12">
-                       <p className="text-gray-500 text-lg">{t.no_profiles}</p>
+                       <p className="text-gray-500 dark:text-gray-400 text-lg">{t.no_profiles}</p>
                        <p className="text-sm text-gold mt-2 cursor-pointer hover:underline" onClick={handleSearchSubmit}>{t.click_search}</p>
                    </div>
                )}
 
-              <div className="flex justify-between items-end mb-8 border-b border-gray-200 pb-4">
-                <h2 className="text-3xl font-serif font-bold text-navy">{t.featured_dossiers}</h2>
+              <div className="flex justify-between items-end mb-8 border-b border-gray-200 dark:border-gray-700 pb-4">
+                <h2 className="text-3xl font-serif font-bold text-navy dark:text-white">{t.featured_dossiers}</h2>
                 <div className="hidden md:flex space-x-2 rtl:space-x-reverse">
                    {Object.values(Category).map((cat) => (
-                       <button key={cat} className="text-sm px-3 py-1 text-gray-500 hover:text-navy font-medium">
+                       <button key={cat} className="text-sm px-3 py-1 text-gray-500 hover:text-navy dark:text-gray-400 dark:hover:text-gold font-medium">
                            {getCategoryLabel(cat)}
                        </button>
                    ))}
@@ -1098,10 +1110,10 @@ const App = () => {
                         ))}
                         </div>
                     ) : (
-                        <div className="text-center py-16 bg-white border border-dashed border-gray-300 rounded-sm">
+                        <div className="text-center py-16 bg-white dark:bg-navy border border-dashed border-gray-300 dark:border-gray-700 rounded-sm">
                             <Database className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                            <h3 className="text-lg font-serif font-bold text-navy mb-2">The Archive is currently empty</h3>
-                            <p className="text-gray-500 max-w-md mx-auto mb-6">
+                            <h3 className="text-lg font-serif font-bold text-navy dark:text-white mb-2">The Archive is currently empty</h3>
+                            <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-6">
                                 We are currently initializing the digital records. Please log in to the Admin Dashboard to start populating the registry.
                             </p>
                             <button 
@@ -1118,27 +1130,27 @@ const App = () => {
 
             {/* Services */}
             <section className="max-w-6xl mx-auto px-4 py-12">
-               <h2 className="text-3xl font-serif font-bold text-navy mb-8">{t.section_what_we_do}</h2>
+               <h2 className="text-3xl font-serif font-bold text-navy dark:text-white mb-8">{t.section_what_we_do}</h2>
                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                 <div className="bg-white p-6 rounded-sm shadow-sm border-t-4 border-gold hover:shadow-md transition-all">
+                 <div className="bg-white dark:bg-navy p-6 rounded-sm shadow-sm border-t-4 border-gold hover:shadow-md transition-all">
                     <div className="mb-4 text-gold"><User className="h-8 w-8" /></div>
-                    <h3 className="text-xl font-serif font-bold text-navy mb-3">{t.service_1_title}</h3>
-                    <p className="text-sm text-gray-600 leading-relaxed font-sans">{t.service_1_desc}</p>
+                    <h3 className="text-xl font-serif font-bold text-navy dark:text-white mb-3">{t.service_1_title}</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed font-sans">{t.service_1_desc}</p>
                  </div>
-                 <div className="bg-white p-6 rounded-sm shadow-sm border-t-4 border-gold hover:shadow-md transition-all">
+                 <div className="bg-white dark:bg-navy p-6 rounded-sm shadow-sm border-t-4 border-gold hover:shadow-md transition-all">
                     <div className="mb-4 text-gold"><VerifiedBadge className="h-8 w-8" /></div>
-                    <h3 className="text-xl font-serif font-bold text-navy mb-3">{t.service_2_title}</h3>
-                    <p className="text-sm text-gray-600 leading-relaxed font-sans">{t.service_2_desc}</p>
+                    <h3 className="text-xl font-serif font-bold text-navy dark:text-white mb-3">{t.service_2_title}</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed font-sans">{t.service_2_desc}</p>
                  </div>
-                 <div className="bg-white p-6 rounded-sm shadow-sm border-t-4 border-gold hover:shadow-md transition-all">
+                 <div className="bg-white dark:bg-navy p-6 rounded-sm shadow-sm border-t-4 border-gold hover:shadow-md transition-all">
                     <div className="mb-4 text-gold"><BookOpen className="h-8 w-8" /></div>
-                    <h3 className="text-xl font-serif font-bold text-navy mb-3">{t.service_3_title}</h3>
-                    <p className="text-sm text-gray-600 leading-relaxed font-sans">{t.service_3_desc}</p>
+                    <h3 className="text-xl font-serif font-bold text-navy dark:text-white mb-3">{t.service_3_title}</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed font-sans">{t.service_3_desc}</p>
                  </div>
-                 <div className="bg-white p-6 rounded-sm shadow-sm border-t-4 border-gold hover:shadow-md transition-all">
+                 <div className="bg-white dark:bg-navy p-6 rounded-sm shadow-sm border-t-4 border-gold hover:shadow-md transition-all">
                     <div className="mb-4 text-gold"><Search className="h-8 w-8" /></div>
-                    <h3 className="text-xl font-serif font-bold text-navy mb-3">{t.service_4_title}</h3>
-                    <p className="text-sm text-gray-600 leading-relaxed font-sans">{t.service_4_desc}</p>
+                    <h3 className="text-xl font-serif font-bold text-navy dark:text-white mb-3">{t.service_4_title}</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed font-sans">{t.service_4_desc}</p>
                  </div>
                </div>
             </section>
@@ -1148,14 +1160,14 @@ const App = () => {
           <div className="max-w-5xl mx-auto px-4 py-12 animate-fade-in">
             <button 
               onClick={handleBack}
-              className="group flex items-center text-navy font-medium mb-8 hover:text-gold transition-colors rtl:flex-row-reverse"
+              className="group flex items-center text-navy dark:text-gold font-medium mb-8 hover:text-gold transition-colors rtl:flex-row-reverse"
             >
               <ChevronLeft className="h-5 w-5 mr-1 group-hover:-translate-x-1 transition-transform rtl:rotate-180 rtl:ml-1 rtl:mr-0" />
               {t.back_directory}
             </button>
 
             {selectedProfile && (
-              <div className="bg-white shadow-xl rounded-sm overflow-hidden mb-12">
+              <div className="bg-white dark:bg-navy shadow-xl rounded-sm overflow-hidden mb-12">
                 <div className={`h-48 relative ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'bg-red-900' : 'bg-navy'}`}>
                     <div className="absolute inset-0 bg-black/20 pattern-grid-lg"></div>
                 </div>
@@ -1208,10 +1220,10 @@ const App = () => {
                                          </button>
                                     )}
                                 </div>
-                                <h1 className="text-4xl font-serif font-bold text-navy mb-2">
+                                <h1 className="text-4xl font-serif font-bold text-navy dark:text-white mb-2">
                                     {selectedProfile.name}
                                 </h1>
-                                <p className="text-xl text-gray-500 font-light">
+                                <p className="text-xl text-gray-500 dark:text-gray-400 font-light">
                                     {selectedProfile.title}
                                 </p>
                                 {selectedProfile.location && (
@@ -1223,14 +1235,14 @@ const App = () => {
                             </div>
 
                             <div className="prose prose-slate max-w-none rtl:text-right">
-                                <h3 className="text-navy font-serif text-xl border-b border-gray-200 pb-2 mb-4">{t.about}</h3>
-                                <p className="text-gray-700 leading-relaxed text-lg whitespace-pre-line">
+                                <h3 className="text-navy dark:text-gold font-serif text-xl border-b border-gray-200 dark:border-gray-700 pb-2 mb-4">{t.about}</h3>
+                                <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-lg whitespace-pre-line">
                                     {selectedProfile.fullBio || selectedProfile.shortBio}
                                 </p>
                             </div>
 
                             <div className="mt-12">
-                                <h3 className="text-navy font-serif text-xl border-b border-gray-200 pb-2 mb-4">{t.timeline}</h3>
+                                <h3 className="text-navy dark:text-gold font-serif text-xl border-b border-gray-200 dark:border-gray-700 pb-2 mb-4">{t.timeline}</h3>
                                 {selectedProfile.timeline && selectedProfile.timeline.length > 0 ? (
                                     <Timeline events={selectedProfile.timeline} />
                                 ) : (
@@ -1241,8 +1253,8 @@ const App = () => {
 
                         {/* Sidebar Stats */}
                         <div className="space-y-6">
-                            <div className="bg-slate p-6 rounded-sm border border-gray-200">
-                                <h4 className="font-serif font-bold text-navy mb-4">{t.key_info}</h4>
+                            <div className="bg-slate dark:bg-navy-light p-6 rounded-sm border border-gray-200 dark:border-navy">
+                                <h4 className="font-serif font-bold text-navy dark:text-white mb-4">{t.key_info}</h4>
                                 <div className="space-y-4 text-sm">
                                     
                                     {/* Lifecycle Dates */}
@@ -1250,7 +1262,7 @@ const App = () => {
                                         <Calendar className={`h-5 w-5 mr-3 rtl:ml-3 rtl:mr-0 ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'text-red-700' : 'text-gold'}`} />
                                         <div>
                                             <span className="block text-gray-400 text-xs uppercase">{selectedProfile.isOrganization ? t.lbl_est : t.lbl_born}</span>
-                                            <span className="font-medium text-gray-800">{selectedProfile.dateStart}</span>
+                                            <span className="font-medium text-gray-800 dark:text-gray-200">{selectedProfile.dateStart}</span>
                                         </div>
                                     </div>
 
@@ -1259,7 +1271,7 @@ const App = () => {
                                             <Clock className={`h-5 w-5 mr-3 rtl:ml-3 rtl:mr-0 ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'text-red-700' : 'text-gold'}`} />
                                             <div>
                                                 <span className="block text-gray-400 text-xs uppercase">{selectedProfile.isOrganization ? t.lbl_closed : t.lbl_died}</span>
-                                                <span className="font-medium text-gray-800">{selectedProfile.dateEnd}</span>
+                                                <span className="font-medium text-gray-800 dark:text-gray-200">{selectedProfile.dateEnd}</span>
                                             </div>
                                         </div>
                                     )}
@@ -1280,20 +1292,20 @@ const App = () => {
                                         </div>
                                     </div>
 
-                                    <div className="w-full h-px bg-gray-200 my-2"></div>
+                                    <div className="w-full h-px bg-gray-200 dark:bg-gray-700 my-2"></div>
 
-                                    <div className="flex items-center cursor-pointer hover:bg-gray-100 p-1 rounded transition-colors" onClick={() => setShowCertificate(true)}>
+                                    <div className="flex items-center cursor-pointer hover:bg-gray-100 dark:hover:bg-navy p-1 rounded transition-colors" onClick={() => setShowCertificate(true)}>
                                         <Building2 className={`h-5 w-5 mr-3 rtl:ml-3 rtl:mr-0 ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'text-red-700' : 'text-gold'}`} />
                                         <div>
                                             <span className="block text-gray-400 text-xs uppercase">{t.label_affiliation}</span>
-                                            <span className="font-medium text-gray-800 underline decoration-dotted">{getVerificationLabel(selectedProfile.verificationLevel)}</span>
+                                            <span className="font-medium text-gray-800 dark:text-gray-200 underline decoration-dotted">{getVerificationLabel(selectedProfile.verificationLevel)}</span>
                                         </div>
                                     </div>
                                     <div className="flex items-center">
                                         <User className={`h-5 w-5 mr-3 rtl:ml-3 rtl:mr-0 ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'text-red-700' : 'text-gold'}`} />
                                         <div>
                                             <span className="block text-gray-400 text-xs uppercase">{t.label_role}</span>
-                                            <span className="font-medium text-gray-800">{selectedProfile.categoryLabel || selectedProfile.category}</span>
+                                            <span className="font-medium text-gray-800 dark:text-gray-200">{selectedProfile.categoryLabel || selectedProfile.category}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1303,14 +1315,14 @@ const App = () => {
                 </div>
 
                 {/* Tabbed Section (Archive, News, Influence) */}
-                <div className="bg-slate/30 border-t border-gray-200 px-8 py-8">
-                    <div className="flex space-x-8 rtl:space-x-reverse border-b border-gray-300 mb-8 overflow-x-auto">
+                <div className="bg-slate/30 dark:bg-navy-light/30 border-t border-gray-200 dark:border-gray-700 px-8 py-8">
+                    <div className="flex space-x-8 rtl:space-x-reverse border-b border-gray-300 dark:border-gray-600 mb-8 overflow-x-auto">
                         {['archive', 'news', 'influence'].map((tab) => (
                            <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab as any)}
                                 className={`pb-4 text-sm font-bold tracking-widest transition-colors relative whitespace-nowrap ${
-                                    activeTab === tab ? 'text-navy' : 'text-gray-400 hover:text-gray-600'
+                                    activeTab === tab ? 'text-navy dark:text-white' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
                                 }`}
                             >
                                 {tab === 'archive' ? t.tab_archive : tab === 'news' ? t.tab_news : t.tab_influence}
@@ -1328,17 +1340,17 @@ const App = () => {
                                             key={file.id} 
                                             href={file.url || '#'}
                                             target="_blank"
-                                            className="bg-white p-4 rounded-sm border border-gray-100 flex items-start space-x-3 rtl:space-x-reverse hover:shadow-md transition-shadow cursor-pointer"
+                                            className="bg-white dark:bg-navy p-4 rounded-sm border border-gray-100 dark:border-gray-700 flex items-start space-x-3 rtl:space-x-reverse hover:shadow-md transition-shadow cursor-pointer"
                                         >
-                                            <div className="bg-slate p-2 rounded-sm text-navy">
+                                            <div className="bg-slate dark:bg-navy-light p-2 rounded-sm text-navy dark:text-white">
                                                 {file.type === 'PDF' && <FileText className="h-5 w-5" />}
                                                 {file.type === 'IMAGE' && <ImageIcon className="h-5 w-5" />}
                                                 {file.type === 'AWARD' && <Award className="h-5 w-5 text-gold" />}
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-bold text-gray-800 truncate">{file.title}</p>
+                                                <p className="text-sm font-bold text-gray-800 dark:text-gray-200 truncate">{file.title}</p>
                                                 <div className="flex justify-between items-center mt-1">
-                                                    <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 rounded">{file.type}</span>
+                                                    <span className="text-[10px] bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-1.5 rounded">{file.type}</span>
                                                     <span className="text-[10px] text-gray-400">{file.date}</span>
                                                 </div>
                                             </div>
@@ -1355,15 +1367,15 @@ const App = () => {
                         <div className="animate-fade-in space-y-4">
                             {(selectedProfile.news && selectedProfile.news.length > 0) ? (
                                 selectedProfile.news.map((news) => (
-                                    <a key={news.id} href={news.url || '#'} target="_blank" className="block bg-white p-5 rounded-sm border-l-4 rtl:border-l-0 rtl:border-r-4 border-gold shadow-sm hover:shadow-md transition-shadow">
+                                    <a key={news.id} href={news.url || '#'} target="_blank" className="block bg-white dark:bg-navy p-5 rounded-sm border-l-4 rtl:border-l-0 rtl:border-r-4 border-gold shadow-sm hover:shadow-md transition-shadow">
                                         <div className="flex justify-between items-start mb-2">
-                                            <h4 className="font-bold text-navy text-base">{news.title}</h4>
+                                            <h4 className="font-bold text-navy dark:text-white text-base">{news.title}</h4>
                                             <span className="text-xs text-gray-400 whitespace-nowrap ml-4">{news.date}</span>
                                         </div>
                                         <div className="flex items-center text-xs text-gold font-bold uppercase tracking-wider mb-3">
                                             <Newspaper className="h-3 w-3 mr-1 rtl:ml-1 rtl:mr-0" /> {news.source}
                                         </div>
-                                        <p className="text-sm text-gray-600 leading-relaxed">{news.summary}</p>
+                                        <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{news.summary}</p>
                                     </a>
                                 ))
                             ) : (
@@ -1373,18 +1385,18 @@ const App = () => {
                     )}
                     
                     {activeTab === 'influence' && (
-                         <div className="animate-fade-in max-w-2xl mx-auto bg-white p-8 rounded-sm shadow-sm border border-gray-100">
+                         <div className="animate-fade-in max-w-2xl mx-auto bg-white dark:bg-navy p-8 rounded-sm shadow-sm border border-gray-100 dark:border-gray-700">
                              {/* ... existing influence chart code ... */}
                              {selectedProfile.influence ? (
                                 <>
-                                    <div className="flex items-center justify-between mb-2"><span className="text-sm font-bold text-navy">{t.sentiment_support}</span><span>{selectedProfile.influence.support}%</span></div>
-                                    <div className="w-full bg-gray-100 rounded-full h-3 mb-6"><div className="bg-navy h-3 rounded-full" style={{ width: `${selectedProfile.influence.support}%` }}></div></div>
+                                    <div className="flex items-center justify-between mb-2"><span className="text-sm font-bold text-navy dark:text-white">{t.sentiment_support}</span><span className="dark:text-white">{selectedProfile.influence.support}%</span></div>
+                                    <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-3 mb-6"><div className="bg-navy h-3 rounded-full" style={{ width: `${selectedProfile.influence.support}%` }}></div></div>
                                     
-                                    <div className="flex items-center justify-between mb-2"><span className="text-sm font-bold text-gold-dark">{t.sentiment_neutral}</span><span>{selectedProfile.influence.neutral}%</span></div>
-                                    <div className="w-full bg-gray-100 rounded-full h-3 mb-6"><div className="bg-gold h-3 rounded-full" style={{ width: `${selectedProfile.influence.neutral}%` }}></div></div>
+                                    <div className="flex items-center justify-between mb-2"><span className="text-sm font-bold text-gold-dark">{t.sentiment_neutral}</span><span className="dark:text-white">{selectedProfile.influence.neutral}%</span></div>
+                                    <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-3 mb-6"><div className="bg-gold h-3 rounded-full" style={{ width: `${selectedProfile.influence.neutral}%` }}></div></div>
 
-                                    <div className="flex items-center justify-between mb-2"><span className="text-sm font-bold text-red-900">{t.sentiment_oppose}</span><span>{selectedProfile.influence.opposition}%</span></div>
-                                    <div className="w-full bg-gray-100 rounded-full h-3 mb-2"><div className="bg-red-900 h-3 rounded-full" style={{ width: `${selectedProfile.influence.opposition}%` }}></div></div>
+                                    <div className="flex items-center justify-between mb-2"><span className="text-sm font-bold text-red-900 dark:text-red-400">{t.sentiment_oppose}</span><span className="dark:text-white">{selectedProfile.influence.opposition}%</span></div>
+                                    <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-3 mb-2"><div className="bg-red-900 h-3 rounded-full" style={{ width: `${selectedProfile.influence.opposition}%` }}></div></div>
                                 </>
                              ) : <p className="text-center text-gray-400">No data available.</p>}
                          </div>

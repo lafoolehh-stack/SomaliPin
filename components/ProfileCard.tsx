@@ -80,7 +80,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({ profile, onClick, onVerify })
   return (
     <div 
       onClick={() => onClick(profile)}
-      className={`group relative bg-white border-t-4 shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden rounded-sm flex flex-col justify-between h-full
+      className={`group relative bg-white dark:bg-navy border-t-4 shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden rounded-sm flex flex-col justify-between h-full
         ${profile.verificationLevel === VerificationLevel.HERO ? 'border-red-800' : 
           profile.verificationLevel === VerificationLevel.STANDARD ? 'border-navy-light' : 'border-gold'}
       `}
@@ -92,11 +92,11 @@ const ProfileCard: React.FC<ProfileCardProps> = ({ profile, onClick, onVerify })
               src={profile.imageUrl} 
               alt={profile.name} 
               className={`w-20 h-20 object-cover rounded-sm border grayscale group-hover:grayscale-0 transition-all duration-500
-                ${profile.verificationLevel === VerificationLevel.HERO ? 'border-red-100' : 'border-gray-100'}
+                ${profile.verificationLevel === VerificationLevel.HERO ? 'border-red-100' : 'border-gray-100 dark:border-gray-700'}
               `}
             />
             {/* Small status indicator dot */}
-            <div className={`absolute -bottom-1 -right-1 h-3 w-3 rounded-full border-2 border-white ${getStatusColor()}`} title={profile.status}></div>
+            <div className={`absolute -bottom-1 -right-1 h-3 w-3 rounded-full border-2 border-white dark:border-navy ${getStatusColor()}`} title={profile.status}></div>
           </div>
           {renderBadge()}
         </div>
@@ -104,11 +104,11 @@ const ProfileCard: React.FC<ProfileCardProps> = ({ profile, onClick, onVerify })
         <div className="space-y-1">
           <span className={`text-xs font-bold tracking-widest uppercase
              ${profile.verificationLevel === VerificationLevel.HERO ? 'text-red-700' : 
-               profile.verificationLevel === VerificationLevel.STANDARD ? 'text-navy-light' : 'text-gold'}
+               profile.verificationLevel === VerificationLevel.STANDARD ? 'text-navy-light dark:text-blue-300' : 'text-gold'}
           `}>
             {profile.categoryLabel || profile.category}
           </span>
-          <h3 className="text-xl font-serif font-bold text-navy leading-tight group-hover:text-gold-dark transition-colors">
+          <h3 className="text-xl font-serif font-bold text-navy dark:text-white leading-tight group-hover:text-gold-dark transition-colors">
             {profile.name}
           </h3>
           <p className="text-xs text-gray-400 font-sans uppercase tracking-wide">
@@ -116,8 +116,8 @@ const ProfileCard: React.FC<ProfileCardProps> = ({ profile, onClick, onVerify })
           </p>
         </div>
 
-        <div className="mt-4 pt-4 border-t border-gray-100">
-          <p className="text-sm text-gray-600 line-clamp-3 leading-relaxed">
+        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+          <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-3 leading-relaxed">
             {profile.shortBio}
           </p>
         </div>
@@ -125,7 +125,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({ profile, onClick, onVerify })
 
       <div className="p-6 pt-2 mt-auto">
         <div className="flex justify-between items-center">
-          <div className="flex items-center text-navy font-medium text-sm group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
+          <div className="flex items-center text-navy dark:text-gold font-medium text-sm group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1">
             <span className="rtl:hidden">View Dossier <span className="ml-2">→</span></span>
             <span className="hidden rtl:inline">عرض الملف <span className="mr-2">←</span></span>
           </div>
@@ -134,7 +134,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({ profile, onClick, onVerify })
             {profile.verified && onVerify && (
               <button
                 onClick={onVerify}
-                className="flex items-center space-x-1 text-[10px] font-bold text-navy hover:text-gold border border-navy/10 hover:border-gold px-2 py-1.5 rounded-sm transition-all bg-slate hover:bg-white uppercase tracking-wider"
+                className="flex items-center space-x-1 text-[10px] font-bold text-navy dark:text-white hover:text-gold border border-navy/10 hover:border-gold px-2 py-1.5 rounded-sm transition-all bg-slate dark:bg-navy-light hover:bg-white dark:hover:bg-navy uppercase tracking-wider"
                 title="Verify Authenticity"
               >
                 <ShieldCheck className="w-3 h-3" />
@@ -144,7 +144,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({ profile, onClick, onVerify })
 
             <button
               onClick={handleShare}
-              className="p-2 text-gray-400 hover:text-gold hover:bg-navy/5 rounded-full transition-all"
+              className="p-2 text-gray-400 hover:text-gold hover:bg-navy/5 dark:hover:bg-navy-light rounded-full transition-all"
               title="Share Dossier"
             >
               {isCopied ? (
