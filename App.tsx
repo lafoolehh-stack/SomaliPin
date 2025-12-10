@@ -477,7 +477,12 @@ const App = () => {
             <>
               <div className="bg-white dark:bg-navy rounded-sm shadow-sm p-6 mb-8">
                 <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-bold text-gray-700 dark:text-gray-200">Dossier Management</h2>
+                  <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-bold text-gray-700 dark:text-gray-200">Dossier Management</h2>
+                    <span className="px-3 py-1 bg-slate dark:bg-navy-light border border-gray-200 dark:border-gray-600 rounded-full text-xs font-bold text-navy dark:text-gold">
+                      Total: {profiles.length}
+                    </span>
+                  </div>
                   <div className="flex space-x-4">
                     <button 
                       onClick={() => openEditModal()}
@@ -1082,7 +1087,12 @@ const App = () => {
                )}
 
               <div className="flex justify-between items-end mb-8 border-b border-gray-200 dark:border-gray-700 pb-4">
-                <h2 className="text-3xl font-serif font-bold text-navy dark:text-white">{t.featured_dossiers}</h2>
+                <h2 className="text-3xl font-serif font-bold text-navy dark:text-white flex items-center">
+                  {t.featured_dossiers}
+                  <span className="ml-4 text-base font-sans font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-navy-light px-3 py-1 rounded-full">
+                    ({profiles.length})
+                  </span>
+                </h2>
                 <div className="hidden md:flex space-x-2 rtl:space-x-reverse">
                    {Object.values(Category).map((cat) => (
                        <button key={cat} className="text-sm px-3 py-1 text-gray-500 hover:text-navy dark:text-gray-400 dark:hover:text-gold font-medium">
