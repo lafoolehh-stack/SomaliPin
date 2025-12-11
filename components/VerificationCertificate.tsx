@@ -13,6 +13,14 @@ const VerificationCertificate: React.FC<Props> = ({ profile, lang, onClose }) =>
   // Styles based on level
   const getTheme = () => {
     switch (profile.verificationLevel) {
+      case VerificationLevel.NOBEL:
+        return {
+          border: 'border-purple-600',
+          text: 'text-purple-700',
+          bg: 'bg-purple-50',
+          sealColor: 'text-purple-600',
+          title: 'Nobel Verification'
+        };
       case VerificationLevel.HERO:
         return {
           border: 'border-red-800',

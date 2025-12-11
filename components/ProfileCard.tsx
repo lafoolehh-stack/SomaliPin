@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Share2, Check, Copy, ShieldCheck } from 'lucide-react';
 import { Profile, VerificationLevel } from '../types';
-import { GoldenBadge, HeroBadge, StandardBadge } from './Icons';
+import { GoldenBadge, HeroBadge, StandardBadge, NobelBadge } from './Icons';
 
 interface ProfileCardProps {
   profile: Profile;
@@ -16,6 +16,12 @@ const ProfileCard: React.FC<ProfileCardProps> = ({ profile, onClick, onVerify })
     if (!profile.verified) return null;
 
     switch (profile.verificationLevel) {
+      case VerificationLevel.NOBEL:
+        return (
+          <div className="text-purple-700" title="Nobel Verified">
+            <NobelBadge className="w-6 h-6" />
+          </div>
+        );
       case VerificationLevel.HERO:
         return (
           <div className="text-red-700" title="National Hero">
@@ -81,7 +87,8 @@ const ProfileCard: React.FC<ProfileCardProps> = ({ profile, onClick, onVerify })
     <div 
       onClick={() => onClick(profile)}
       className={`group relative bg-white dark:bg-navy border-t-4 shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden rounded-sm flex flex-col justify-between h-full
-        ${profile.verificationLevel === VerificationLevel.HERO ? 'border-red-800' : 
+        ${profile.verificationLevel === VerificationLevel.NOBEL ? 'border-purple-600' :
+          profile.verificationLevel === VerificationLevel.HERO ? 'border-red-800' : 
           profile.verificationLevel === VerificationLevel.STANDARD ? 'border-navy-light' : 'border-gold'}
       `}
     >
@@ -92,7 +99,8 @@ const ProfileCard: React.FC<ProfileCardProps> = ({ profile, onClick, onVerify })
               src={profile.imageUrl} 
               alt={profile.name} 
               className={`w-20 h-20 object-cover rounded-sm border grayscale group-hover:grayscale-0 transition-all duration-500
-                ${profile.verificationLevel === VerificationLevel.HERO ? 'border-red-100' : 'border-gray-100 dark:border-gray-700'}
+                ${profile.verificationLevel === VerificationLevel.NOBEL ? 'border-purple-200' : 
+                  profile.verificationLevel === VerificationLevel.HERO ? 'border-red-100' : 'border-gray-100 dark:border-gray-700'}
               `}
             />
             {/* Small status indicator dot */}
@@ -103,7 +111,8 @@ const ProfileCard: React.FC<ProfileCardProps> = ({ profile, onClick, onVerify })
         
         <div className="space-y-1">
           <span className={`text-xs font-bold tracking-widest uppercase
-             ${profile.verificationLevel === VerificationLevel.HERO ? 'text-red-700' : 
+             ${profile.verificationLevel === VerificationLevel.NOBEL ? 'text-purple-700' :
+               profile.verificationLevel === VerificationLevel.HERO ? 'text-red-700' : 
                profile.verificationLevel === VerificationLevel.STANDARD ? 'text-navy-light dark:text-blue-300' : 'text-gold'}
           `}>
             {profile.categoryLabel || profile.category}

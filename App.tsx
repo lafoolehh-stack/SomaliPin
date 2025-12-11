@@ -1,12 +1,12 @@
 import * as React from 'react';
 import { useState, useEffect } from 'react';
-import { Search, MapPin, ChevronLeft, Building2, User, BookOpen, Upload, FileText, Image as ImageIcon, Award, PieChart, Newspaper, Globe, Calendar, Clock, Activity, Lock, Plus, Trash2, Edit2, Save, X, Database, Link as LinkIcon, AlertCircle, Sun, Moon } from 'lucide-react';
-import { BrandPin, VerifiedBadge, HeroBadge, GoldenBadge, StandardBadge } from './components/Icons';
+import { Search, MapPin, ChevronLeft, Building2, User, BookOpen, Upload, FileText, Image as ImageIcon, Award, Newspaper, Globe, Calendar, Clock, Activity, Lock, Plus, Trash2, Edit2, Save, X, Database, Link as LinkIcon, AlertCircle, Sun, Moon, Mic, Headphones, PlayCircle } from 'lucide-react';
+import { BrandPin, VerifiedBadge, HeroBadge, GoldenBadge, StandardBadge, NobelBadge } from './components/Icons';
 import ProfileCard from './components/ProfileCard';
 import Timeline from './components/Timeline';
 import VerificationCertificate from './components/VerificationCertificate';
 import { getProfiles, UI_TEXT } from './constants';
-import { Profile, Category, ArchiveItem, NewsItem, VerificationLevel, Language, DossierDB, ProfileStatus, TimelineEvent } from './types';
+import { Profile, Category, ArchiveItem, NewsItem, PodcastItem, VerificationLevel, Language, DossierDB, ProfileStatus, TimelineEvent } from './types';
 import { askArchive } from './services/geminiService';
 import { supabase, isSupabaseConfigured } from './services/supabaseClient';
 
@@ -16,7 +16,7 @@ const App = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'archive' | 'news' | 'influence'>('archive');
+  const [activeTab, setActiveTab] = useState<'archive' | 'news' | 'podcast'>('archive');
   const [language, setLanguage] = useState<Language>('en');
   const [darkMode, setDarkMode] = useState(false);
   
@@ -33,7 +33,7 @@ const App = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<Partial<DossierDB>>({});
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [activeAdminTab, setActiveAdminTab] = useState<'basic' | 'timeline' | 'archive' | 'news'>('basic');
+  const [activeAdminTab, setActiveAdminTab] = useState<'basic' | 'timeline' | 'archive' | 'news' | 'podcast'>('basic');
   const [uploadingDoc, setUploadingDoc] = useState<string | null>(null); // Track which doc ID is uploading
 
   const t = UI_TEXT[language];
@@ -92,6 +92,7 @@ const App = () => {
           const timeline = details.timeline || [];
           const archives = details.archives || [];
           const news = details.news || [];
+          const podcasts = details.podcasts || [];
           
           const rawCategory = d.category || Category.POLITICS;
 
@@ -110,6 +111,7 @@ const App = () => {
             location: details.location || '',
             archives: archives,
             news: news,
+            podcasts: podcasts,
             influence: { support: d.reputation_score || 0, neutral: 100 - (d.reputation_score || 0), opposition: 0 },
             isOrganization: details.isOrganization || false,
             status: details.status || 'ACTIVE',
@@ -290,6 +292,24 @@ const App = () => {
       setEditForm({ ...editForm, details: { ...editForm.details, news: current } });
   };
 
+  const addPodcastItem = () => {
+      const current = editForm.details?.podcasts || [];
+      const newItem: PodcastItem = { id: Date.now().toString(), title: '', source: '', date: '', duration: '', url: '' };
+      setEditForm({ ...editForm, details: { ...editForm.details, podcasts: [...current, newItem] } });
+  };
+
+  const removePodcastItem = (idx: number) => {
+      const current = [...(editForm.details?.podcasts || [])];
+      current.splice(idx, 1);
+      setEditForm({ ...editForm, details: { ...editForm.details, podcasts: current } });
+  };
+
+  const updatePodcastItem = (idx: number, field: keyof PodcastItem, value: string) => {
+      const current = [...(editForm.details?.podcasts || [])];
+      current[idx] = { ...current[idx], [field]: value };
+      setEditForm({ ...editForm, details: { ...editForm.details, podcasts: current } });
+  };
+
   const handleSaveDossier = async () => {
     try {
       if (!editForm.full_name || !editForm.category) {
@@ -377,7 +397,8 @@ const App = () => {
           tempFullBio: profile.fullBio,
           timeline: profile.timeline || [],
           archives: profile.archives || [],
-          news: profile.news || []
+          news: profile.news || [],
+          podcasts: profile.podcasts || []
         }
       });
     } else {
@@ -391,7 +412,8 @@ const App = () => {
             tempFullBio: '',
             timeline: [],
             archives: [],
-            news: []
+            news: [],
+            podcasts: []
         }
       });
     }
@@ -418,6 +440,7 @@ const App = () => {
 
   const getVerificationIcon = (level?: VerificationLevel) => {
       switch (level) {
+          case VerificationLevel.NOBEL: return <NobelBadge className="h-8 w-8 text-purple-700" />;
           case VerificationLevel.HERO: return <HeroBadge className="h-8 w-8 text-red-700" />;
           case VerificationLevel.GOLDEN: return <GoldenBadge className="h-8 w-8 text-gold" />;
           case VerificationLevel.STANDARD: return <StandardBadge className="h-8 w-8 text-navy-light" />;
@@ -427,6 +450,7 @@ const App = () => {
 
   const getVerificationLabel = (level?: VerificationLevel) => {
       switch (level) {
+          case VerificationLevel.NOBEL: return t.lvl_nobel;
           case VerificationLevel.HERO: return t.lvl_hero;
           case VerificationLevel.GOLDEN: return t.lvl_golden;
           case VerificationLevel.STANDARD: return t.lvl_standard;
@@ -552,31 +576,16 @@ const App = () => {
                 </div>
 
                 {/* Tabs */}
-                <div className="flex border-b border-gray-200 dark:border-gray-700 px-6 bg-gray-50 dark:bg-navy-light">
-                    <button 
-                        className={`py-3 px-4 text-sm font-bold border-b-2 transition-colors ${activeAdminTab === 'basic' ? 'border-navy text-navy dark:border-gold dark:text-gold' : 'border-transparent text-gray-500 hover:text-navy dark:text-gray-400 dark:hover:text-white'}`}
-                        onClick={() => setActiveAdminTab('basic')}
-                    >
-                        Basic Info
-                    </button>
-                    <button 
-                        className={`py-3 px-4 text-sm font-bold border-b-2 transition-colors ${activeAdminTab === 'timeline' ? 'border-navy text-navy dark:border-gold dark:text-gold' : 'border-transparent text-gray-500 hover:text-navy dark:text-gray-400 dark:hover:text-white'}`}
-                        onClick={() => setActiveAdminTab('timeline')}
-                    >
-                        Timeline
-                    </button>
-                    <button 
-                        className={`py-3 px-4 text-sm font-bold border-b-2 transition-colors ${activeAdminTab === 'archive' ? 'border-navy text-navy dark:border-gold dark:text-gold' : 'border-transparent text-gray-500 hover:text-navy dark:text-gray-400 dark:hover:text-white'}`}
-                        onClick={() => setActiveAdminTab('archive')}
-                    >
-                        Archives (Docs)
-                    </button>
-                    <button 
-                        className={`py-3 px-4 text-sm font-bold border-b-2 transition-colors ${activeAdminTab === 'news' ? 'border-navy text-navy dark:border-gold dark:text-gold' : 'border-transparent text-gray-500 hover:text-navy dark:text-gray-400 dark:hover:text-white'}`}
-                        onClick={() => setActiveAdminTab('news')}
-                    >
-                        News
-                    </button>
+                <div className="flex border-b border-gray-200 dark:border-gray-700 px-6 bg-gray-50 dark:bg-navy-light overflow-x-auto">
+                    {['basic', 'timeline', 'archive', 'news', 'podcast'].map((tab) => (
+                         <button 
+                            key={tab}
+                            className={`py-3 px-4 text-sm font-bold border-b-2 transition-colors whitespace-nowrap capitalize ${activeAdminTab === tab ? 'border-navy text-navy dark:border-gold dark:text-gold' : 'border-transparent text-gray-500 hover:text-navy dark:text-gray-400 dark:hover:text-white'}`}
+                            onClick={() => setActiveAdminTab(tab as any)}
+                        >
+                            {tab === 'podcast' ? 'Podcasts' : tab === 'archive' ? 'Archives' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                        </button>
+                    ))}
                 </div>
 
                 <div className="p-6">
@@ -691,6 +700,7 @@ const App = () => {
                                     <option value="Standard">Standard</option>
                                     <option value="Golden">Golden</option>
                                     <option value="Hero">Hero</option>
+                                    <option value="Nobel">Nobel</option>
                                 </select>
                                 </div>
                                 <div>
@@ -920,6 +930,65 @@ const App = () => {
                                 ))}
                                 {(!editForm.details?.news || editForm.details.news.length === 0) && (
                                     <p className="text-gray-400 italic text-center py-4">No news items added.</p>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                    
+                    {activeAdminTab === 'podcast' && (
+                        <div>
+                             <div className="flex justify-between items-center mb-4">
+                                <h3 className="font-bold text-lg dark:text-white">Podcasts</h3>
+                                <button onClick={addPodcastItem} className="text-sm bg-navy text-white px-3 py-1 rounded-sm flex items-center">
+                                    <Plus className="w-3 h-3 mr-1" /> Add Podcast
+                                </button>
+                            </div>
+                            <div className="space-y-4">
+                                {editForm.details?.podcasts?.map((item: PodcastItem, idx: number) => (
+                                    <div key={idx} className="flex flex-col gap-2 border p-3 rounded-sm bg-gray-50 dark:bg-navy-light dark:border-gray-600">
+                                        <div className="flex gap-2">
+                                            <input 
+                                                placeholder="Episode Title" 
+                                                className="flex-1 border p-1 rounded-sm font-bold dark:bg-navy dark:border-gray-600 dark:text-white"
+                                                value={item.title} 
+                                                onChange={e => updatePodcastItem(idx, 'title', e.target.value)}
+                                            />
+                                            <button onClick={() => removePodcastItem(idx)} className="text-red-500 hover:text-red-700">
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <input 
+                                                placeholder="Source (e.g. Daljir)" 
+                                                className="w-1/3 border p-1 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white"
+                                                value={item.source} 
+                                                onChange={e => updatePodcastItem(idx, 'source', e.target.value)}
+                                            />
+                                            <input 
+                                                placeholder="Date" 
+                                                className="w-1/3 border p-1 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white"
+                                                value={item.date} 
+                                                onChange={e => updatePodcastItem(idx, 'date', e.target.value)}
+                                            />
+                                            <input 
+                                                placeholder="Duration" 
+                                                className="w-1/3 border p-1 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white"
+                                                value={item.duration} 
+                                                onChange={e => updatePodcastItem(idx, 'duration', e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <input 
+                                                placeholder="Audio/Video Link URL" 
+                                                className="w-full border p-1 rounded-sm text-blue-600 dark:text-blue-400 dark:bg-navy dark:border-gray-600"
+                                                value={item.url || ''} 
+                                                onChange={e => updatePodcastItem(idx, 'url', e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
+                                {(!editForm.details?.podcasts || editForm.details.podcasts.length === 0) && (
+                                    <p className="text-gray-400 italic text-center py-4">No podcasts added.</p>
                                 )}
                             </div>
                         </div>
@@ -1207,7 +1276,8 @@ const App = () => {
                             <div className="mb-8">
                                 <div className="flex flex-wrap items-center gap-3 mb-4">
                                      <span className={`text-sm font-bold tracking-widest uppercase
-                                        ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'text-red-700' : 'text-gold'}
+                                        ${selectedProfile.verificationLevel === VerificationLevel.NOBEL ? 'text-purple-700' :
+                                          selectedProfile.verificationLevel === VerificationLevel.HERO ? 'text-red-700' : 'text-gold'}
                                     `}>
                                         {selectedProfile.categoryLabel || selectedProfile.category}
                                     </span>
@@ -1217,11 +1287,13 @@ const App = () => {
                                          <button 
                                             onClick={() => setShowCertificate(true)}
                                             className={`flex items-center px-3 py-1 rounded-full border text-xs font-bold uppercase tracking-wider transition-all
-                                                ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'bg-red-50 text-red-800 border-red-200 hover:bg-red-100' : 
+                                                ${selectedProfile.verificationLevel === VerificationLevel.NOBEL ? 'bg-purple-50 text-purple-800 border-purple-200 hover:bg-purple-100' :
+                                                  selectedProfile.verificationLevel === VerificationLevel.HERO ? 'bg-red-50 text-red-800 border-red-200 hover:bg-red-100' : 
                                                   selectedProfile.verificationLevel === VerificationLevel.GOLDEN ? 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100' : 
                                                   'bg-blue-50 text-navy-light border-blue-100 hover:bg-blue-100'}
                                             `}
                                          >
+                                            {selectedProfile.verificationLevel === VerificationLevel.NOBEL && <NobelBadge className="w-4 h-4 mr-2" />}
                                             {selectedProfile.verificationLevel === VerificationLevel.HERO && <HeroBadge className="w-4 h-4 mr-2" />}
                                             {selectedProfile.verificationLevel === VerificationLevel.GOLDEN && <GoldenBadge className="w-4 h-4 mr-2" />}
                                             {selectedProfile.verificationLevel === VerificationLevel.STANDARD && <StandardBadge className="w-4 h-4 mr-2" />}
@@ -1324,18 +1396,18 @@ const App = () => {
                     </div>
                 </div>
 
-                {/* Tabbed Section (Archive, News, Influence) */}
+                {/* Tabbed Section (Archive, News, Podcast) */}
                 <div className="bg-slate/30 dark:bg-navy-light/30 border-t border-gray-200 dark:border-gray-700 px-8 py-8">
                     <div className="flex space-x-8 rtl:space-x-reverse border-b border-gray-300 dark:border-gray-600 mb-8 overflow-x-auto">
-                        {['archive', 'news', 'influence'].map((tab) => (
+                        {['archive', 'news', 'podcast'].map((tab) => (
                            <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab as any)}
-                                className={`pb-4 text-sm font-bold tracking-widest transition-colors relative whitespace-nowrap ${
+                                className={`pb-4 text-sm font-bold tracking-widest transition-colors relative whitespace-nowrap uppercase ${
                                     activeTab === tab ? 'text-navy dark:text-white' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
                                 }`}
                             >
-                                {tab === 'archive' ? t.tab_archive : tab === 'news' ? t.tab_news : t.tab_influence}
+                                {tab === 'archive' ? t.tab_archive : tab === 'news' ? t.tab_news : t.tab_podcast}
                                 {activeTab === tab && <span className="absolute bottom-0 left-0 w-full h-1 bg-gold rounded-t-sm"></span>}
                             </button> 
                         ))}
@@ -1394,21 +1466,32 @@ const App = () => {
                         </div>
                     )}
                     
-                    {activeTab === 'influence' && (
-                         <div className="animate-fade-in max-w-2xl mx-auto bg-white dark:bg-navy p-8 rounded-sm shadow-sm border border-gray-100 dark:border-gray-700">
-                             {/* ... existing influence chart code ... */}
-                             {selectedProfile.influence ? (
-                                <>
-                                    <div className="flex items-center justify-between mb-2"><span className="text-sm font-bold text-navy dark:text-white">{t.sentiment_support}</span><span className="dark:text-white">{selectedProfile.influence.support}%</span></div>
-                                    <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-3 mb-6"><div className="bg-navy h-3 rounded-full" style={{ width: `${selectedProfile.influence.support}%` }}></div></div>
-                                    
-                                    <div className="flex items-center justify-between mb-2"><span className="text-sm font-bold text-gold-dark">{t.sentiment_neutral}</span><span className="dark:text-white">{selectedProfile.influence.neutral}%</span></div>
-                                    <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-3 mb-6"><div className="bg-gold h-3 rounded-full" style={{ width: `${selectedProfile.influence.neutral}%` }}></div></div>
-
-                                    <div className="flex items-center justify-between mb-2"><span className="text-sm font-bold text-red-900 dark:text-red-400">{t.sentiment_oppose}</span><span className="dark:text-white">{selectedProfile.influence.opposition}%</span></div>
-                                    <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-3 mb-2"><div className="bg-red-900 h-3 rounded-full" style={{ width: `${selectedProfile.influence.opposition}%` }}></div></div>
-                                </>
-                             ) : <p className="text-center text-gray-400">No data available.</p>}
+                    {activeTab === 'podcast' && (
+                         <div className="animate-fade-in space-y-4">
+                             {(selectedProfile.podcasts && selectedProfile.podcasts.length > 0) ? (
+                                selectedProfile.podcasts.map((podcast) => (
+                                    <a key={podcast.id} href={podcast.url || '#'} target="_blank" className="flex items-center bg-white dark:bg-navy p-4 rounded-sm shadow-sm hover:shadow-md transition-all group">
+                                        <div className="bg-navy dark:bg-navy-light text-white p-3 rounded-full mr-4 rtl:mr-0 rtl:ml-4 group-hover:bg-gold transition-colors">
+                                            <Headphones className="h-6 w-6" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h4 className="font-bold text-navy dark:text-white text-base mb-1">{podcast.title}</h4>
+                                            <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 space-x-3 rtl:space-x-reverse">
+                                                <span className="flex items-center"><Mic className="w-3 h-3 mr-1 rtl:ml-1 rtl:mr-0" /> {podcast.source}</span>
+                                                <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
+                                                <span>{podcast.date}</span>
+                                                <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
+                                                <span>{podcast.duration}</span>
+                                            </div>
+                                        </div>
+                                        <div className="text-gray-300 group-hover:text-gold transition-colors">
+                                            <PlayCircle className="h-8 w-8" />
+                                        </div>
+                                    </a>
+                                ))
+                             ) : (
+                                <p className="text-center text-gray-400 italic text-sm py-4">{t.no_podcasts}</p>
+                             )}
                          </div>
                     )}
                 </div>

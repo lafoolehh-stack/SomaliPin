@@ -7,6 +7,7 @@ export enum Category {
   }
   
   export enum VerificationLevel {
+    NOBEL = 'Nobel',   // Highest Honor/Nobel Level
     GOLDEN = 'Golden', // High-level elite
     HERO = 'Hero',     // Martyrs and Heroes (Halgamaayaal)
     STANDARD = 'Standard' // Standard verification
@@ -39,6 +40,15 @@ export enum Category {
     summary: string;
     url?: string; // Added URL field for news links
   }
+
+  export interface PodcastItem {
+    id: string;
+    title: string;
+    date: string;
+    duration: string;
+    source: string; // e.g. "Daljir", "BBC"
+    url?: string;
+  }
   
   export interface InfluenceStats {
     support: number; // Percentage
@@ -62,6 +72,7 @@ export enum Category {
     location?: string;
     archives?: ArchiveItem[];
     news?: NewsItem[];
+    podcasts?: PodcastItem[];
     influence?: InfluenceStats;
     isOrganization: boolean;
     status: ProfileStatus;

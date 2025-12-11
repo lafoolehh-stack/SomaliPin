@@ -12,6 +12,19 @@ export const BrandPin: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
+// NOBEL LEVEL: Starburst/Rosette
+export const NobelBadge: React.FC<{ className?: string }> = ({ className }) => (
+  <svg 
+    viewBox="0 0 24 24" 
+    fill="currentColor" 
+    className={className}
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path d="M12 2l2.4 7.2h7.6l-6 4.8 2.4 7.2-6-4.8-6 4.8 2.4-7.2-6-4.8h7.6z" />
+    <path d="M12 6l1.5 4.5h4.75L14.5 13.5l1.5 4.5-3.75-3-3.75 3 1.5-4.5L5.75 10.5h4.75z" fill="white" fillOpacity="0.3"/>
+  </svg>
+);
+
 // GOLDEN LEVEL: Intricate Shield
 export const GoldenBadge: React.FC<{ className?: string }> = ({ className }) => (
   <svg 

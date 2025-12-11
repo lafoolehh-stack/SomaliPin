@@ -40,13 +40,14 @@ export const UI_TEXT = {
     verify_desc: "Scan the official QR code to verify the authenticity of this digital record.",
     tab_archive: "ARCHIVE",
     tab_news: "NEWS",
-    tab_influence: "INFLUENCE SCORE",
+    tab_podcast: "PODCAST",
     upload_doc: "Upload Document",
     click_upload: "Click to upload files",
     upload_hint: "PDF, Images (JPG, PNG), or Awards Certificates",
     no_docs: "No public documents available in this dossier yet.",
     related_reports: "Related Reports & Mentions",
     no_news: "No recent news articles linked to this profile.",
+    no_podcasts: "No podcasts available for this profile.",
     sentiment_title: "Public Sentiment Analysis",
     sentiment_desc: "Aggregate data based on public perception, verified surveys, and social impact metrics.",
     sentiment_support: "Support",
@@ -65,6 +66,7 @@ export const UI_TEXT = {
     footer_contact: "Contact",
     rights: "SomaliPin Digital Archive. All rights reserved.",
     design_integrity: "Designed with Integrity",
+    lvl_nobel: "Nobel Verified",
     lvl_golden: "Golden Verified",
     lvl_hero: "National Hero",
     lvl_standard: "Verified Entity",
@@ -118,13 +120,14 @@ export const UI_TEXT = {
     verify_desc: "Sawir QR code-ka rasmiga ah si aad u xaqiijiso saxnimada diiwaankan dhijitaalka ah.",
     tab_archive: "KAYDKA",
     tab_news: "WARARKA",
-    tab_influence: "HEERKA SAAMAYNTA",
+    tab_podcast: "PODCAST",
     upload_doc: "Soo Geli Document",
     click_upload: "Guji si aad u soo geliso",
     upload_hint: "PDF, Sawirro (JPG, PNG), ama Shahaadooyin",
     no_docs: "Weli laguma darin dokumentiyo dadweyne diiwaankan.",
     related_reports: "Warbixinada La Xiriira",
     no_news: "Ma jiraan warar dhowaan la xiriira profile-kan.",
+    no_podcasts: "Ma jiraan wax podcast ah oo loo hayo profile-kan.",
     sentiment_title: "Falanqaynta Ra'yiga Dadweynaha",
     sentiment_desc: "Xog la isku geeyay oo ku salaysan aragtida dadweynaha, sahanno la hubiyay, iyo cabbirrada saamaynta bulshada.",
     sentiment_support: "Taageero",
@@ -143,6 +146,7 @@ export const UI_TEXT = {
     footer_contact: "Xiriirka",
     rights: "SomaliPin Digital Archive. Xuquuqda oo dhan way dhowran yihiin.",
     design_integrity: "Lagu dhisay Hufnaan",
+    lvl_nobel: "Nobel",
     lvl_golden: "Heerka Sare",
     lvl_hero: "Halyey Qaran",
     lvl_standard: "Rasmi",
@@ -196,13 +200,14 @@ export const UI_TEXT = {
     verify_desc: "امسح رمز الاستجابة السريعة الرسمي للتحقق من صحة هذا السجل الرقمي.",
     tab_archive: "الأرشيف",
     tab_news: "الأخبار",
-    tab_influence: "نقاط التأثير",
+    tab_podcast: "بودكاست",
     upload_doc: "تحميل مستند",
     click_upload: "انقر للتحميل",
     upload_hint: "PDF، صور (JPG، PNG)، أو شهادات",
     no_docs: "لا توجد مستندات عامة متاحة في هذا الملف حتى الآن.",
     related_reports: "التقارير والإشارات ذات الصلة",
     no_news: "لا توجد مقالات إخبارية حديثة مرتبطة بهذا الملف.",
+    no_podcasts: "لا توجد ملفات بودكاست متاحة لهذا الملف الشخصي.",
     sentiment_title: "تحليل المشاعر العامة",
     sentiment_desc: "بيانات مجمعة بناءً على التصور العام والاستطلاعات المؤكدة ومقاييس التأثير الاجتماعي.",
     sentiment_support: "دعم",
@@ -221,6 +226,7 @@ export const UI_TEXT = {
     footer_contact: "اتصل بنا",
     rights: "أرشيف الصومال بن الرقمي. جميع الحقوق محفوظة.",
     design_integrity: "صمم بنزاهة",
+    lvl_nobel: "موثق نوبل",
     lvl_golden: "موثق ذهبي",
     lvl_hero: "بطل وطني",
     lvl_standard: "كيان رسمي",
@@ -278,6 +284,10 @@ const RAW_DATA = [
         news: [
             { id: 'n1', title: 'The Legacy of Aden Adde: A Model for Democracy', source: 'Historical Review', date: 'June 2023', summary: 'An in-depth look at how the first president established democratic norms in the horn of Africa.' },
             { id: 'n2', title: 'Airport Renaming Ceremony Anniversary', source: 'Mogadishu Times', date: 'Jan 2024', summary: 'Celebrations mark the anniversary of renaming Mogadishu International Airport in his honor.' }
+        ],
+        podcasts: [
+            { id: 'p1', title: 'Ep. 12: The Founders of the Republic', date: 'Sep 2023', duration: '45 min', source: 'Somali History Podcast', url: '#' },
+            { id: 'p2', title: 'Aden Adde: A Life of Service', date: 'Aug 2023', duration: '32 min', source: 'Daljir Radio', url: '#' }
         ]
       },
       so: {
@@ -300,6 +310,10 @@ const RAW_DATA = [
         news: [
             { id: 'n1', title: 'Dhaxalkii Aadan Cadde: Tusaale u ah Dimuqraadiyadda', source: 'Dib u eegista Taariikhda', date: 'Juun 2023', summary: 'Eegid qoto dheer sida madaxweynihii ugu horeeyay u hirgeliyay nidaamka dimuqraadiyadda Geeska Afrika.' },
             { id: 'n2', title: 'Xuska Magac-bixinta Garoonka Diyaaradaha', source: 'Wargeyska Muqdisho', date: 'Jan 2024', summary: 'Dabaaldegyo lagu xusayo sannad-guurada magac-bixinta Garoonka Caalamiga ah ee Aadan Cadde.' }
+        ],
+        podcasts: [
+            { id: 'p1', title: 'Xalqada 12aad: Aasaasayaashii Jamhuuriyadda', date: 'Sab 2023', duration: '45 daqiiqo', source: 'Somali History Podcast', url: '#' },
+            { id: 'p2', title: 'Aadan Cadde: Nolol Shaqo', date: 'Ago 2023', duration: '32 daqiiqo', source: 'Daljir Radio', url: '#' }
         ]
       },
       ar: {
@@ -322,6 +336,10 @@ const RAW_DATA = [
         news: [
             { id: 'n1', title: 'إرث آدم عدي: نموذج للديمقراطية', source: 'المراجعة التاريخية', date: 'يونيو 2023', summary: 'نظرة متعمقة حول كيفية ترسيخ الرئيس الأول للمعايير الديمقراطية في القرن الأفريقي.' },
             { id: 'n2', title: 'ذكرى إعادة تسمية المطار', source: 'أوقات مقديشو', date: 'يناير 2024', summary: 'احتفالات بمناسبة ذكرى إعادة تسمية مطار مقديشو الدولي تكريماً له.' }
+        ],
+        podcasts: [
+            { id: 'p1', title: 'الحلقة 12: مؤسسو الجمهورية', date: 'سبتمبر 2023', duration: '45 دقيقة', source: 'بودكاست التاريخ الصومالي', url: '#' },
+            { id: 'p2', title: 'آدم عدي: حياة الخدمة', date: 'أغسطس 2023', duration: '32 دقيقة', source: 'راديو دالجير', url: '#' }
         ]
       }
     }
@@ -350,6 +368,7 @@ export const getProfiles = (lang: Language): Profile[] => {
       dateEnd: p.dateEnd,
       archives: p.content[lang].archives || [],
       news: p.content[lang].news || [],
+      podcasts: p.content[lang].podcasts || [],
       name: p.content[lang].name,
       title: p.content[lang].title,
       location: p.content[lang].location,
