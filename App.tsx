@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useState, useEffect } from 'react';
-import { Search, MapPin, ChevronLeft, Building2, User, BookOpen, Upload, FileText, Image as ImageIcon, Award, Newspaper, Globe, Calendar, Clock, Activity, Lock, Plus, Trash2, Edit2, Save, X, Database, Link as LinkIcon, AlertCircle, Sun, Moon, Mic, Headphones, PlayCircle } from 'lucide-react';
+import { Search, MapPin, ChevronLeft, Building2, User, BookOpen, Upload, FileText, Image as ImageIcon, Award, Newspaper, Globe, Calendar, Clock, Activity, Lock, Plus, Trash2, Edit2, Save, X, Database, Link as LinkIcon, AlertCircle, Sun, Moon, Mic, Headphones, PlayCircle, Unlock, Shield, Loader2 } from 'lucide-react';
 import { BrandPin, VerifiedBadge, HeroBadge, GoldenBadge, StandardBadge, NobelBadge } from './components/Icons';
 import ProfileCard from './components/ProfileCard';
 import Timeline from './components/Timeline';
@@ -35,6 +35,7 @@ const App = () => {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [activeAdminTab, setActiveAdminTab] = useState<'basic' | 'timeline' | 'archive' | 'news' | 'podcast'>('basic');
   const [uploadingDoc, setUploadingDoc] = useState<string | null>(null); // Track which doc ID is uploading
+  const [isLocking, setIsLocking] = useState(false); // Loading state for locking operations
 
   const t = UI_TEXT[language];
 
@@ -76,7 +77,7 @@ const App = () => {
         return;
       }
 
-      const { data, error } = await supabase.from('dossiers').select('*');
+      const { data, error } = await supabase.from('dossiers').select('*').order('created_at', { ascending: false });
       
       if (error) {
         console.error('Supabase Error fetching dossiers:', error);
@@ -116,7 +117,8 @@ const App = () => {
             isOrganization: details.isOrganization || false,
             status: details.status || 'ACTIVE',
             dateStart: details.dateStart || 'Unknown',
-            dateEnd: details.dateEnd
+            dateEnd: details.dateEnd,
+            locked: details.locked || false
           };
         });
         setProfiles(mappedProfiles);
@@ -181,6 +183,74 @@ const App = () => {
     }
   };
 
+  const handleLockToggle = async (profile: Profile) => {
+    try {
+      const newLockedState = !profile.locked;
+      const { data, error } = await supabase.from('dossiers').select('details').eq('id', profile.id).single();
+      
+      if (error || !data) throw new Error('Could not fetch details');
+
+      const updatedDetails = { ...data.details, locked: newLockedState };
+
+      const { error: updateError } = await supabase.from('dossiers')
+        .update({ details: updatedDetails })
+        .eq('id', profile.id);
+
+      if (updateError) throw updateError;
+      
+      // Update local state
+      setProfiles(profiles.map(p => p.id === profile.id ? { ...p, locked: newLockedState } : p));
+    } catch (err: any) {
+      alert('Failed to toggle lock: ' + err.message);
+    }
+  };
+
+  const handleGlobalLock = async (shouldLock: boolean) => {
+    const action = shouldLock ? 'LOCK' : 'UNLOCK';
+    if (!window.confirm(`⚠️ WARNING: This will ${action} ALL ${profiles.length} dossiers.\n\nAre you sure you want to proceed?`)) return;
+    
+    setIsLocking(true);
+    try {
+      // We process updates in batches to be safe, though promise.all is fine for small datasets.
+      // We need to fetch current details for each to preserve other nested data.
+      
+      // 1. Fetch all dossiers with their IDs and details
+      const { data: allDossiers, error: fetchError } = await supabase
+        .from('dossiers')
+        .select('id, details');
+
+      if (fetchError || !allDossiers) throw new Error('Failed to fetch dossier details for bulk update.');
+
+      // 2. Prepare update promises
+      const updatePromises = allDossiers.map(dossier => {
+        const currentDetails = dossier.details || {};
+        // Only update if the state is different to save writes
+        if (!!currentDetails.locked !== shouldLock) {
+           return supabase
+            .from('dossiers')
+            .update({ 
+                details: { ...currentDetails, locked: shouldLock } 
+            })
+            .eq('id', dossier.id);
+        }
+        return Promise.resolve();
+      });
+
+      // 3. Execute all updates
+      await Promise.all(updatePromises);
+      
+      // 4. Refresh local state
+      await fetchDossiers();
+      alert(`Success: All dossiers have been ${shouldLock ? 'LOCKED' : 'UNLOCKED'}.`);
+
+    } catch (err: any) {
+        console.error('Global lock error:', err);
+        alert('Global lock/unlock failed: ' + err.message);
+    } finally {
+        setIsLocking(false);
+    }
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     try {
       if (!e.target.files || e.target.files.length === 0) return;
@@ -227,7 +297,7 @@ const App = () => {
         const { data } = supabase.storage.from('dossier-images').getPublicUrl(fileName);
         
         // Update the specific archive item url
-        archives[index] = { ...currentItem, url: data.publicUrl, size: '2MB' }; // Mock size for now
+        archives[index] = { ...currentItem, url: data.publicUrl }; 
         setEditForm({ ...editForm, details: { ...editForm.details, archives }});
       } catch (err: any) {
           alert('Upload failed: ' + err.message);
@@ -336,7 +406,9 @@ const App = () => {
         verification_level: editForm.verification_level || 'Standard',
         details: {
           ...editForm.details,
-          fullBio: currentFullBio
+          fullBio: currentFullBio,
+          // Preserve locked state if not explicitly editing it
+          locked: editForm.details?.locked || false 
         }
       };
 
@@ -398,7 +470,8 @@ const App = () => {
           timeline: profile.timeline || [],
           archives: profile.archives || [],
           news: profile.news || [],
-          podcasts: profile.podcasts || []
+          podcasts: profile.podcasts || [],
+          locked: profile.locked
         }
       });
     } else {
@@ -413,7 +486,8 @@ const App = () => {
             timeline: [],
             archives: [],
             news: [],
-            podcasts: []
+            podcasts: [],
+            locked: false
         }
       });
     }
@@ -468,6 +542,42 @@ const App = () => {
     }
   };
 
+  // --- COMPONENT: ARCHIVIST WORK DESK ---
+  const ArchivistWorkDesk = () => (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] bg-slate dark:bg-navy p-8 text-center animate-fade-in">
+          <div className="bg-white dark:bg-navy-light p-12 rounded-sm shadow-2xl max-w-2xl w-full border-t-8 border-navy dark:border-gold relative overflow-hidden">
+              <div className="absolute top-4 right-4 text-navy/10 dark:text-white/5">
+                  <Shield className="w-32 h-32" />
+              </div>
+              
+              <div className="relative z-10">
+                  <div className="inline-block p-4 bg-navy dark:bg-gold rounded-full mb-6 shadow-lg">
+                      <Lock className="w-8 h-8 text-white dark:text-navy" />
+                  </div>
+                  
+                  <h1 className="text-3xl md:text-4xl font-serif font-bold text-navy dark:text-white mb-2 tracking-tight">
+                      Somalipin
+                  </h1>
+                  <h2 className="text-xl md:text-2xl font-sans font-medium text-gold dark:text-gray-300 uppercase tracking-widest mb-8">
+                      Archivist Work Desk Edition
+                  </h2>
+                  
+                  <div className="h-px w-24 bg-gray-300 dark:bg-gray-600 mx-auto mb-8"></div>
+                  
+                  <p className="text-gray-600 dark:text-gray-400 text-lg leading-relaxed mb-8">
+                      This dossier is currently secured for archival processing, verification updates, or sensitivity classification. 
+                      Access is temporarily restricted to authorized archivists only.
+                  </p>
+                  
+                  <div className="inline-flex items-center space-x-2 text-xs font-bold text-gray-400 uppercase tracking-widest border border-gray-200 dark:border-gray-600 px-4 py-2 rounded-sm">
+                      <Activity className="w-3 h-3" />
+                      <span>Status: Locked / Maintenance</span>
+                  </div>
+              </div>
+          </div>
+      </div>
+  );
+
   // --- ADMIN VIEW RENDER ---
   if (view === 'admin') {
     return (
@@ -500,17 +610,40 @@ const App = () => {
           ) : (
             <>
               <div className="bg-white dark:bg-navy rounded-sm shadow-sm p-6 mb-8">
-                <div className="flex justify-between items-center mb-6">
+                {/* Admin Toolbar */}
+                <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                   <div className="flex items-center gap-4">
                     <h2 className="text-xl font-bold text-gray-700 dark:text-gray-200">Dossier Management</h2>
                     <span className="px-3 py-1 bg-slate dark:bg-navy-light border border-gray-200 dark:border-gray-600 rounded-full text-xs font-bold text-navy dark:text-gold">
                       Total: {profiles.length}
                     </span>
+                    {isLocking && <span className="text-xs text-gold animate-pulse flex items-center"><Loader2 className="w-3 h-3 mr-1 animate-spin"/> Processing...</span>}
                   </div>
-                  <div className="flex space-x-4">
+                  <div className="flex space-x-4 items-center">
+                    {/* Global Lock Controls */}
+                    <div className="flex items-center bg-slate dark:bg-navy-light p-1 rounded-sm border border-gray-200 dark:border-gray-600 mr-4">
+                         <button 
+                            onClick={() => handleGlobalLock(true)}
+                            disabled={isLocking}
+                            className={`flex items-center px-3 py-1 text-xs font-bold rounded-sm transition-all ${isLocking ? 'opacity-50 cursor-not-allowed' : 'text-gray-600 dark:text-gray-300 hover:text-red-600 hover:bg-white dark:hover:bg-navy'}`}
+                            title="Lock All Profiles"
+                         >
+                             <Lock className="w-3 h-3 mr-1" /> Lock All
+                         </button>
+                         <div className="w-px h-4 bg-gray-300 mx-1"></div>
+                         <button 
+                            onClick={() => handleGlobalLock(false)}
+                            disabled={isLocking}
+                            className={`flex items-center px-3 py-1 text-xs font-bold rounded-sm transition-all ${isLocking ? 'opacity-50 cursor-not-allowed' : 'text-gray-600 dark:text-gray-300 hover:text-green-600 hover:bg-white dark:hover:bg-navy'}`}
+                            title="Unlock All Profiles"
+                         >
+                             <Unlock className="w-3 h-3 mr-1" /> Unlock All
+                         </button>
+                    </div>
+
                     <button 
                       onClick={() => openEditModal()}
-                      className="bg-green-600 text-white px-4 py-2 rounded-sm flex items-center hover:bg-green-700"
+                      className="bg-green-600 text-white px-4 py-2 rounded-sm flex items-center hover:bg-green-700 shadow-sm"
                     >
                       <Plus className="w-4 h-4 mr-2" /> Add New
                     </button>
@@ -521,6 +654,7 @@ const App = () => {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-gray-100 dark:bg-navy-light text-gray-600 dark:text-gray-300 text-sm uppercase">
+                        <th className="p-3">Lock</th>
                         <th className="p-3">Name</th>
                         <th className="p-3">Category</th>
                         <th className="p-3">Status</th>
@@ -531,29 +665,41 @@ const App = () => {
                     <tbody>
                       {profiles.length === 0 ? (
                         <tr>
-                            <td colSpan={5} className="p-8 text-center text-gray-500 italic">
+                            <td colSpan={6} className="p-8 text-center text-gray-500 italic">
                                 No dossiers found. Click "Add New" to create the first record.
                             </td>
                         </tr>
                       ) : (
                         profiles.map(p => (
-                            <tr key={p.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-navy-light">
-                            <td className="p-3 font-medium text-navy dark:text-white">{p.name}</td>
-                            <td className="p-3 text-sm text-gray-500 dark:text-gray-400">{p.category}</td>
-                            <td className="p-3">
-                                <span className={`px-2 py-1 text-xs rounded-full ${p.verified ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'}`}>
-                                {p.verified ? 'Verified' : 'Unverified'}
-                                </span>
-                            </td>
-                            <td className="p-3 text-sm dark:text-gray-300">{p.verificationLevel}</td>
-                            <td className="p-3 text-right space-x-2">
-                                <button onClick={() => openEditModal(p)} className="text-blue-600 hover:text-blue-800 dark:text-blue-400">
-                                <Edit2 className="w-4 h-4" />
-                                </button>
-                                <button onClick={() => handleDeleteDossier(p.id)} className="text-red-600 hover:text-red-800 dark:text-red-400">
-                                <Trash2 className="w-4 h-4" />
-                                </button>
-                            </td>
+                            <tr key={p.id} className={`border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-navy-light ${p.locked ? 'bg-gray-50 dark:bg-navy-light/50' : ''}`}>
+                                <td className="p-3">
+                                    <button 
+                                        onClick={() => handleLockToggle(p)}
+                                        className={`p-1.5 rounded-full transition-colors ${p.locked ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-400 hover:text-green-600'}`}
+                                        title={p.locked ? "Unlock Dossier" : "Lock Dossier"}
+                                    >
+                                        {p.locked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+                                    </button>
+                                </td>
+                                <td className="p-3 font-medium text-navy dark:text-white">
+                                    {p.name}
+                                    {p.locked && <span className="ml-2 text-[10px] text-red-500 font-bold uppercase tracking-wider">(Locked)</span>}
+                                </td>
+                                <td className="p-3 text-sm text-gray-500 dark:text-gray-400">{p.category}</td>
+                                <td className="p-3">
+                                    <span className={`px-2 py-1 text-xs rounded-full ${p.verified ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'}`}>
+                                    {p.verified ? 'Verified' : 'Unverified'}
+                                    </span>
+                                </td>
+                                <td className="p-3 text-sm dark:text-gray-300">{p.verificationLevel}</td>
+                                <td className="p-3 text-right space-x-2">
+                                    <button onClick={() => openEditModal(p)} className="text-blue-600 hover:text-blue-800 dark:text-blue-400">
+                                    <Edit2 className="w-4 h-4" />
+                                    </button>
+                                    <button onClick={() => handleDeleteDossier(p.id)} className="text-red-600 hover:text-red-800 dark:text-red-400">
+                                    <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </td>
                             </tr>
                         ))
                       )}
@@ -567,7 +713,7 @@ const App = () => {
           {/* Edit Modal */}
           {isEditing && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white dark:bg-navy w-full max-w-4xl max-h-[95vh] overflow-y-auto rounded-sm flex flex-col">
+              <div className="bg-white dark:bg-navy w-full max-w-4xl max-h-[95vh] overflow-y-auto rounded-sm flex flex-col shadow-2xl">
                 <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center sticky top-0 bg-white dark:bg-navy z-10">
                   <h2 className="text-2xl font-serif font-bold text-navy dark:text-white">
                     {editForm.id ? 'Edit Dossier' : 'New Dossier'}
@@ -770,7 +916,7 @@ const App = () => {
                         <div>
                              <div className="flex justify-between items-center mb-4">
                                 <h3 className="font-bold text-lg dark:text-white">Timeline Events</h3>
-                                <button onClick={addTimelineEvent} className="text-sm bg-navy text-white px-3 py-1 rounded-sm flex items-center">
+                                <button onClick={addTimelineEvent} className="text-sm bg-navy text-white px-3 py-1 rounded-sm flex items-center shadow-sm hover:bg-navy-light">
                                     <Plus className="w-3 h-3 mr-1" /> Add Event
                                 </button>
                             </div>
@@ -801,7 +947,7 @@ const App = () => {
                                     </div>
                                 ))}
                                 {(!editForm.details?.timeline || editForm.details.timeline.length === 0) && (
-                                    <p className="text-gray-400 italic text-center py-4">No timeline events added.</p>
+                                    <p className="text-gray-400 italic text-center py-4 bg-gray-50 dark:bg-navy-light rounded-sm">No timeline events added.</p>
                                 )}
                             </div>
                         </div>
@@ -811,7 +957,7 @@ const App = () => {
                         <div>
                              <div className="flex justify-between items-center mb-4">
                                 <h3 className="font-bold text-lg dark:text-white">Archives & Documents</h3>
-                                <button onClick={addArchiveItem} className="text-sm bg-navy text-white px-3 py-1 rounded-sm flex items-center">
+                                <button onClick={addArchiveItem} className="text-sm bg-navy text-white px-3 py-1 rounded-sm flex items-center shadow-sm hover:bg-navy-light">
                                     <Plus className="w-3 h-3 mr-1" /> Add Document
                                 </button>
                             </div>
@@ -863,7 +1009,7 @@ const App = () => {
                                                 />
                                             </label>
                                             <input 
-                                                placeholder="Or paste URL here" 
+                                                placeholder="Or paste URL manually" 
                                                 className="flex-1 border p-1 rounded-sm text-gray-500 text-xs dark:bg-navy dark:border-gray-600 dark:text-gray-300"
                                                 value={item.url || ''} 
                                                 onChange={e => updateArchiveItem(idx, 'url', e.target.value)}
@@ -872,7 +1018,7 @@ const App = () => {
                                     </div>
                                 ))}
                                  {(!editForm.details?.archives || editForm.details.archives.length === 0) && (
-                                    <p className="text-gray-400 italic text-center py-4">No documents added.</p>
+                                    <p className="text-gray-400 italic text-center py-4 bg-gray-50 dark:bg-navy-light rounded-sm">No documents added.</p>
                                 )}
                             </div>
                         </div>
@@ -882,7 +1028,7 @@ const App = () => {
                         <div>
                              <div className="flex justify-between items-center mb-4">
                                 <h3 className="font-bold text-lg dark:text-white">News & Reports</h3>
-                                <button onClick={addNewsItem} className="text-sm bg-navy text-white px-3 py-1 rounded-sm flex items-center">
+                                <button onClick={addNewsItem} className="text-sm bg-navy text-white px-3 py-1 rounded-sm flex items-center shadow-sm hover:bg-navy-light">
                                     <Plus className="w-3 h-3 mr-1" /> Add Article
                                 </button>
                             </div>
@@ -929,7 +1075,7 @@ const App = () => {
                                     </div>
                                 ))}
                                 {(!editForm.details?.news || editForm.details.news.length === 0) && (
-                                    <p className="text-gray-400 italic text-center py-4">No news items added.</p>
+                                    <p className="text-gray-400 italic text-center py-4 bg-gray-50 dark:bg-navy-light rounded-sm">No news items added.</p>
                                 )}
                             </div>
                         </div>
@@ -939,7 +1085,7 @@ const App = () => {
                         <div>
                              <div className="flex justify-between items-center mb-4">
                                 <h3 className="font-bold text-lg dark:text-white">Podcasts</h3>
-                                <button onClick={addPodcastItem} className="text-sm bg-navy text-white px-3 py-1 rounded-sm flex items-center">
+                                <button onClick={addPodcastItem} className="text-sm bg-navy text-white px-3 py-1 rounded-sm flex items-center shadow-sm hover:bg-navy-light">
                                     <Plus className="w-3 h-3 mr-1" /> Add Podcast
                                 </button>
                             </div>
@@ -988,7 +1134,7 @@ const App = () => {
                                     </div>
                                 ))}
                                 {(!editForm.details?.podcasts || editForm.details.podcasts.length === 0) && (
-                                    <p className="text-gray-400 italic text-center py-4">No podcasts added.</p>
+                                    <p className="text-gray-400 italic text-center py-4 bg-gray-50 dark:bg-navy-light rounded-sm">No podcasts added.</p>
                                 )}
                             </div>
                         </div>
@@ -996,7 +1142,7 @@ const App = () => {
 
                 </div>
 
-                <div className="p-6 border-t border-gray-100 dark:border-gray-700 flex justify-end space-x-4 sticky bottom-0 bg-white dark:bg-navy">
+                <div className="p-6 border-t border-gray-100 dark:border-gray-700 flex justify-end space-x-4 sticky bottom-0 bg-white dark:bg-navy z-20">
                   <button 
                     onClick={() => setIsEditing(false)}
                     className="px-4 py-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
@@ -1005,7 +1151,7 @@ const App = () => {
                   </button>
                   <button 
                     onClick={handleSaveDossier}
-                    className="bg-navy text-white px-6 py-2 rounded-sm hover:bg-navy-light dark:bg-gold dark:text-navy flex items-center"
+                    className="bg-navy text-white px-6 py-2 rounded-sm hover:bg-navy-light dark:bg-gold dark:text-navy flex items-center shadow-sm"
                   >
                     <Save className="w-4 h-4 mr-2" /> Save Changes
                   </button>
@@ -1245,7 +1391,9 @@ const App = () => {
               {t.back_directory}
             </button>
 
-            {selectedProfile && (
+            {selectedProfile && selectedProfile.locked ? (
+                 <ArchivistWorkDesk />
+            ) : selectedProfile ? (
               <div className="bg-white dark:bg-navy shadow-xl rounded-sm overflow-hidden mb-12">
                 <div className={`h-48 relative ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'bg-red-900' : 'bg-navy'}`}>
                     <div className="absolute inset-0 bg-black/20 pattern-grid-lg"></div>
@@ -1496,7 +1644,7 @@ const App = () => {
                     )}
                 </div>
               </div>
-            )}
+            ) : null}
           </div>
         )}
       </main>

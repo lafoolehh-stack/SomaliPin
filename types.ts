@@ -78,6 +78,7 @@ export enum Category {
     status: ProfileStatus;
     dateStart: string; 
     dateEnd?: string;
+    locked?: boolean; // New field for security/locking
   }
 
   // Supabase Database Row Interface
