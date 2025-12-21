@@ -1,13 +1,13 @@
 
 import * as React from 'react';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Search, ChevronLeft, Building2, User, FileText, 
   ImageIcon, Newspaper, Globe, Calendar, Clock, Activity, Lock, 
   Plus, Trash2, Save, X, Database, Sun, Moon, Headphones, 
   Unlock, Shield, Loader2, Briefcase, Landmark, Gavel, 
   ShieldCheck, ChevronUp, ChevronDown, Palette, Settings, Layers, RefreshCw, 
-  ExternalLink, Play, ArrowRight 
+  ExternalLink, Play, ArrowRight, Upload 
 } from 'lucide-react';
 import ProfileCard from './components/ProfileCard';
 import Timeline from './components/Timeline';
@@ -38,10 +38,13 @@ const App = () => {
   const [editForm, setEditForm] = useState<Partial<Profile>>({});
   const [activeAdminTab, setActiveAdminTab] = useState<'basic' | 'timeline' | 'archive' | 'positions' | 'news' | 'podcast'>('basic');
   const [isLocking, setIsLocking] = useState(false); 
+  const [isUploadingImage, setIsUploadingImage] = useState(false); // New state for image upload
 
   const [newCatName, setNewCatName] = useState('');
   const [newCatSection, setNewCatSection] = useState<SectionType>(SectionType.BUSINESS);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null); // Ref for hidden file input
 
   const t = UI_TEXT[language] || UI_TEXT.en;
 
@@ -288,6 +291,35 @@ const App = () => {
     else await fetchDossiers();
   };
 
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingImage(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `profile-pictures/${fileName}`; // Ensure this bucket exists in Supabase Storage
+
+      const { data, error } = await supabase.storage.from('profile-pictures').upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+      if (error) throw error;
+
+      const { data: publicUrlData } = supabase.storage.from('profile-pictures').getPublicUrl(filePath);
+      
+      setEditForm(prev => ({ ...prev, imageUrl: publicUrlData.publicUrl }));
+      alert('Image uploaded successfully!');
+    } catch (error: any) {
+      console.error('Error uploading image:', error);
+      alert('Image upload failed: ' + error.message);
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
   const handleSaveDossier = async () => {
     try {
       if (!editForm.name || !editForm.category) return alert('Name and Category are required');
@@ -298,7 +330,7 @@ const App = () => {
         bio: editForm.shortBio || '', 
         status: editForm.verified ? 'Verified' : 'Unverified',
         reputation_score: Number(editForm.influence?.support) || 0,
-        image_url: editForm.imageUrl || '',
+        image_url: editForm.imageUrl || '', // Use the uploaded image URL
         category: editForm.category,
         verification_level: editForm.verificationLevel || 'Standard',
         details: { 
@@ -629,7 +661,51 @@ const App = () => {
                                 <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Lifecycle Status</label><select className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.status || 'ACTIVE'} onChange={(e) => setEditForm({...editForm, status: e.target.value as ProfileStatus})}><option value="ACTIVE">Active</option><option value="DECEASED">Deceased</option><option value="RETIRED">Retired</option><option value="CLOSED">Closed</option></select></div>
                                 <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Display Category</label><input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.category || ''} onChange={(e) => setEditForm({...editForm, category: e.target.value})} /></div>
                                 <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Honors Tier</label><select className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.verificationLevel || 'Standard'} onChange={(e) => setEditForm({...editForm, verificationLevel: e.target.value as VerificationLevel})}><option value="Standard">Standard</option><option value="Golden">Golden</option><option value="Hero">Hero</option><option value="Nobel">Nobel</option></select></div>
-                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Profile Image URL</label><input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.imageUrl || ''} onChange={(e) => setEditForm({...editForm, imageUrl: e.target.value})} /></div>
+                                
+                                {/* Profile Image URL input */}
+                                <div>
+                                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Profile Image URL (Manual)</label>
+                                  <input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.imageUrl || ''} onChange={(e) => setEditForm({...editForm, imageUrl: e.target.value})} />
+                                </div>
+
+                                {/* Image Upload Section */}
+                                <div className="mt-4">
+                                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Upload Profile Picture</label>
+                                  <input 
+                                    type="file" 
+                                    accept="image/*" 
+                                    onChange={handleImageUpload} 
+                                    ref={fileInputRef} 
+                                    className="hidden" 
+                                    disabled={isUploadingImage}
+                                  />
+                                  <div 
+                                    className={`w-full h-32 border-2 border-dashed rounded-sm flex items-center justify-center cursor-pointer transition-colors ${isUploadingImage ? 'bg-gray-100 dark:bg-navy-light/50 border-gray-300' : 'border-gray-200 dark:border-gray-600 hover:border-gold hover:bg-slate dark:hover:bg-navy-light'}`}
+                                    onClick={() => !isUploadingImage && fileInputRef.current?.click()}
+                                  >
+                                    {isUploadingImage ? (
+                                      <Loader2 className="w-6 h-6 text-gold animate-spin" />
+                                    ) : editForm.imageUrl ? (
+                                      <div className="relative w-full h-full flex items-center justify-center">
+                                        <img src={editForm.imageUrl} alt="Profile Preview" className="max-h-full max-w-full object-contain" />
+                                        <button 
+                                          type="button" 
+                                          onClick={(e) => { e.stopPropagation(); setEditForm(prev => ({ ...prev, imageUrl: '' })); if(fileInputRef.current) fileInputRef.current.value = ''; }}
+                                          className="absolute top-1 right-1 p-1 bg-black/50 text-white rounded-full hover:bg-black/70 transition-colors"
+                                          title="Clear Image"
+                                        >
+                                          <X className="w-4 h-4" />
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <div className="flex flex-col items-center text-gray-400">
+                                        <Upload className="w-6 h-6 mb-2" />
+                                        <span className="text-sm font-medium">Click to upload image</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
                                 <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Short Bio</label><textarea className="w-full border p-2.5 rounded-sm h-24 dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none resize-none" value={editForm.shortBio || ''} onChange={(e) => setEditForm({...editForm, shortBio: e.target.value})} /></div>
                             </div>
                             <div className="md:col-span-2"><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Full Biography</label><textarea className="w-full border p-3 rounded-sm h-56 font-serif dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.fullBio || ''} onChange={(e) => setEditForm({ ...editForm, fullBio: e.target.value })} /></div>
