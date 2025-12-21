@@ -66,9 +66,7 @@ const App = () => {
   }, [view]);
 
   const navigateTo = (newView: typeof view, path: string = '/') => {
-    if (window.location.pathname !== path) {
-      window.history.pushState({}, '', path);
-    }
+    // Removed window.history.pushState( {}, '', path); to prevent SecurityError in iframe environments.
     setView(newView);
     window.scrollTo(0, 0);
   };
@@ -662,13 +660,7 @@ const App = () => {
                                 <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Display Category</label><input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.category || ''} onChange={(e) => setEditForm({...editForm, category: e.target.value})} /></div>
                                 <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Honors Tier</label><select className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.verificationLevel || 'Standard'} onChange={(e) => setEditForm({...editForm, verificationLevel: e.target.value as VerificationLevel})}><option value="Standard">Standard</option><option value="Golden">Golden</option><option value="Hero">Hero</option><option value="Nobel">Nobel</option></select></div>
                                 
-                                {/* Profile Image URL input */}
-                                <div>
-                                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Profile Image URL (Manual)</label>
-                                  <input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.imageUrl || ''} onChange={(e) => setEditForm({...editForm, imageUrl: e.target.value})} />
-                                </div>
-
-                                {/* Image Upload Section */}
+                                {/* Profile Image Upload Section */}
                                 <div className="mt-4">
                                   <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Upload Profile Picture</label>
                                   <input 
