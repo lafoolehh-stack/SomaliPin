@@ -499,7 +499,7 @@ const App = () => {
 
   if (view === 'admin') {
     return (
-      <div className="min-h-screen bg-slate dark:bg-navy-light dark:text-gray-100 p-8 font-sans">
+      <div className="min-h-screen bg-slate dark:bg-navy-light dark:text-gray-100 p-8 font-sans text-gray-800">
         <div className="max-w-6xl mx-auto">
           <div className="flex justify-between items-center mb-8">
             <h1 className="text-3xl font-serif font-bold text-navy dark:text-white">Admin Dashboard</h1>
@@ -574,7 +574,7 @@ const App = () => {
                     </div>
                   </>
                 ) : (
-                  <div className="space-y-8">
+                  <div className="space-y-8 text-gray-800">
                     <div className="flex justify-between items-center mb-2">
                       <h2 className="text-xl font-bold text-gray-800 dark:text-white">Archive Categories Manager</h2>
                       <button onClick={fetchDossiers} className="p-2 text-gray-400 hover:text-navy dark:hover:text-gold" title="Refresh Structure">
@@ -627,7 +627,7 @@ const App = () => {
 
           {isEditing && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
-              <div className="bg-white dark:bg-navy w-full max-w-5xl max-h-[95vh] overflow-y-auto rounded-sm flex flex-col shadow-2xl animate-fade-in border border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-navy w-full max-w-5xl max-h-[95vh] overflow-y-auto rounded-sm flex flex-col shadow-2xl animate-fade-in border border-gray-200 dark:border-gray-700 text-gray-800">
                 <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center sticky top-0 bg-white dark:bg-navy z-10">
                   <h2 className="text-2xl font-serif font-bold text-navy dark:text-white">Dossier Workspace</h2>
                   <button onClick={() => setIsEditing(false)} className="p-2 hover:bg-slate dark:hover:bg-navy-light rounded-full transition-colors"><X className="w-6 h-6 text-gray-400" /></button>
@@ -642,7 +642,7 @@ const App = () => {
                 <div className="p-8">
                     {activeAdminTab === 'basic' && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="space-y-5">
+                            <div className="space-y-5 text-gray-800">
                                 <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Full Name</label><input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.name || ''} onChange={(e) => setEditForm({...editForm, name: e.target.value})} /></div>
                                 <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Headline Role</label><input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.title || ''} onChange={(e) => setEditForm({...editForm, title: e.target.value})} /></div>
                                 <div className="grid grid-cols-2 gap-4">
@@ -660,7 +660,7 @@ const App = () => {
                                 <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Display Category</label><input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.category || ''} onChange={(e) => setEditForm({...editForm, category: e.target.value})} /></div>
                                 <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Honors Tier</label><select className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.verificationLevel || 'Standard'} onChange={(e) => setEditForm({...editForm, verificationLevel: e.target.value as VerificationLevel})}><option value="Standard">Standard</option><option value="Golden">Golden</option><option value="Hero">Hero</option><option value="Nobel">Nobel</option></select></div>
                                 
-                                <div className="mt-4 p-4 border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-navy/30 rounded-sm">
+                                <div className="mt-4 p-4 border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-navy/30 rounded-sm text-gray-800">
                                   <div className="mb-4">
                                     <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Profile Image URL (Manual)</label>
                                     <input 
@@ -733,7 +733,7 @@ const App = () => {
                         <div className="space-y-6">
                             <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-navy dark:text-white flex items-center"><FileText className="w-5 h-5 mr-2 text-gold"/> Archive Documents</h3><button onClick={() => setEditForm(prev => ({ ...prev, archives: [...(prev.archives || []), { id: Date.now().toString(), type: 'PDF', title: '', date: '', url: '' }] }))} className="text-xs bg-navy text-gold px-4 py-2 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"><Plus className="w-4 h-4 mr-1" /> Add Doc</button></div>
                             <div className="space-y-4">{(editForm.archives || []).filter(Boolean).map((item, idx) => (
-                                <div key={idx} className="flex gap-4 items-center border p-4 rounded-sm bg-slate/30 dark:bg-navy-light/40 group">
+                                <div key={idx} className="flex gap-4 items-center border p-4 rounded-sm bg-[#F9FAFB] dark:bg-navy-light/40 group">
                                     <select className="w-24 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={item.type} onChange={e => { const a = [...(editForm.archives || [])]; a[idx].type = e.target.value as any; setEditForm({...editForm, archives: a}); }}>
                                         <option value="PDF">PDF</option>
                                         <option value="IMAGE">IMAGE</option>
@@ -750,7 +750,7 @@ const App = () => {
                         <div className="space-y-6">
                             <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-navy dark:text-white flex items-center"><Newspaper className="w-5 h-5 mr-2 text-gold"/> News Reports</h3><button onClick={() => setEditForm(prev => ({ ...prev, news: [...(prev.news || []), { id: Date.now().toString(), title: '', source: '', date: '', summary: '', url: '' }] }))} className="text-xs bg-navy text-gold px-4 py-2 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"><Plus className="w-4 h-4 mr-1" /> Add News</button></div>
                             <div className="space-y-4">{(editForm.news || []).filter(Boolean).map((item, idx) => (
-                                <div key={idx} className="border p-4 rounded-sm bg-slate/30 dark:bg-navy-light/40 group space-y-3">
+                                <div key={idx} className="border p-4 rounded-sm bg-[#F9FAFB] dark:bg-navy-light/40 group space-y-3">
                                     <div className="flex gap-4">
                                         <input placeholder="Headline" className="flex-1 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs font-bold" value={item.title || ''} onChange={e => { const n = [...(editForm.news || [])]; n[idx].title = e.target.value; setEditForm({...editForm, news: n}); }} />
                                         <input placeholder="Source" className="w-40 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={item.source || ''} onChange={e => { const n = [...(editForm.news || [])]; n[idx].source = e.target.value; setEditForm({...editForm, news: n}); }} />
@@ -765,7 +765,7 @@ const App = () => {
                         <div className="space-y-6">
                             <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-navy dark:text-white flex items-center"><Headphones className="w-5 h-5 mr-2 text-gold"/> Podcast Library</h3><button onClick={() => setEditForm(prev => ({ ...prev, podcasts: [...(prev.podcasts || []), { id: Date.now().toString(), title: '', date: '', duration: '', source: '', url: '' }] }))} className="text-xs bg-navy text-gold px-4 py-2 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"><Plus className="w-4 h-4 mr-1" /> Add Clip</button></div>
                             <div className="space-y-4">{(editForm.podcasts || []).filter(Boolean).map((item, idx) => (
-                                <div key={idx} className="border p-4 rounded-sm bg-slate/30 dark:bg-navy-light/40 group space-y-3">
+                                <div key={idx} className="border p-4 rounded-sm bg-[#F9FAFB] dark:bg-navy-light/40 group space-y-3">
                                     <div className="flex gap-4">
                                         <input placeholder="Episode Title" className="flex-1 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs font-bold" value={item.title || ''} onChange={e => { const p = [...(editForm.podcasts || [])]; p[idx].title = e.target.value; setEditForm({...editForm, podcasts: p}); }} />
                                         <input placeholder="Audio URL" className="flex-1 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={item.url || ''} onChange={e => { const p = [...(editForm.podcasts || [])]; p[idx].url = e.target.value; setEditForm({...editForm, podcasts: p}); }} />
@@ -776,14 +776,14 @@ const App = () => {
                         </div>
                     )}
                     {activeAdminTab === 'positions' && (
-                        <div className="space-y-8 animate-fade-in">
+                        <div className="space-y-8 animate-fade-in text-gray-800">
                              <div className="flex justify-between items-center">
                                 <h3 className="font-bold text-lg text-navy dark:text-white flex items-center">
                                   <Layers className="w-5 h-5 mr-2 text-gold"/> Official Archive Roles
                                 </h3>
                                 <button 
                                   onClick={() => setEditForm(prev => ({ ...prev, archiveAssignments: [...(prev.archiveAssignments || []), { id: 0, user_id: editForm.id || '', category_id: (allCategories && allCategories.length > 0) ? allCategories[0].id : 0, start_date: '', end_date: '', title_note: '' }] }))} 
-                                  className="text-xs bg-navy text-white px-5 py-2.5 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"
+                                  className="text-xs bg-[#0A2647] text-white px-5 py-2.5 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"
                                 >
                                   <Plus className="w-4 h-4 mr-1.5 text-gold" /> Assign Role
                                 </button>
@@ -791,16 +791,16 @@ const App = () => {
 
                             <div className="space-y-6">
                               {(editForm.archiveAssignments || []).filter(Boolean).map((assign, idx) => (
-                                <div key={idx} className="border border-gray-100 dark:border-gray-800 p-8 rounded-sm bg-gray-50/50 dark:bg-navy-light/10 group relative shadow-sm">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start pr-12">
+                                <div key={idx} className="border border-gray-100 dark:border-gray-800 p-6 rounded-sm bg-[#F9FAFB] dark:bg-navy-light/10 group relative shadow-sm">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start pr-12">
                                         <div className="space-y-2">
-                                            <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-widest">Category</label>
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">CATEGORY</label>
                                             <select 
-                                              className="w-full border border-gray-200 p-3.5 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-sm font-medium focus:ring-1 focus:ring-gold outline-none bg-white transition-shadow" 
+                                              className="w-full border border-gray-200 p-3 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-sm font-medium focus:ring-1 focus:ring-blue-400 outline-none bg-white transition-shadow" 
                                               value={assign.category_id} 
                                               onChange={e => { const updated = [...(editForm.archiveAssignments || [])]; updated[idx].category_id = parseInt(e.target.value); setEditForm({...editForm, archiveAssignments: updated}); }}
                                             >
-                                                <option value={0}>Select a category...</option>
+                                                <option value={0}>Select Category...</option>
                                                 {Object.values(SectionType).map(sect => (
                                                     <optgroup label={sect} key={sect} className="font-bold text-navy-light">
                                                         {(allCategories || []).filter(c => c && c.section_type === sect).map(cat => (
@@ -811,10 +811,10 @@ const App = () => {
                                             </select>
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-widest">Specific Title</label>
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">SPECIFIC TITLE</label>
                                             <input 
                                               placeholder="e.g. Chairman" 
-                                              className="w-full border border-gray-200 p-3.5 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-sm focus:ring-1 focus:ring-gold outline-none bg-white placeholder-gray-300" 
+                                              className="w-full border border-gray-200 p-3 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-sm focus:ring-1 focus:ring-blue-400 outline-none bg-white placeholder-gray-300" 
                                               value={assign.title_note || ''} 
                                               onChange={e => { const updated = [...(editForm.archiveAssignments || [])]; updated[idx].title_note = e.target.value; setEditForm({...editForm, archiveAssignments: updated}); }} 
                                             />
@@ -822,7 +822,7 @@ const App = () => {
                                     </div>
                                     <button 
                                       onClick={() => { const updated = [...(editForm.archiveAssignments || [])]; updated.splice(idx, 1); setEditForm({...editForm, archiveAssignments: updated}); }} 
-                                      className="absolute top-1/2 -translate-y-1/2 right-6 p-2.5 text-red-300 hover:text-red-500 transition-colors bg-white dark:bg-navy rounded-full shadow-sm hover:shadow-md border border-gray-100 dark:border-gray-700"
+                                      className="absolute top-1/2 -translate-y-1/2 right-6 p-2 text-red-400 hover:text-red-600 transition-colors"
                                       title="Remove Role"
                                     >
                                       <Trash2 className="w-5 h-5" />
@@ -831,8 +831,8 @@ const App = () => {
                             ))}
 
                             {(editForm.archiveAssignments || []).length === 0 && (
-                                <div className="text-center py-16 border-2 border-dashed border-gray-100 rounded-sm bg-slate/30">
-                                    <Layers className="w-12 h-12 text-gray-200 mx-auto mb-4" />
+                                <div className="text-center py-12 border-2 border-dashed border-gray-100 rounded-sm">
+                                    <Layers className="w-10 h-10 text-gray-200 mx-auto mb-3" />
                                     <p className="text-gray-400 text-sm italic font-serif">No official archive roles assigned yet.</p>
                                 </div>
                             )}
@@ -840,18 +840,18 @@ const App = () => {
                         </div>
                     )}
                 </div>
-                <div className="p-6 border-t border-gray-100 dark:border-gray-700 flex justify-end items-center space-x-10 sticky bottom-0 bg-white dark:bg-navy z-20">
+                <div className="p-6 border-t border-gray-100 dark:border-gray-700 flex justify-end items-center space-x-12 sticky bottom-0 bg-white dark:bg-navy z-20">
                     <button 
                       onClick={() => setIsEditing(false)} 
-                      className="text-sm font-bold text-gray-400 hover:text-navy transition-colors tracking-widest uppercase"
+                      className="text-sm font-bold text-gray-400 hover:text-navy transition-colors tracking-widest"
                     >
                       Discard
                     </button>
                     <button 
                       onClick={handleSaveDossier} 
-                      className="bg-navy dark:bg-gold text-white dark:text-navy px-14 py-3.5 rounded-sm font-bold flex items-center shadow-xl transform active:scale-95 transition-all"
+                      className="bg-[#0A2647] dark:bg-gold text-white dark:text-navy px-12 py-3 rounded-sm font-bold flex items-center shadow-lg transform active:scale-95 transition-all"
                     >
-                      <Save className="w-5 h-5 mr-3" /> Save Dossier
+                      <Save className="w-4 h-4 mr-2.5" /> Save Dossier
                     </button>
                 </div>
               </div>
@@ -931,7 +931,7 @@ const App = () => {
               </div>
             </section>
 
-            <section className="max-w-6xl mx-auto px-4 py-12 border-b border-gray-200 dark:border-gray-700">
+            <section className="max-w-6xl mx-auto px-4 py-12 border-b border-gray-200 dark:border-gray-700 text-gray-800">
               <div className="flex justify-between items-end mb-8 border-b border-gray-200 dark:border-gray-700 pb-4">
                 <h2 className="text-3xl font-serif font-bold text-navy dark:text-white flex items-center">
                   Featured Dossiers (129)
@@ -970,26 +970,26 @@ const App = () => {
             </section>
           </>
         ) : (
-          <div className="max-w-5xl mx-auto px-4 py-12 animate-fade-in">
+          <div className="max-w-5xl mx-auto px-4 py-12 animate-fade-in text-gray-800">
             <button onClick={handleBack} className="group flex items-center text-navy dark:text-gold font-medium mb-8 hover:text-gold transition-colors"><ChevronLeft className="h-5 w-5 mr-1" />{t.back_directory}</button>
             {selectedProfile && selectedProfile.locked ? (<ArchivistWorkDesk />) : selectedProfile ? (
               <div className="bg-white dark:bg-navy shadow-xl rounded-sm overflow-hidden mb-12">
                 <div className="h-48 relative bg-navy"><div className="absolute inset-0 bg-black/20"></div></div>
                 <div className="px-8 pb-12">
                     <div className="relative flex justify-between items-end -mt-20 mb-8"><div className="relative"><img src={selectedProfile?.imageUrl || 'https://via.placeholder.com/150'} className="w-40 h-40 object-cover rounded-sm border-4 border-white shadow-md" />{selectedProfile?.verified && (<div className="absolute -bottom-3 -right-3 bg-white p-1 rounded-full shadow-sm cursor-pointer hover:scale-110 transition-transform" onClick={() => setShowCertificate(true)}>{getVerificationIcon(selectedProfile?.verificationLevel)}</div>)}</div></div>
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 text-gray-800">
                         <div className="lg:col-span-2">
                             <div className="mb-8"><div className="flex flex-wrap items-center gap-3 mb-4"><span className="text-sm font-bold tracking-widest uppercase text-gold">{selectedProfile?.category}</span></div><h1 className="text-4xl font-serif font-bold text-navy dark:text-white mb-2">{selectedProfile?.name}</h1><p className="text-xl text-gray-500 dark:text-gray-400 font-light">{selectedProfile?.title}</p></div>
-                            <div className="prose prose-slate max-w-none"><h3 className="text-navy dark:text-gold font-serif text-xl border-b border-gray-200 dark:border-gray-700 pb-2 mb-4">{t.about}</h3><p className="text-gray-700 dark:text-gray-300 leading-relaxed text-lg whitespace-pre-line">{selectedProfile?.fullBio}</p></div>
-                            <div className="mt-12"><h3 className="text-navy dark:text-gold font-serif text-xl border-b border-gray-200 dark:border-gray-700 pb-2 mb-4">{t.timeline}</h3><Timeline events={selectedProfile?.timeline || []} /></div>
+                            <div className="prose prose-slate max-w-none text-gray-800"><h3 className="text-navy dark:text-gold font-serif text-xl border-b border-gray-200 dark:border-gray-700 pb-2 mb-4">{t.about}</h3><p className="text-gray-700 dark:text-gray-300 leading-relaxed text-lg whitespace-pre-line">{selectedProfile?.fullBio}</p></div>
+                            <div className="mt-12 text-gray-800"><h3 className="text-navy dark:text-gold font-serif text-xl border-b border-gray-200 dark:border-gray-700 pb-2 mb-4">{t.timeline}</h3><Timeline events={selectedProfile?.timeline || []} /></div>
                             
-                            <div className="mt-16">
+                            <div className="mt-16 text-gray-800">
                                 <div className="flex border-b border-gray-100 dark:border-gray-700 mb-8 overflow-x-auto space-x-8">
                                     {['archive', 'news', 'podcast'].map((tab) => (
                                         <button key={tab} onClick={() => setActiveTab(tab as any)} className={`pb-4 text-xs font-bold tracking-[0.2em] uppercase transition-all relative ${activeTab === tab ? 'text-navy dark:text-gold' : 'text-gray-300 hover:text-gray-500'}`}>{tab === 'archive' ? t.tab_archive : tab === 'news' ? t.tab_news : t.tab_podcast}{activeTab === tab && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-navy dark:bg-gold"></div>}</button>
                                     ))}
                                 </div>
-                                <div className="animate-fade-in min-h-[200px]">
+                                <div className="animate-fade-in min-h-[200px] text-gray-800">
                                     {activeTab === 'archive' && (<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">{(selectedProfile?.archives || []).length > 0 ? selectedProfile?.archives?.map((item) => (<a key={item.id} href={item.url || '#'} target="_blank" className="group flex items-center p-4 bg-slate dark:bg-navy-light rounded-sm border border-transparent hover:border-gold transition-all"><div className="p-3 bg-white dark:bg-navy rounded text-gold mr-4">{item.type === 'PDF' ? <FileText className="w-6 h-6" /> : <ImageIcon className="w-6 h-6" />}</div><div className="flex-1 min-w-0"><h4 className="text-sm font-bold text-navy dark:text-white truncate">{item.title}</h4><p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">{item.date}</p></div><ExternalLink className="w-4 h-4 text-gray-300 opacity-0 group-hover:opacity-100" /></a>)) : <div className="col-span-2 py-12 text-center text-gray-400 italic">{t.no_docs}</div>}</div>)}
                                     {activeTab === 'news' && (<div className="space-y-4">{(selectedProfile?.news || []).length > 0 ? selectedProfile?.news?.map((item) => (<div key={item.id} className="p-5 bg-white dark:bg-navy-light border border-gray-100 dark:border-gray-700 rounded-sm hover:shadow-lg transition-all group"><div className="flex justify-between items-start mb-3"><span className="text-[10px] font-bold text-gold uppercase bg-gold/10 px-2 py-0.5 rounded">{item.source}</span><span className="text-[10px] font-mono text-gray-400">{item.date}</span></div><h4 className="text-lg font-serif font-bold text-navy dark:text-white mb-2 group-hover:text-gold transition-colors">{item.title}</h4><p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-4">{item.summary}</p>{item.url && <a href={item.url} target="_blank" className="inline-flex items-center text-[10px] font-bold text-navy dark:text-gold uppercase hover:underline"><Globe className="w-3 h-3 mr-1" /> {t.search_btn}</a>}</div>)) : <div className="py-12 text-center text-gray-400 italic">{t.no_news}</div>}</div>)}
                                     {activeTab === 'podcast' && (<div className="grid grid-cols-1 gap-3">{(selectedProfile?.podcasts || []).length > 0 ? selectedProfile?.podcasts?.map((item) => (<div key={item.id} className="flex items-center p-4 bg-navy dark:bg-navy-light text-white rounded-sm group hover:bg-navy-light transition-all shadow-xl border border-gold/10"><div className="p-3 bg-gold rounded-full mr-4 text-navy"><Play className="w-5 h-5 fill-current" /></div><div className="flex-1 min-w-0"><h4 className="text-sm font-bold truncate tracking-wide">{item.title}</h4><p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">{item.source} • {item.duration}</p></div><div className="flex items-center space-x-3 opacity-40"><Headphones className="w-4 h-4" /><span className="text-[10px] font-mono">{item.date}</span></div></div>)) : <div className="py-12 text-center text-gray-400 italic">{t.no_podcasts}</div>}</div>)}
@@ -997,18 +997,18 @@ const App = () => {
                             </div>
                         </div>
 
-                        <div className="space-y-6">
+                        <div className="space-y-6 text-gray-800">
                             <div className="bg-slate dark:bg-navy-light p-6 rounded-sm border border-gray-200 dark:border-navy">
                                 <h4 className="font-serif font-bold text-navy dark:text-white mb-4">{t.key_info}</h4>
-                                <div className="space-y-4 text-sm">
-                                    <div className="flex items-center"><Calendar className="h-5 w-5 mr-3 text-gold" /><div><span className="block text-gray-400 text-xs uppercase">{selectedProfile?.isOrganization ? t.lbl_est : t.lbl_born}</span><span className="font-medium">{selectedProfile?.dateStart || 'Unknown'}</span></div></div>
+                                <div className="space-y-4 text-sm text-gray-800">
+                                    <div className="flex items-center"><Calendar className="h-5 w-5 mr-3 text-gold" /><div><span className="block text-gray-400 text-xs uppercase">{selectedProfile?.isOrganization ? t.lbl_est : t.lbl_born}</span><span className="font-medium text-gray-800">{selectedProfile?.dateStart || 'Unknown'}</span></div></div>
                                     
                                     {selectedProfile?.dateEnd && (
                                       <div className="flex items-center">
                                         <Clock className="h-5 w-5 mr-3 text-gold" />
                                         <div>
                                           <span className="block text-gray-400 text-xs uppercase">{selectedProfile.isOrganization ? t.lbl_closed : t.lbl_died}</span>
-                                          <span className="font-medium">{selectedProfile.dateEnd}</span>
+                                          <span className="font-medium text-gray-800">{selectedProfile.dateEnd}</span>
                                         </div>
                                       </div>
                                     )}
