@@ -1,5 +1,4 @@
 
-
 import { Category, Profile, VerificationLevel, Language, ProfileStatus } from './types';
 
 export const UI_TEXT = {
@@ -9,6 +8,7 @@ export const UI_TEXT = {
     nav_business: "Business",
     nav_history: "History",
     nav_arts: "Arts & Culture",
+    nav_archive: "National Archive",
     nav_login: "Login",
     hero_title_1: "Discover the History of",
     hero_title_2: "Somali Excellence",
@@ -82,9 +82,17 @@ export const UI_TEXT = {
     status_deceased: "Deceased",
     status_retired: "Retired",
     status_closed: "Closed",
-    // New
+    // National Archive
+    archive_explorer_title: "🏛️ National Registry Explorer",
+    archive_explorer_desc: "An organized directory of historical leadership across Politics, Judiciary, Security, and Business sectors.",
+    sec_politics: "Politics (Siyaasadda)",
+    sec_judiciary: "Judiciary (Garsoorka)",
+    sec_security: "Security (Ciidamada)",
+    sec_business: "Business (Ganacsiga)",
+    sec_arts_culture: "Arts & Culture (Dhaqanka)",
     archive_positions: "Archive Positions",
-    no_archive_positions: "No archive positions recorded for this profile."
+    no_archive_positions: "No archive positions recorded for this profile.",
+    empty_archive: "No records found in this category."
   },
   so: {
     subtitle: "Kaydka Hal-abuurka Soomaaliyeed",
@@ -92,6 +100,7 @@ export const UI_TEXT = {
     nav_business: "Ganacsiga",
     nav_history: "Taariikhda",
     nav_arts: "Farshaxanka & Dhaqanka",
+    nav_archive: "Keydka Qaranka",
     nav_login: "Galid",
     hero_title_1: "Sahamo Taariikhda",
     hero_title_2: "Hal-doorka Soomaaliyeed",
@@ -165,9 +174,17 @@ export const UI_TEXT = {
     status_deceased: "Geeriyooday",
     status_retired: "Hoolgab",
     status_closed: "Xirmay",
-    // New
+    // National Archive
+    archive_explorer_title: "🏛️ Sahamiyaha Keydka Qaranka",
+    archive_explorer_desc: "Diiwaan habaysan oo muujinaya hoggaamiyeyaashii soo maray waaxyaha Siyaasadda, Garsoorka, Amniga, iyo Ganacsiga.",
+    sec_politics: "Siyaasadda",
+    sec_judiciary: "Garsoorka",
+    sec_security: "Amniga & Ciidanka",
+    sec_business: "Ganacsiga & Shirkadaha",
+    sec_arts_culture: "Farshaxanka & Dhaqanka",
     archive_positions: "Jagooyinka Kaydka",
-    no_archive_positions: "Ma jiraan jagooyin kayd ah oo loo diiwaan geliyay profile-kan."
+    no_archive_positions: "Ma jiraan jagooyin kayd ah oo loo diiwaan geliyay profile-kan.",
+    empty_archive: "Ma jiraan xog lagu hayo qaybtan."
   },
   ar: {
     subtitle: "أرشيف التميز الصومالي",
@@ -175,6 +192,7 @@ export const UI_TEXT = {
     nav_business: "الأعمال",
     nav_history: "التاريخ",
     nav_arts: "الفنون والثقافة",
+    nav_archive: "الأرشيف الوطني",
     nav_login: "دخول",
     hero_title_1: "اكتشف تاريخ",
     hero_title_2: "التميز الصومالي",
@@ -191,7 +209,7 @@ export const UI_TEXT = {
     service_1_desc: "نقوم بإنشاء ملفات رقمية عالمية المستوى للأفراد. نبني ملفك الشخصي ليكون له حضور رسمي ومسؤول.",
     service_2_title: "التحقق والأمان",
     service_2_desc: "تضمن خدمة \"الكيان الموثق\" صحة البيانات. نوفر شارة التحقق ورمز استجابة سريعة (QR) فريد.",
-    service_3_title: "حفظ الإرث",
+    service_3_title: "إرث الماضي",
     service_3_desc: "نقوم بجمع وتصحيح وتحديث الوثائق التاريخية الصومالية (1960-الآن) وتحويلها إلى تنسيقات رقمية.",
     service_4_title: "الاستخبارات الحديثة",
     service_4_desc: "تعمل منصتنا كمحرك بحث مخصص. تصبح بياناتك سهلة الوصول للباحثين والمستثمرين.",
@@ -248,9 +266,17 @@ export const UI_TEXT = {
     status_deceased: "متوفي",
     status_retired: "متقاعد",
     status_closed: "مغلق",
-    // New
+    // National Archive
+    archive_explorer_title: "🏛️ مستكشف السجل الوطني",
+    archive_explorer_desc: "دليل منظم للقيادات التاريخية عبر قطاعات السياسة والقضاء والأمن والأعمال.",
+    sec_politics: "السياسة",
+    sec_judiciary: "القضاء",
+    sec_security: "الأمن والدفاع",
+    sec_business: "الأعمال والشركات",
+    sec_arts_culture: "الفنون والثقافة",
     archive_positions: "المناصب الأرشيفية",
-    no_archive_positions: "لم يتم تسجيل أي مناصب أرشيفية لهذا الملف الشخصي."
+    no_archive_positions: "لم يتم تسجيل أي مناصب أرشيفية لهذا الملف الشخصي.",
+    empty_archive: "لم يتم العثور على سجلات في هذه الفئة."
   }
 };
 
@@ -304,7 +330,7 @@ const RAW_DATA = [
         name: 'Aadan Cadde',
         title: 'Madaxweynihii Ugu Horeeyay ee Soomaaliya',
         location: 'Muqdisho, Soomaaliya',
-        shortBio: 'Aadan Cabdulle Cusmaan Daar wuxuu ahaa siyaasi Soomaaliyeed oo noqday Madaxweynihii ugu horeeyay ee Jamhuuriyadda Soomaaliya intii u dhaxaysay 1960 ilaa 1967.',
+        shortBio: 'Aadan Cabdulle Cusmaan Daar wuxuu ahaa siyaasi Soomaaliyeed oo noqdoor Madaxweynihii ugu horeeyay ee Jamhuuriyadda Soomaaliya intii u dhaxaysay 1960 ilaa 1967.',
         fullBio: 'Aadan Cabdulle Cusmaan Daar (Aadan Cadde) waxaa lagu tiriyaa aabaha dimuqraadiyadda Soomaaliya. Wuxuu ku dhashay Beledweyne, wuxuuna ku biiray Ururkii Dhalinyarada Soomaaliyeed (SYL) 1944. Madaxweynanimadiisii waxaa lagu xusuustaa xil-wareejintii nabadeed, taasoo ahayd dhacdo taariikhi ah Afrika.',
         timeline: [
             { year: '1908', title: 'Dhalasho', description: 'Wuxuu ku dhashay Beledweyne, gobolka Hiiraan.' },
@@ -354,19 +380,17 @@ const RAW_DATA = [
       }
     }
   },
-  // ... other raw data omitted for brevity as they are for mock/fallback
 ];
 
 export const getProfiles = (lang: Language): Profile[] => {
   return RAW_DATA.map(p => {
-    // Check if the category is one of the standard enums, otherwise just use the string
     const mappedKey = Object.values(Category).includes(p.category as Category) 
       ? CATEGORY_MAP[p.category as Category] 
       : null;
       
     return {
       id: p.id,
-      category: p.category, // Just pass the string
+      category: p.category,
       categoryLabel: mappedKey ? (UI_TEXT[lang][mappedKey] || p.category) : p.category,
       verified: p.verified,
       verificationLevel: p.verificationLevel,

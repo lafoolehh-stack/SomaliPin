@@ -60,7 +60,9 @@ export enum Category {
   export enum SectionType {
     POLITICS = 'POLITICS',
     JUDICIARY = 'JUDICIARY',
-    SECURITY = 'SECURITY'
+    SECURITY = 'SECURITY',
+    BUSINESS = 'BUSINESS',
+    ARTS_CULTURE = 'ARTS_CULTURE'
   }
 
   export interface ArchiveCategory {
