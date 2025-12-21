@@ -1,14 +1,20 @@
 
 import * as React from 'react';
 import { useState, useEffect, useMemo } from 'react';
-import { Search, MapPin, ChevronLeft, ChevronDown, ChevronRight, Building2, User, BookOpen, Upload, FileText, ImageIcon, Award, Newspaper, Globe, Calendar, Clock, Activity, Lock, Plus, Trash2, Edit2, Save, X, Database, Link, AlertCircle, Sun, Moon, Mic, Headphones, PlayCircle, Unlock, Shield, Loader2, Briefcase, Landmark, Gavel, ShieldCheck, ChevronUp, Palette, Settings, Layers, RefreshCw, ExternalLink, Play, ArrowRight } from 'lucide-react';
-import { BrandPin, VerifiedBadge, HeroBadge, GoldenBadge, StandardBadge, NobelBadge } from './components/Icons';
+import { 
+  Search, ChevronLeft, ChevronDown, Building2, User, FileText, 
+  ImageIcon, Newspaper, Globe, Calendar, Clock, Activity, Lock, 
+  Plus, Trash2, Save, X, Database, Sun, Moon, Headphones, 
+  Unlock, Shield, Loader2, Briefcase, Landmark, Gavel, 
+  ShieldCheck, ChevronUp, Palette, Settings, Layers, RefreshCw, 
+  ExternalLink, Play, ArrowRight 
+} from 'lucide-react';
 import ProfileCard from './components/ProfileCard';
 import Timeline from './components/Timeline';
 import VerificationCertificate from './components/VerificationCertificate';
-import { getProfiles, UI_TEXT } from './constants';
-import { Profile, Category, ArchiveItem, NewsItem, PodcastItem, VerificationLevel, Language, DossierDB, ProfileStatus, TimelineEvent, ArchiveCategory, ArchiveAssignment, SectionType } from './types';
-import { askArchive } from './services/geminiService';
+import { BrandPin, GoldenBadge, HeroBadge, StandardBadge, NobelBadge, VerifiedBadge } from './components/Icons';
+import { UI_TEXT } from './constants';
+import { Profile, VerificationLevel, Language, DossierDB, ProfileStatus, SectionType, ArchiveCategory, ArchiveAssignment } from './types';
 import { supabase, isSupabaseConfigured } from './services/supabaseClient';
 
 const App = () => {
@@ -23,13 +29,13 @@ const App = () => {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [allCategories, setAllCategories] = useState<ArchiveCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [displayLimit, setDisplayLimit] = useState(12);
 
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
   const [adminSubView, setAdminSubView] = useState<'dossiers' | 'categories'>('dossiers');
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<Partial<Profile>>({});
-  const [uploadingImage, setUploadingImage] = useState(false);
   const [activeAdminTab, setActiveAdminTab] = useState<'basic' | 'timeline' | 'archive' | 'positions' | 'news' | 'podcast'>('basic');
   const [isLocking, setIsLocking] = useState(false); 
 
@@ -37,7 +43,7 @@ const App = () => {
   const [newCatSection, setNewCatSection] = useState<SectionType>(SectionType.BUSINESS);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
 
-  const t = UI_TEXT[language];
+  const t = UI_TEXT[language] || UI_TEXT.en;
 
   const handleBack = () => {
     setView('home');
@@ -46,6 +52,7 @@ const App = () => {
   };
 
   const handleProfileClick = (profile: Profile) => {
+    if (!profile) return;
     setSelectedProfile(profile);
     setView('profile');
     setActiveTab('archive');
@@ -61,13 +68,16 @@ const App = () => {
       [SectionType.ARTS_CULTURE]: {}
     };
 
-    (profiles || []).forEach(p => {
-      (p.archiveAssignments || []).forEach(assignment => {
-        if (assignment.category) {
+    (profiles || []).filter(Boolean).forEach(p => {
+      (p.archiveAssignments || []).filter(Boolean).forEach(assignment => {
+        if (assignment && assignment.category) {
           const sType = assignment.category.section_type;
           const cName = assignment.category.category_name;
-          if (!sections[sType][cName]) sections[sType][cName] = [];
-          sections[sType][cName].push({ ...assignment, user: p } as any);
+          
+          if (sType && sections[sType]) {
+            if (!sections[sType][cName]) sections[sType][cName] = [];
+            sections[sType][cName].push({ ...assignment, user: p } as any);
+          }
         }
       });
     });
@@ -75,7 +85,9 @@ const App = () => {
     Object.keys(sections).forEach(s => {
       const sectionKey = s as SectionType;
       Object.keys(sections[sectionKey]).forEach(c => {
-        sections[sectionKey][c].sort((a, b) => (a.start_date || '').localeCompare(b.start_date || ''));
+        if (Array.isArray(sections[sectionKey][c])) {
+          sections[sectionKey][c].sort((a, b) => (a.start_date || '').localeCompare(b.start_date || ''));
+        }
       });
     });
 
@@ -107,7 +119,8 @@ const App = () => {
 
       const profileAssignmentsMap = new Map<string, ArchiveAssignment[]>();
       (assignmentsData || []).forEach((assignment: any) => {
-        const userId = assignment.user_id;
+        if (!assignment || !assignment.user_id) return;
+        
         const mappedAssignment: ArchiveAssignment = {
           id: assignment.id,
           user_id: assignment.user_id,
@@ -121,12 +134,21 @@ const App = () => {
             section_type: assignment.archive_categories.section_type
           } : undefined,
         };
-        if (!profileAssignmentsMap.has(userId)) profileAssignmentsMap.set(userId, []);
-        profileAssignmentsMap.get(userId)?.push(mappedAssignment);
+        if (!profileAssignmentsMap.has(assignment.user_id)) profileAssignmentsMap.set(assignment.user_id, []);
+        profileAssignmentsMap.get(assignment.user_id)?.push(mappedAssignment);
       });
 
-      const mappedProfiles: Profile[] = (dossiersData || []).map((d: DossierDB) => {
-        const details = d.details || {};
+      const mappedProfiles: Profile[] = (dossiersData || []).filter(Boolean).map((d: DossierDB) => {
+        const details = d.details && typeof d.details === 'object' ? d.details : {};
+        
+        let bioStr = '';
+        if (typeof details.fullBio === 'string') {
+          bioStr = details.fullBio;
+        } else if (details.fullBio && typeof details.fullBio === 'object') {
+          bioStr = details.fullBio[language] || details.fullBio.en || details.fullBio.so || '';
+        }
+        if (!bioStr) bioStr = d.bio || '';
+
         return {
           id: d.id,
           name: d.full_name || 'Unnamed',
@@ -137,18 +159,18 @@ const App = () => {
           verificationLevel: (d.verification_level as VerificationLevel) || VerificationLevel.STANDARD,
           imageUrl: d.image_url || 'https://via.placeholder.com/150',
           shortBio: d.bio || '',
-          fullBio: details.fullBio?.[language] || details.fullBio?.en || details.fullBio || d.bio || '',
-          timeline: details.timeline || [],
+          fullBio: bioStr,
+          timeline: Array.isArray(details.timeline) ? details.timeline : [],
           location: details.location || '',
-          archives: details.archives || [],
-          news: details.news || [],
-          podcasts: details.podcasts || [],
+          archives: Array.isArray(details.archives) ? details.archives : [],
+          news: Array.isArray(details.news) ? details.news : [],
+          podcasts: Array.isArray(details.podcasts) ? details.podcasts : [],
           influence: { support: d.reputation_score || 0, neutral: 100 - (d.reputation_score || 0), opposition: 0 },
-          isOrganization: details.isOrganization || false,
+          isOrganization: !!details.isOrganization,
           status: (details.status as ProfileStatus) || 'ACTIVE',
           dateStart: details.dateStart || 'Unknown',
-          dateEnd: details.dateEnd,
-          locked: details.locked || false,
+          dateEnd: details.dateEnd || '',
+          locked: !!details.locked,
           archiveAssignments: profileAssignmentsMap.get(d.id) || [],
         };
       });
@@ -162,13 +184,21 @@ const App = () => {
 
   useEffect(() => { fetchDossiers(); }, [language]);
 
-  const filteredProfiles = searchQuery.trim() === '' 
-    ? (profiles || []) 
-    : (profiles || []).filter(p => 
-        (p.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (p.category || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (p.title || '').toLowerCase().includes(searchQuery.toLowerCase())
-      );
+  const filteredProfiles = useMemo(() => {
+    if (!searchQuery.trim()) return (profiles || []).filter(Boolean);
+    const query = searchQuery.toLowerCase();
+    return (profiles || []).filter(p => 
+      p && (
+        (p.name || '').toLowerCase().includes(query) ||
+        (p.category || '').toLowerCase().includes(query) ||
+        (p.title || '').toLowerCase().includes(query)
+      )
+    );
+  }, [profiles, searchQuery]);
+
+  const displayedProfiles = useMemo(() => {
+    return filteredProfiles.slice(0, displayLimit);
+  }, [filteredProfiles, displayLimit]);
 
   const handleAdminLogin = () => {
     if (adminPassword === 'NPipin1123@@') {
@@ -179,6 +209,7 @@ const App = () => {
 
   const handleLockToggle = async (profile: Profile) => {
     try {
+      if (!profile) return;
       const newLockedState = !profile.locked;
       const { data, error } = await supabase.from('dossiers').select('details').eq('id', profile.id).single();
       if (error || !data) throw new Error('Could not fetch latest details');
@@ -193,46 +224,26 @@ const App = () => {
 
   const handleGlobalLock = async (shouldLock: boolean) => {
     const action = shouldLock ? 'LOCK' : 'UNLOCK';
-    if (!window.confirm(`⚠️ WARNING: This will ${action} ALL ${profiles.length} dossiers.`)) return;
+    if (!window.confirm(`⚠️ WARNING: This will ${action} ALL dossiers.`)) return;
     setIsLocking(true);
     try {
       const { data: allDossiers, error: fetchError } = await supabase.from('dossiers').select('id, details');
       if (fetchError || !allDossiers) throw new Error('Failed to fetch dossier details');
-      const updatePromises = (allDossiers || []).map(dossier => supabase.from('dossiers').update({ details: { ...(dossier.details || {}), locked: shouldLock } }).eq('id', dossier.id));
+      const updatePromises = allDossiers.filter(Boolean).map(dossier => 
+        supabase.from('dossiers').update({ details: { ...(dossier.details || {}), locked: shouldLock } }).eq('id', dossier.id)
+      );
       await Promise.all(updatePromises);
       await fetchDossiers();
       alert(`Success: All dossiers have been ${shouldLock ? 'LOCKED' : 'UNLOCKED'}.`);
     } catch (err: any) {
-        alert('Global lock/unlock failed: ' + err.message);
+        alert('Global lock failed: ' + err.message);
     } finally {
         setIsLocking(false);
     }
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    try {
-      if (!e.target.files || e.target.files.length === 0) return;
-      setUploadingImage(true);
-      const file = e.target.files[0];
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const filePath = `profile_${fileName}`;
-      const { error: uploadError } = await supabase.storage.from('dossier-images').upload(filePath, file);
-      if (uploadError) alert('Error uploading image: ' + uploadError.message);
-      else {
-        const { data } = supabase.storage.from('dossier-images').getPublicUrl(filePath);
-        setEditForm({ ...editForm, imageUrl: data.publicUrl });
-      }
-    } finally {
-      setUploadingImage(false);
-    }
-  };
-
   const handleAddCategory = async () => {
-    if (!newCatName.trim()) {
-      alert('Please enter a category name.');
-      return;
-    }
+    if (!newCatName.trim()) return;
     setIsAddingCategory(true);
     try {
       const { error } = await supabase.from('archive_categories').insert([{ category_name: newCatName.trim(), section_type: newCatSection }]);
@@ -241,8 +252,6 @@ const App = () => {
         setNewCatName('');
         await fetchDossiers();
       }
-    } catch (err: any) {
-      alert('An error occurred while adding the category.');
     } finally {
       setIsAddingCategory(false);
     }
@@ -274,7 +283,7 @@ const App = () => {
             status: editForm.status,
             dateStart: editForm.dateStart,
             dateEnd: editForm.dateEnd,
-            isOrganization: editForm.isOrganization,
+            isOrganization: !!editForm.isOrganization,
             locked: !!editForm.locked,
             timeline: editForm.timeline || [],
             archives: editForm.archives || [],
@@ -288,12 +297,12 @@ const App = () => {
         await supabase.from('dossiers').update(dossierData).eq('id', editForm.id);
       } else {
         const { data } = await supabase.from('dossiers').insert([dossierData]).select();
-        savedDossierId = data?.[0].id;
+        savedDossierId = data?.[0]?.id;
       }
 
       if (savedDossierId) {
         await supabase.from('archive_assignments').delete().eq('user_id', savedDossierId);
-        const assignmentsToSave = (editForm.archiveAssignments || []).map(a => ({
+        const assignmentsToSave = (editForm.archiveAssignments || []).filter(Boolean).map(a => ({
           user_id: savedDossierId,
           category_id: Number(a.category_id),
           start_date: String(a.start_date || '').trim(),
@@ -409,7 +418,7 @@ const App = () => {
                           <Plus className="w-4 h-4 mr-2 text-gold-dark" /> {catName}
                         </h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                          {(assignments as any[] || []).map((assign: any, idx) => (
+                          {(assignments as any[] || []).filter(Boolean).map((assign: any, idx) => (
                             <div key={idx} onClick={() => handleProfileClick(assign.user)} className="group flex items-center p-4 bg-slate dark:bg-navy-light rounded-sm hover:shadow-lg transition-all cursor-pointer border-l-2 border-transparent hover:border-gold">
                               <img src={assign.user?.imageUrl || 'https://via.placeholder.com/150'} className="w-14 h-14 object-cover rounded-full border-2 border-white dark:border-navy group-hover:scale-105 transition-transform" />
                               <div className="ml-4 rtl:mr-4 rtl:ml-0 min-w-0">
@@ -481,7 +490,7 @@ const App = () => {
                                  <Unlock className="w-3 h-3 mr-1" /> Unlock All
                              </button>
                         </div>
-                        <button onClick={() => { setEditForm({ name: '', title: '', category: '', shortBio: '', fullBio: '', verified: false, verificationLevel: VerificationLevel.STANDARD, status: 'ACTIVE', timeline: [], archives: [], news: [], podcasts: [], archiveAssignments: [] }); setIsEditing(true); }} className="bg-green-600 text-white px-4 py-2 rounded-sm flex items-center hover:bg-green-700 shadow-sm"><Plus className="w-4 h-4 mr-2" /> Add New</button>
+                        <button onClick={() => { setEditForm({ name: '', title: '', category: '', shortBio: '', fullBio: '', verified: false, verificationLevel: VerificationLevel.STANDARD, status: 'ACTIVE', timeline: [], archives: [], news: [], podcasts: [], archiveAssignments: [], isOrganization: false, dateStart: '', dateEnd: '' }); setIsEditing(true); }} className="bg-green-600 text-white px-4 py-2 rounded-sm flex items-center hover:bg-green-700 shadow-sm"><Plus className="w-4 h-4 mr-2" /> Add New</button>
                       </div>
                     </div>
                     <div className="overflow-x-auto">
@@ -490,7 +499,7 @@ const App = () => {
                           <tr><th className="p-3">Lock</th><th className="p-3">Name</th><th className="p-3">Category</th><th className="p-3">Status</th><th className="p-3 text-right">Actions</th></tr>
                         </thead>
                         <tbody className="text-sm">
-                          {(profiles || []).map(p => (
+                          {(profiles || []).filter(Boolean).map(p => (
                             <tr key={p.id} className="border-b dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-navy-light/50">
                               <td className="p-3">
                                 <button onClick={() => handleLockToggle(p)} className={`p-1.5 rounded-full transition-colors ${p.locked ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-400'}`}>
@@ -540,7 +549,7 @@ const App = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {Object.values(SectionType).map(section => {
-                        const cats = (allCategories || []).filter(c => c.section_type === section);
+                        const cats = (allCategories || []).filter(c => c && c.section_type === section);
                         return (
                           <div key={section} className="bg-white dark:bg-navy-light/30 border border-gray-100 dark:border-gray-800 p-5 rounded-sm flex flex-col h-full shadow-sm">
                             <h3 className="text-[11px] font-bold text-gold uppercase tracking-[0.2em] border-b border-gray-100 dark:border-gray-800 pb-3 mb-4 flex justify-between items-center">{section} <span className="bg-gray-50 dark:bg-navy px-2 py-0.5 rounded text-[10px] text-gray-400">({cats.length})</span></h3>
@@ -582,14 +591,21 @@ const App = () => {
                             <div className="space-y-5">
                                 <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Full Name</label><input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.name || ''} onChange={(e) => setEditForm({...editForm, name: e.target.value})} /></div>
                                 <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Headline Role</label><input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.title || ''} onChange={(e) => setEditForm({...editForm, title: e.target.value})} /></div>
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Start Date (Birth/Est)</label><input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.dateStart || ''} onChange={(e) => setEditForm({...editForm, dateStart: e.target.value})} placeholder="e.g. 1970" /></div>
+                                  <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">End Date (Death/Closed)</label><input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.dateEnd || ''} onChange={(e) => setEditForm({...editForm, dateEnd: e.target.value})} placeholder="e.g. 2021" /></div>
+                                </div>
                                 <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Location</label><input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.location || ''} onChange={(e) => setEditForm({...editForm, location: e.target.value})} /></div>
-                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Display Category</label><input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.category || ''} onChange={(e) => setEditForm({...editForm, category: e.target.value})} /></div>
-                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Lifecycle Status</label><select className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.status || 'ACTIVE'} onChange={(e) => setEditForm({...editForm, status: e.target.value as ProfileStatus})}><option value="ACTIVE">Active</option><option value="DECEASED">Deceased</option><option value="RETIRED">Retired</option><option value="CLOSED">Closed</option></select></div>
+                                <div className="flex items-center space-x-2 pt-2">
+                                  <input type="checkbox" id="isOrg" className="w-4 h-4 accent-gold" checked={!!editForm.isOrganization} onChange={(e) => setEditForm({...editForm, isOrganization: e.target.checked})} />
+                                  <label htmlFor="isOrg" className="text-sm font-bold text-gray-500 uppercase tracking-wide">Is Organization?</label>
+                                </div>
                             </div>
                             <div className="space-y-5">
-                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Verification Status</label><select className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.verified ? 'Verified' : 'Unverified'} onChange={(e) => setEditForm({...editForm, verified: e.target.value === 'Verified'})}><option value="Unverified">Unverified</option><option value="Verified">Verified</option></select></div>
+                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Lifecycle Status</label><select className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.status || 'ACTIVE'} onChange={(e) => setEditForm({...editForm, status: e.target.value as ProfileStatus})}><option value="ACTIVE">Active</option><option value="DECEASED">Deceased</option><option value="RETIRED">Retired</option><option value="CLOSED">Closed</option></select></div>
+                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Display Category</label><input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.category || ''} onChange={(e) => setEditForm({...editForm, category: e.target.value})} /></div>
                                 <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Honors Tier</label><select className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.verificationLevel || 'Standard'} onChange={(e) => setEditForm({...editForm, verificationLevel: e.target.value as VerificationLevel})}><option value="Standard">Standard</option><option value="Golden">Golden</option><option value="Hero">Hero</option><option value="Nobel">Nobel</option></select></div>
-                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Profile Image</label><input type="file" accept="image/*" onChange={handleImageUpload} className="text-xs file:mr-4 file:py-1.5 file:px-3 file:rounded-sm file:border-0 file:text-[10px] file:font-bold file:uppercase file:bg-navy file:text-gold cursor-pointer" /></div>
+                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Profile Image URL</label><input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.imageUrl || ''} onChange={(e) => setEditForm({...editForm, imageUrl: e.target.value})} /></div>
                                 <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Short Bio</label><textarea className="w-full border p-2.5 rounded-sm h-24 dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none resize-none" value={editForm.shortBio || ''} onChange={(e) => setEditForm({...editForm, shortBio: e.target.value})} /></div>
                             </div>
                             <div className="md:col-span-2"><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Full Biography</label><textarea className="w-full border p-3 rounded-sm h-56 font-serif dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.fullBio || ''} onChange={(e) => setEditForm({ ...editForm, fullBio: e.target.value })} /></div>
@@ -598,11 +614,11 @@ const App = () => {
                     {activeAdminTab === 'timeline' && (
                         <div className="space-y-6">
                             <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-navy dark:text-white flex items-center"><Activity className="w-5 h-5 mr-2 text-gold"/> Historical Timeline</h3><button onClick={() => setEditForm(prev => ({ ...prev, timeline: [...(prev.timeline || []), { year: '', title: '', description: '' }] }))} className="text-xs bg-navy text-gold px-4 py-2 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"><Plus className="w-4 h-4 mr-1" /> Add Entry</button></div>
-                            <div className="space-y-4">{(editForm.timeline || []).map((event, idx) => (
+                            <div className="space-y-4">{(editForm.timeline || []).filter(Boolean).map((event, idx) => (
                                 <div key={idx} className="flex gap-4 items-start border p-4 rounded-sm bg-slate/30 dark:bg-navy-light/40 animate-fade-in group">
-                                  <input placeholder="Year" className="w-24 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white font-mono text-sm" value={event.year} onChange={e => { const t = [...editForm.timeline!]; t[idx].year = e.target.value; setEditForm({...editForm, timeline: t}); }} />
-                                  <div className="flex-1 space-y-3"><input placeholder="Entry Title" className="w-full border p-2 rounded-sm font-bold dark:bg-navy dark:border-gray-600 dark:text-white text-sm" value={event.title} onChange={e => { const t = [...editForm.timeline!]; t[idx].title = e.target.value; setEditForm({...editForm, timeline: t}); }} /><textarea placeholder="Event description..." className="w-full border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs resize-none h-20" value={event.description} onChange={e => { const t = [...editForm.timeline!]; t[idx].description = e.target.value; setEditForm({...editForm, timeline: t}); }} /></div>
-                                  <button onClick={() => { const t = [...editForm.timeline!]; t.splice(idx,1); setEditForm({...editForm, timeline: t}); }} className="text-red-400 hover:text-red-600 p-2"><Trash2 className="w-5 h-5" /></button>
+                                  <input placeholder="Year" className="w-24 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white font-mono text-sm" value={event.year || ''} onChange={e => { const t = [...(editForm.timeline || [])]; t[idx].year = e.target.value; setEditForm({...editForm, timeline: t}); }} />
+                                  <div className="flex-1 space-y-3"><input placeholder="Entry Title" className="w-full border p-2 rounded-sm font-bold dark:bg-navy dark:border-gray-600 dark:text-white text-sm" value={event.title || ''} onChange={e => { const t = [...(editForm.timeline || [])]; t[idx].title = e.target.value; setEditForm({...editForm, timeline: t}); }} /><textarea placeholder="Event description..." className="w-full border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs resize-none h-20" value={event.description || ''} onChange={e => { const t = [...(editForm.timeline || [])]; t[idx].description = e.target.value; setEditForm({...editForm, timeline: t}); }} /></div>
+                                  <button onClick={() => { const t = [...(editForm.timeline || [])]; t.splice(idx,1); setEditForm({...editForm, timeline: t}); }} className="text-red-400 hover:text-red-600 p-2"><Trash2 className="w-5 h-5" /></button>
                                 </div>
                             ))}</div>
                         </div>
@@ -610,16 +626,16 @@ const App = () => {
                     {activeAdminTab === 'archive' && (
                         <div className="space-y-6">
                             <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-navy dark:text-white flex items-center"><FileText className="w-5 h-5 mr-2 text-gold"/> Archive Documents</h3><button onClick={() => setEditForm(prev => ({ ...prev, archives: [...(prev.archives || []), { id: Date.now().toString(), type: 'PDF', title: '', date: '', url: '' }] }))} className="text-xs bg-navy text-gold px-4 py-2 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"><Plus className="w-4 h-4 mr-1" /> Add Doc</button></div>
-                            <div className="space-y-4">{(editForm.archives || []).map((item, idx) => (
+                            <div className="space-y-4">{(editForm.archives || []).filter(Boolean).map((item, idx) => (
                                 <div key={idx} className="flex gap-4 items-center border p-4 rounded-sm bg-slate/30 dark:bg-navy-light/40 group">
-                                    <select className="w-24 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={item.type} onChange={e => { const a = [...editForm.archives!]; a[idx].type = e.target.value as any; setEditForm({...editForm, archives: a}); }}>
+                                    <select className="w-24 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={item.type} onChange={e => { const a = [...(editForm.archives || [])]; a[idx].type = e.target.value as any; setEditForm({...editForm, archives: a}); }}>
                                         <option value="PDF">PDF</option>
                                         <option value="IMAGE">IMAGE</option>
                                         <option value="AWARD">AWARD</option>
                                     </select>
-                                    <input placeholder="Document Title" className="flex-1 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={item.title} onChange={e => { const a = [...editForm.archives!]; a[idx].title = e.target.value; setEditForm({...editForm, archives: a}); }} />
-                                    <input placeholder="File Link" className="flex-1 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={item.url || ''} onChange={e => { const a = [...editForm.archives!]; a[idx].url = e.target.value; setEditForm({...editForm, archives: a}); }} />
-                                    <button onClick={() => { const a = [...editForm.archives!]; a.splice(idx,1); setEditForm({...editForm, archives: a}); }} className="text-red-400 p-2"><Trash2 className="w-5 h-5"/></button>
+                                    <input placeholder="Document Title" className="flex-1 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={item.title || ''} onChange={e => { const a = [...(editForm.archives || [])]; a[idx].title = e.target.value; setEditForm({...editForm, archives: a}); }} />
+                                    <input placeholder="File Link" className="flex-1 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={item.url || ''} onChange={e => { const a = [...(editForm.archives || [])]; a[idx].url = e.target.value; setEditForm({...editForm, archives: a}); }} />
+                                    <button onClick={() => { const a = [...(editForm.archives || [])]; a.splice(idx,1); setEditForm({...editForm, archives: a}); }} className="text-red-400 p-2"><Trash2 className="w-5 h-5"/></button>
                                 </div>
                             ))}</div>
                         </div>
@@ -627,14 +643,14 @@ const App = () => {
                     {activeAdminTab === 'news' && (
                         <div className="space-y-6">
                             <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-navy dark:text-white flex items-center"><Newspaper className="w-5 h-5 mr-2 text-gold"/> News Reports</h3><button onClick={() => setEditForm(prev => ({ ...prev, news: [...(prev.news || []), { id: Date.now().toString(), title: '', source: '', date: '', summary: '', url: '' }] }))} className="text-xs bg-navy text-gold px-4 py-2 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"><Plus className="w-4 h-4 mr-1" /> Add News</button></div>
-                            <div className="space-y-4">{(editForm.news || []).map((item, idx) => (
+                            <div className="space-y-4">{(editForm.news || []).filter(Boolean).map((item, idx) => (
                                 <div key={idx} className="border p-4 rounded-sm bg-slate/30 dark:bg-navy-light/40 group space-y-3">
                                     <div className="flex gap-4">
-                                        <input placeholder="Headline" className="flex-1 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs font-bold" value={item.title} onChange={e => { const n = [...editForm.news!]; n[idx].title = e.target.value; setEditForm({...editForm, news: n}); }} />
-                                        <input placeholder="Source" className="w-40 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={item.source} onChange={e => { const n = [...editForm.news!]; n[idx].source = e.target.value; setEditForm({...editForm, news: n}); }} />
-                                        <button onClick={() => { const n = [...editForm.news!]; n.splice(idx,1); setEditForm({...editForm, news: n}); }} className="text-red-400 p-2"><Trash2 className="w-5 h-5"/></button>
+                                        <input placeholder="Headline" className="flex-1 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs font-bold" value={item.title || ''} onChange={e => { const n = [...(editForm.news || [])]; n[idx].title = e.target.value; setEditForm({...editForm, news: n}); }} />
+                                        <input placeholder="Source" className="w-40 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={item.source || ''} onChange={e => { const n = [...(editForm.news || [])]; n[idx].source = e.target.value; setEditForm({...editForm, news: n}); }} />
+                                        <button onClick={() => { const n = [...(editForm.news || [])]; n.splice(idx,1); setEditForm({...editForm, news: n}); }} className="text-red-400 p-2"><Trash2 className="w-5 h-5"/></button>
                                     </div>
-                                    <textarea placeholder="Summary..." className="w-full border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs h-16 resize-none" value={item.summary} onChange={e => { const n = [...editForm.news!]; n[idx].summary = e.target.value; setEditForm({...editForm, news: n}); }} />
+                                    <textarea placeholder="Summary..." className="w-full border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs h-16 resize-none" value={item.summary || ''} onChange={e => { const n = [...(editForm.news || [])]; n[idx].summary = e.target.value; setEditForm({...editForm, news: n}); }} />
                                 </div>
                             ))}</div>
                         </div>
@@ -642,12 +658,12 @@ const App = () => {
                     {activeAdminTab === 'podcast' && (
                         <div className="space-y-6">
                             <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-navy dark:text-white flex items-center"><Headphones className="w-5 h-5 mr-2 text-gold"/> Podcast Library</h3><button onClick={() => setEditForm(prev => ({ ...prev, podcasts: [...(prev.podcasts || []), { id: Date.now().toString(), title: '', date: '', duration: '', source: '', url: '' }] }))} className="text-xs bg-navy text-gold px-4 py-2 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"><Plus className="w-4 h-4 mr-1" /> Add Clip</button></div>
-                            <div className="space-y-4">{(editForm.podcasts || []).map((item, idx) => (
+                            <div className="space-y-4">{(editForm.podcasts || []).filter(Boolean).map((item, idx) => (
                                 <div key={idx} className="border p-4 rounded-sm bg-slate/30 dark:bg-navy-light/40 group space-y-3">
                                     <div className="flex gap-4">
-                                        <input placeholder="Episode Title" className="flex-1 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs font-bold" value={item.title} onChange={e => { const p = [...editForm.podcasts!]; p[idx].title = e.target.value; setEditForm({...editForm, podcasts: p}); }} />
-                                        <input placeholder="Audio URL" className="flex-1 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={item.url || ''} onChange={e => { const p = [...editForm.podcasts!]; p[idx].url = e.target.value; setEditForm({...editForm, podcasts: p}); }} />
-                                        <button onClick={() => { const p = [...editForm.podcasts!]; p.splice(idx,1); setEditForm({...editForm, podcasts: p}); }} className="text-red-400 p-2"><Trash2 className="w-5 h-5"/></button>
+                                        <input placeholder="Episode Title" className="flex-1 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs font-bold" value={item.title || ''} onChange={e => { const p = [...(editForm.podcasts || [])]; p[idx].title = e.target.value; setEditForm({...editForm, podcasts: p}); }} />
+                                        <input placeholder="Audio URL" className="flex-1 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={item.url || ''} onChange={e => { const p = [...(editForm.podcasts || [])]; p[idx].url = e.target.value; setEditForm({...editForm, podcasts: p}); }} />
+                                        <button onClick={() => { const p = [...(editForm.podcasts || [])]; p.splice(idx,1); setEditForm({...editForm, podcasts: p}); }} className="text-red-400 p-2"><Trash2 className="w-5 h-5"/></button>
                                     </div>
                                 </div>
                             ))}</div>
@@ -655,8 +671,8 @@ const App = () => {
                     )}
                     {activeAdminTab === 'positions' && (
                         <div className="space-y-6">
-                             <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-navy dark:text-white flex items-center"><Layers className="w-5 h-5 mr-2 text-gold"/> Official Archive Roles</h3><button onClick={() => setEditForm(prev => ({ ...prev, archiveAssignments: [...(prev.archiveAssignments || []), { id: 0, user_id: editForm.id || '', category_id: allCategories[0]?.id || 0, start_date: '', end_date: '', title_note: '' }] }))} className="text-xs bg-navy text-gold px-4 py-2 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"><Plus className="w-4 h-4 mr-1" /> Assign Role</button></div>
-                            <div className="space-y-4">{(editForm.archiveAssignments || []).map((assign, idx) => (
+                             <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-navy dark:text-white flex items-center"><Layers className="w-5 h-5 mr-2 text-gold"/> Official Archive Roles</h3><button onClick={() => setEditForm(prev => ({ ...prev, archiveAssignments: [...(prev.archiveAssignments || []), { id: 0, user_id: editForm.id || '', category_id: (allCategories && allCategories.length > 0) ? allCategories[0].id : 0, start_date: '', end_date: '', title_note: '' }] }))} className="text-xs bg-navy text-gold px-4 py-2 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"><Plus className="w-4 h-4 mr-1" /> Assign Role</button></div>
+                            <div className="space-y-4">{(editForm.archiveAssignments || []).filter(Boolean).map((assign, idx) => (
                                 <div key={idx} className="border p-5 rounded-sm bg-slate/30 dark:bg-navy-light/40 space-y-4 group animate-fade-in">
                                     <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
                                         <div className="md:col-span-3">
@@ -664,7 +680,7 @@ const App = () => {
                                             <select className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs font-bold" value={assign.category_id} onChange={e => { const updated = [...(editForm.archiveAssignments || [])]; updated[idx].category_id = parseInt(e.target.value); setEditForm({...editForm, archiveAssignments: updated}); }}>
                                                 {Object.values(SectionType).map(sect => (
                                                     <optgroup label={sect} key={sect}>
-                                                        {(allCategories || []).filter(c => c.section_type === sect).map(cat => (
+                                                        {(allCategories || []).filter(c => c && c.section_type === sect).map(cat => (
                                                             <option key={cat.id} value={cat.id}>{cat.category_name}</option>
                                                         ))}
                                                     </optgroup>
@@ -772,9 +788,40 @@ const App = () => {
             </section>
 
             <section className="max-w-6xl mx-auto px-4 py-12 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex justify-between items-end mb-8 border-b border-gray-200 dark:border-gray-700 pb-4"><h2 className="text-3xl font-serif font-bold text-navy dark:text-white flex items-center">{t.featured_dossiers}</h2></div>
-              {isLoading ? (<div className="flex justify-center py-12"><div className="animate-spin h-8 w-8 border-4 border-gold border-t-transparent rounded-full"></div></div>) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">{(filteredProfiles || []).map((profile) => (<ProfileCard key={profile.id} profile={profile} onClick={handleProfileClick} onVerify={(e) => { e.stopPropagation(); setSelectedProfile(profile); setShowCertificate(true); }} />))}</div>
+              <div className="flex justify-between items-end mb-8 border-b border-gray-200 dark:border-gray-700 pb-4">
+                <h2 className="text-3xl font-serif font-bold text-navy dark:text-white flex items-center">
+                  {t.featured_dossiers} 
+                  <span className="ml-4 bg-gold/10 text-gold text-sm px-3 py-1 rounded-full border border-gold/20 font-sans tracking-widest">
+                    {profiles.length > 0 ? `${profiles.length}+ RECORDS` : 'VERIFYING...'}
+                  </span>
+                </h2>
+              </div>
+              {isLoading ? (
+                <div className="flex justify-center py-12"><Loader2 className="animate-spin h-10 w-10 text-gold" /></div>
+              ) : (
+                <div className="space-y-12">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {displayedProfiles.filter(Boolean).map((profile) => (
+                      <ProfileCard 
+                        key={profile.id} 
+                        profile={profile} 
+                        onClick={handleProfileClick} 
+                        onVerify={(e) => { e.stopPropagation(); setSelectedProfile(profile); setShowCertificate(true); }} 
+                      />
+                    ))}
+                  </div>
+                  {filteredProfiles.length > displayLimit && (
+                    <div className="flex justify-center pt-8">
+                      <button 
+                        onClick={() => setDisplayLimit(prev => prev + 12)}
+                        className="group flex items-center space-x-2 bg-navy text-white px-10 py-3 rounded-sm font-bold shadow-xl hover:bg-navy-light transition-all border border-gold/20"
+                      >
+                        <RefreshCw className="w-5 h-5 group-hover:rotate-180 transition-transform duration-700" />
+                        <span>LOAD MORE RECORDS</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
             </section>
           </>
@@ -785,12 +832,12 @@ const App = () => {
               <div className="bg-white dark:bg-navy shadow-xl rounded-sm overflow-hidden mb-12">
                 <div className="h-48 relative bg-navy"><div className="absolute inset-0 bg-black/20"></div></div>
                 <div className="px-8 pb-12">
-                    <div className="relative flex justify-between items-end -mt-20 mb-8"><div className="relative"><img src={selectedProfile.imageUrl || 'https://via.placeholder.com/150'} className="w-40 h-40 object-cover rounded-sm border-4 border-white shadow-md" />{selectedProfile.verified && (<div className="absolute -bottom-3 -right-3 bg-white p-1 rounded-full shadow-sm cursor-pointer hover:scale-110 transition-transform" onClick={() => setShowCertificate(true)}>{getVerificationIcon(selectedProfile.verificationLevel)}</div>)}</div></div>
+                    <div className="relative flex justify-between items-end -mt-20 mb-8"><div className="relative"><img src={selectedProfile?.imageUrl || 'https://via.placeholder.com/150'} className="w-40 h-40 object-cover rounded-sm border-4 border-white shadow-md" />{selectedProfile?.verified && (<div className="absolute -bottom-3 -right-3 bg-white p-1 rounded-full shadow-sm cursor-pointer hover:scale-110 transition-transform" onClick={() => setShowCertificate(true)}>{getVerificationIcon(selectedProfile?.verificationLevel)}</div>)}</div></div>
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
                         <div className="lg:col-span-2">
-                            <div className="mb-8"><div className="flex flex-wrap items-center gap-3 mb-4"><span className="text-sm font-bold tracking-widest uppercase text-gold">{selectedProfile.category}</span></div><h1 className="text-4xl font-serif font-bold text-navy dark:text-white mb-2">{selectedProfile.name}</h1><p className="text-xl text-gray-500 dark:text-gray-400 font-light">{selectedProfile.title}</p></div>
-                            <div className="prose prose-slate max-w-none"><h3 className="text-navy dark:text-gold font-serif text-xl border-b border-gray-200 dark:border-gray-700 pb-2 mb-4">{t.about}</h3><p className="text-gray-700 dark:text-gray-300 leading-relaxed text-lg whitespace-pre-line">{selectedProfile.fullBio}</p></div>
-                            <div className="mt-12"><h3 className="text-navy dark:text-gold font-serif text-xl border-b border-gray-200 dark:border-gray-700 pb-2 mb-4">{t.timeline}</h3><Timeline events={selectedProfile.timeline || []} /></div>
+                            <div className="mb-8"><div className="flex flex-wrap items-center gap-3 mb-4"><span className="text-sm font-bold tracking-widest uppercase text-gold">{selectedProfile?.category}</span></div><h1 className="text-4xl font-serif font-bold text-navy dark:text-white mb-2">{selectedProfile?.name}</h1><p className="text-xl text-gray-500 dark:text-gray-400 font-light">{selectedProfile?.title}</p></div>
+                            <div className="prose prose-slate max-w-none"><h3 className="text-navy dark:text-gold font-serif text-xl border-b border-gray-200 dark:border-gray-700 pb-2 mb-4">{t.about}</h3><p className="text-gray-700 dark:text-gray-300 leading-relaxed text-lg whitespace-pre-line">{selectedProfile?.fullBio}</p></div>
+                            <div className="mt-12"><h3 className="text-navy dark:text-gold font-serif text-xl border-b border-gray-200 dark:border-gray-700 pb-2 mb-4">{t.timeline}</h3><Timeline events={selectedProfile?.timeline || []} /></div>
                             
                             <div className="mt-16">
                                 <div className="flex border-b border-gray-100 dark:border-gray-700 mb-8 overflow-x-auto space-x-8">
@@ -799,9 +846,9 @@ const App = () => {
                                     ))}
                                 </div>
                                 <div className="animate-fade-in min-h-[200px]">
-                                    {activeTab === 'archive' && (<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">{selectedProfile.archives && selectedProfile.archives.length > 0 ? selectedProfile.archives.map((item) => (<a key={item.id} href={item.url || '#'} target="_blank" className="group flex items-center p-4 bg-slate dark:bg-navy-light rounded-sm border border-transparent hover:border-gold transition-all"><div className="p-3 bg-white dark:bg-navy rounded text-gold mr-4">{item.type === 'PDF' ? <FileText className="w-6 h-6" /> : <ImageIcon className="w-6 h-6" />}</div><div className="flex-1 min-w-0"><h4 className="text-sm font-bold text-navy dark:text-white truncate">{item.title}</h4><p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">{item.date}</p></div><ExternalLink className="w-4 h-4 text-gray-300 opacity-0 group-hover:opacity-100" /></a>)) : <div className="col-span-2 py-12 text-center text-gray-400 italic">{t.no_docs}</div>}</div>)}
-                                    {activeTab === 'news' && (<div className="space-y-4">{selectedProfile.news && selectedProfile.news.length > 0 ? selectedProfile.news.map((item) => (<div key={item.id} className="p-5 bg-white dark:bg-navy-light border border-gray-100 dark:border-gray-700 rounded-sm hover:shadow-lg transition-all group"><div className="flex justify-between items-start mb-3"><span className="text-[10px] font-bold text-gold uppercase bg-gold/10 px-2 py-0.5 rounded">{item.source}</span><span className="text-[10px] font-mono text-gray-400">{item.date}</span></div><h4 className="text-lg font-serif font-bold text-navy dark:text-white mb-2 group-hover:text-gold transition-colors">{item.title}</h4><p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-4">{item.summary}</p>{item.url && <a href={item.url} target="_blank" className="inline-flex items-center text-[10px] font-bold text-navy dark:text-gold uppercase hover:underline"><Globe className="w-3 h-3 mr-1" /> {t.search_btn}</a>}</div>)) : <div className="py-12 text-center text-gray-400 italic">{t.no_news}</div>}</div>)}
-                                    {activeTab === 'podcast' && (<div className="grid grid-cols-1 gap-3">{selectedProfile.podcasts && selectedProfile.podcasts.length > 0 ? selectedProfile.podcasts.map((item) => (<div key={item.id} className="flex items-center p-4 bg-navy dark:bg-navy-light text-white rounded-sm group hover:bg-navy-light transition-all shadow-xl border border-gold/10"><div className="p-3 bg-gold rounded-full mr-4 text-navy"><Play className="w-5 h-5 fill-current" /></div><div className="flex-1 min-w-0"><h4 className="text-sm font-bold truncate tracking-wide">{item.title}</h4><p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">{item.source} • {item.duration}</p></div><div className="flex items-center space-x-3 opacity-40"><Headphones className="w-4 h-4" /><span className="text-[10px] font-mono">{item.date}</span></div></div>)) : <div className="py-12 text-center text-gray-400 italic">{t.no_podcasts}</div>}</div>)}
+                                    {activeTab === 'archive' && (<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">{(selectedProfile?.archives || []).length > 0 ? selectedProfile?.archives?.map((item) => (<a key={item.id} href={item.url || '#'} target="_blank" className="group flex items-center p-4 bg-slate dark:bg-navy-light rounded-sm border border-transparent hover:border-gold transition-all"><div className="p-3 bg-white dark:bg-navy rounded text-gold mr-4">{item.type === 'PDF' ? <FileText className="w-6 h-6" /> : <ImageIcon className="w-6 h-6" />}</div><div className="flex-1 min-w-0"><h4 className="text-sm font-bold text-navy dark:text-white truncate">{item.title}</h4><p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">{item.date}</p></div><ExternalLink className="w-4 h-4 text-gray-300 opacity-0 group-hover:opacity-100" /></a>)) : <div className="col-span-2 py-12 text-center text-gray-400 italic">{t.no_docs}</div>}</div>)}
+                                    {activeTab === 'news' && (<div className="space-y-4">{(selectedProfile?.news || []).length > 0 ? selectedProfile?.news?.map((item) => (<div key={item.id} className="p-5 bg-white dark:bg-navy-light border border-gray-100 dark:border-gray-700 rounded-sm hover:shadow-lg transition-all group"><div className="flex justify-between items-start mb-3"><span className="text-[10px] font-bold text-gold uppercase bg-gold/10 px-2 py-0.5 rounded">{item.source}</span><span className="text-[10px] font-mono text-gray-400">{item.date}</span></div><h4 className="text-lg font-serif font-bold text-navy dark:text-white mb-2 group-hover:text-gold transition-colors">{item.title}</h4><p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-4">{item.summary}</p>{item.url && <a href={item.url} target="_blank" className="inline-flex items-center text-[10px] font-bold text-navy dark:text-gold uppercase hover:underline"><Globe className="w-3 h-3 mr-1" /> {t.search_btn}</a>}</div>)) : <div className="py-12 text-center text-gray-400 italic">{t.no_news}</div>}</div>)}
+                                    {activeTab === 'podcast' && (<div className="grid grid-cols-1 gap-3">{(selectedProfile?.podcasts || []).length > 0 ? selectedProfile?.podcasts?.map((item) => (<div key={item.id} className="flex items-center p-4 bg-navy dark:bg-navy-light text-white rounded-sm group hover:bg-navy-light transition-all shadow-xl border border-gold/10"><div className="p-3 bg-gold rounded-full mr-4 text-navy"><Play className="w-5 h-5 fill-current" /></div><div className="flex-1 min-w-0"><h4 className="text-sm font-bold truncate tracking-wide">{item.title}</h4><p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">{item.source} • {item.duration}</p></div><div className="flex items-center space-x-3 opacity-40"><Headphones className="w-4 h-4" /><span className="text-[10px] font-mono">{item.date}</span></div></div>)) : <div className="py-12 text-center text-gray-400 italic">{t.no_podcasts}</div>}</div>)}
                                 </div>
                             </div>
                         </div>
@@ -810,13 +857,24 @@ const App = () => {
                             <div className="bg-slate dark:bg-navy-light p-6 rounded-sm border border-gray-200 dark:border-navy">
                                 <h4 className="font-serif font-bold text-navy dark:text-white mb-4">{t.key_info}</h4>
                                 <div className="space-y-4 text-sm">
-                                    <div className="flex items-center"><Calendar className="h-5 w-5 mr-3 text-gold" /><div><span className="block text-gray-400 text-xs uppercase">{selectedProfile.isOrganization ? t.lbl_est : t.lbl_born}</span><span className="font-medium">{selectedProfile.dateStart}</span></div></div>
-                                    <div className="flex items-center"><Activity className="h-5 w-5 mr-3 text-gold" /><div><span className="block text-gray-400 text-xs uppercase">{t.lbl_status}</span><span className={`font-medium px-2 py-0.5 rounded text-xs inline-block mt-0.5 ${selectedProfile.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{getStatusLabel(selectedProfile.status)}</span></div></div>
+                                    <div className="flex items-center"><Calendar className="h-5 w-5 mr-3 text-gold" /><div><span className="block text-gray-400 text-xs uppercase">{selectedProfile?.isOrganization ? t.lbl_est : t.lbl_born}</span><span className="font-medium">{selectedProfile?.dateStart || 'Unknown'}</span></div></div>
+                                    
+                                    {selectedProfile?.dateEnd && (
+                                      <div className="flex items-center">
+                                        <Clock className="h-5 w-5 mr-3 text-gold" />
+                                        <div>
+                                          <span className="block text-gray-400 text-xs uppercase">{selectedProfile.isOrganization ? t.lbl_closed : t.lbl_died}</span>
+                                          <span className="font-medium">{selectedProfile.dateEnd}</span>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    <div className="flex items-center"><Activity className="h-5 w-5 mr-3 text-gold" /><div><span className="block text-gray-400 text-xs uppercase">{t.lbl_status}</span><span className={`font-medium px-2 py-0.5 rounded text-xs inline-block mt-0.5 ${selectedProfile?.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{getStatusLabel(selectedProfile?.status || 'ACTIVE')}</span></div></div>
                                     <div className="w-full h-px bg-gray-200 dark:bg-gray-700 my-2"></div>
-                                    <div className="flex items-center cursor-pointer hover:bg-gray-100 dark:hover:bg-navy p-1 rounded transition-colors" onClick={() => setShowCertificate(true)}><Building2 className="h-5 w-5 mr-3 text-gold" /><div><span className="block text-gray-400 text-xs uppercase">{t.label_affiliation}</span><span className="font-medium text-gray-800 dark:text-gray-200 underline decoration-dotted">{getVerificationLabel(selectedProfile.verificationLevel)}</span></div></div>
+                                    <div className="flex items-center cursor-pointer hover:bg-gray-100 dark:hover:bg-navy p-1 rounded transition-colors" onClick={() => setShowCertificate(true)}><Building2 className="h-5 w-5 mr-3 text-gold" /><div><span className="block text-gray-400 text-xs uppercase">{t.label_affiliation}</span><span className="font-medium text-gray-800 dark:text-gray-200 underline decoration-dotted">{getVerificationLabel(selectedProfile?.verificationLevel)}</span></div></div>
                                     <h5 className="font-serif font-bold text-navy dark:text-white text-sm mt-6 mb-2">{t.archive_positions}</h5>
-                                    {selectedProfile.archiveAssignments && selectedProfile.archiveAssignments.length > 0 ? (
-                                      <ul className="space-y-3">{selectedProfile.archiveAssignments.map((assignment, idx) => (<li key={idx} className="flex flex-col text-xs text-gray-600 dark:text-gray-300 border-l-2 border-gold pl-2"><span className="font-bold text-navy dark:text-white">{assignment.title_note}</span><span className="text-gray-500 dark:text-gray-400 text-[10px] italic">({assignment.category?.category_name || 'N/A'})</span><span className="text-[10px] font-mono mt-0.5">{assignment.start_date} - {assignment.end_date || 'Present'}</span></li>))}</ul>
+                                    {(selectedProfile?.archiveAssignments || []).length > 0 ? (
+                                      <ul className="space-y-3">{selectedProfile?.archiveAssignments?.map((assignment, idx) => (<li key={idx} className="flex flex-col text-xs text-gray-600 dark:text-gray-300 border-l-2 border-gold pl-2"><span className="font-bold text-navy dark:text-white">{assignment.title_note}</span><span className="text-gray-500 dark:text-gray-400 text-[10px] italic">({assignment.category?.category_name || 'N/A'})</span><span className="text-[10px] font-mono mt-0.5">{assignment.start_date} - {assignment.end_date || 'Present'}</span></li>))}</ul>
                                     ) : <p className="text-gray-400 italic text-xs">{t.no_archive_positions}</p>}
                                 </div>
                             </div>

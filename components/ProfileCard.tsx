@@ -1,5 +1,6 @@
+
 import * as React from 'react';
-import { Share2, Check, Copy, ShieldCheck } from 'lucide-react';
+import { Share2, Check, ShieldCheck } from 'lucide-react';
 import { Profile, VerificationLevel } from '../types';
 import { GoldenBadge, HeroBadge, StandardBadge, NobelBadge } from './Icons';
 
@@ -56,8 +57,6 @@ const ProfileCard: React.FC<ProfileCardProps> = ({ profile, onClick, onVerify })
 
   const handleShare = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    
-    // Construct a shareable URL (assuming query param support would be handled in App entry)
     const shareUrl = `${window.location.origin}?profile=${profile.id}`;
     const shareData = {
       title: `SomaliPin: ${profile.name}`,
@@ -69,16 +68,15 @@ const ProfileCard: React.FC<ProfileCardProps> = ({ profile, onClick, onVerify })
       try {
         await navigator.share(shareData);
       } catch (err) {
-        console.debug('Share canceled or failed', err);
+        console.debug('Share canceled', err);
       }
     } else {
-      // Fallback to clipboard
       try {
         await navigator.clipboard.writeText(shareUrl);
         setIsCopied(true);
         setTimeout(() => setIsCopied(false), 2000);
       } catch (err) {
-        console.error('Clipboard write failed', err);
+        console.error('Clipboard failed', err);
       }
     }
   };
@@ -96,14 +94,13 @@ const ProfileCard: React.FC<ProfileCardProps> = ({ profile, onClick, onVerify })
         <div className="flex justify-between items-start mb-4">
           <div className="relative">
             <img 
-              src={profile.imageUrl} 
+              src={profile.imageUrl || 'https://via.placeholder.com/150'} 
               alt={profile.name} 
               className={`w-20 h-20 object-cover rounded-sm border grayscale group-hover:grayscale-0 transition-all duration-500
                 ${profile.verificationLevel === VerificationLevel.NOBEL ? 'border-purple-200' : 
                   profile.verificationLevel === VerificationLevel.HERO ? 'border-red-100' : 'border-gray-100 dark:border-gray-700'}
               `}
             />
-            {/* Small status indicator dot */}
             <div className={`absolute -bottom-1 -right-1 h-3 w-3 rounded-full border-2 border-white dark:border-navy ${getStatusColor()}`} title={profile.status}></div>
           </div>
           {renderBadge()}

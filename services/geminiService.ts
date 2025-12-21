@@ -4,9 +4,15 @@ import { Language } from "../types";
 
 // Service function to query the Gemini Archive
 export const askArchive = async (query: string, lang: Language): Promise<string> => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    console.error("Gemini API Key is missing. Check environment variables.");
+    return "The archive intelligence service is currently not configured.";
+  }
+
   try {
     // Initializing with the environment variable directly as per guidelines
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+    const ai = new GoogleGenAI({ apiKey });
 
     const languageNames = {
       en: "English",
@@ -24,7 +30,7 @@ export const askArchive = async (query: string, lang: Language): Promise<string>
         
         Provide a concise summary (max 150 words) regarding the user's query about Somali figures, history, or business. 
         Focus on verified achievements and historical significance. 
-        If the query is vagues, politely ask for clarification.
+        If the query is vague, politely ask for clarification.
         Do not use markdown formatting like bolding or headers, just plain text paragraphs.
         
         IMPORTANT: The user has selected ${languageNames[lang]} as their preferred language. You MUST reply in ${languageNames[lang]}.`,

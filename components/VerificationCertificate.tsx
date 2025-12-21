@@ -1,3 +1,4 @@
+
 import * as React from 'react';
 import { Profile, VerificationLevel, Language } from '../types';
 import { BrandPin, OfficialSeal, QrCode } from './Icons';
@@ -142,7 +143,7 @@ const VerificationCertificate: React.FC<Props> = ({ profile, lang, onClose }) =>
           <div className="grid grid-cols-2 gap-x-4 gap-y-6 relative z-10 border-t border-b border-gray-100 py-6">
             <div className="text-left">
               <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Registry ID</span>
-              <span className="font-mono text-sm text-navy font-bold break-all">{`SOM-${profile.id.padStart(4, '0')}`}</span>
+              <span className="font-mono text-sm text-navy font-bold break-all">{`SOM-${String(profile.id).padStart(4, '0')}`}</span>
             </div>
             <div className="text-right">
               <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Category</span>
