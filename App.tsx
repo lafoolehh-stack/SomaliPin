@@ -563,7 +563,7 @@ const App = () => {
 
           {isEditing && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
-              <div className="bg-white dark:bg-navy w-full max-w-4xl max-h-[95vh] overflow-y-auto rounded-sm flex flex-col shadow-2xl animate-fade-in border border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-navy w-full max-w-5xl max-h-[95vh] overflow-y-auto rounded-sm flex flex-col shadow-2xl animate-fade-in border border-gray-200 dark:border-gray-700">
                 <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center sticky top-0 bg-white dark:bg-navy z-10">
                   <h2 className="text-2xl font-serif font-bold text-navy dark:text-white">Dossier Workspace</h2>
                   <button onClick={() => setIsEditing(false)} className="p-2 hover:bg-slate dark:hover:bg-navy-light rounded-full transition-colors"><X className="w-6 h-6 text-gray-400" /></button>
@@ -657,7 +657,79 @@ const App = () => {
                              <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-navy dark:text-white flex items-center"><Layers className="w-5 h-5 mr-2 text-gold"/> Official Archive Roles</h3><button onClick={() => setEditForm(prev => ({ ...prev, archiveAssignments: [...(prev.archiveAssignments || []), { id: 0, user_id: editForm.id || '', category_id: allCategories[0]?.id || 0, start_date: '', end_date: '', title_note: '' }] }))} className="text-xs bg-navy text-gold px-4 py-2 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"><Plus className="w-4 h-4 mr-1" /> Assign Role</button></div>
                             <div className="space-y-4">{editForm.archiveAssignments?.map((assign, idx) => (
                                 <div key={idx} className="border p-5 rounded-sm bg-slate/30 dark:bg-navy-light/40 space-y-4 group">
-                                    <div className="flex gap-4"><div className="flex-1"><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Category</label><select className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs font-bold" value={assign.category_id} onChange={e => { const updated = [...editForm.archiveAssignments!]; updated[idx].category_id = parseInt(e.target.value); setEditForm({...editForm, archiveAssignments: updated}); }}>{Object.values(SectionType).map(sect => (<optgroup label={sect} key={sect}>{allCategories.filter(c => c.section_type === sect).map(cat => (<option key={cat.id} value={cat.id}>{cat.category_name}</option>))}</optgroup>)}</select></div><div className="flex-1"><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Specific Title</label><input placeholder="e.g. Chairman" className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={assign.title_note} onChange={e => { const updated = [...editForm.archiveAssignments!]; updated[idx].title_note = e.target.value; setEditForm({...editForm, archiveAssignments: updated}); }} /></div><button onClick={() => { const updated = [...editForm.archiveAssignments!]; updated.splice(idx, 1); setEditForm({...editForm, archiveAssignments: updated}); }} className="self-end p-2.5 text-red-400"><Trash2 className="w-5 h-5" /></button></div>
+                                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                                      <div className="md:col-span-3">
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Category</label>
+                                        <select 
+                                          className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs font-bold" 
+                                          value={assign.category_id} 
+                                          onChange={e => { 
+                                            const updated = [...editForm.archiveAssignments!]; 
+                                            updated[idx].category_id = parseInt(e.target.value); 
+                                            setEditForm({...editForm, archiveAssignments: updated}); 
+                                          }}
+                                        >
+                                          {Object.values(SectionType).map(sect => (
+                                            <optgroup label={sect} key={sect}>
+                                              {allCategories.filter(c => c.section_type === sect).map(cat => (
+                                                <option key={cat.id} value={cat.id}>{cat.category_name}</option>
+                                              ))}
+                                            </optgroup>
+                                          ))}
+                                        </select>
+                                      </div>
+                                      <div className="md:col-span-3">
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Specific Title</label>
+                                        <input 
+                                          placeholder="e.g. Chairman" 
+                                          className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" 
+                                          value={assign.title_note} 
+                                          onChange={e => { 
+                                            const updated = [...editForm.archiveAssignments!]; 
+                                            updated[idx].title_note = e.target.value; 
+                                            setEditForm({...editForm, archiveAssignments: updated}); 
+                                          }} 
+                                        />
+                                      </div>
+                                      <div className="md:col-span-2">
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Start Date</label>
+                                        <input 
+                                          placeholder="e.g. 2020" 
+                                          className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs font-mono" 
+                                          value={assign.start_date} 
+                                          onChange={e => { 
+                                            const updated = [...editForm.archiveAssignments!]; 
+                                            updated[idx].start_date = e.target.value; 
+                                            setEditForm({...editForm, archiveAssignments: updated}); 
+                                          }} 
+                                        />
+                                      </div>
+                                      <div className="md:col-span-2">
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">End Date</label>
+                                        <input 
+                                          placeholder="e.g. 2024 / Present" 
+                                          className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs font-mono" 
+                                          value={assign.end_date} 
+                                          onChange={e => { 
+                                            const updated = [...editForm.archiveAssignments!]; 
+                                            updated[idx].end_date = e.target.value; 
+                                            setEditForm({...editForm, archiveAssignments: updated}); 
+                                          }} 
+                                        />
+                                      </div>
+                                      <div className="md:col-span-2 flex justify-end">
+                                        <button 
+                                          onClick={() => { 
+                                            const updated = [...editForm.archiveAssignments!]; 
+                                            updated.splice(idx, 1); 
+                                            setEditForm({...editForm, archiveAssignments: updated}); 
+                                          }} 
+                                          className="p-2.5 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-sm transition-colors"
+                                        >
+                                          <Trash2 className="w-5 h-5" />
+                                        </button>
+                                      </div>
+                                    </div>
                                 </div>
                             ))}</div>
                         </div>
