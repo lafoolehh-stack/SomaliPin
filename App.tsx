@@ -104,15 +104,6 @@ const App = () => {
       });
     });
 
-    Object.keys(sections).forEach(s => {
-      const sectionKey = s as SectionType;
-      Object.keys(sections[sectionKey]).forEach(c => {
-        if (Array.isArray(sections[sectionKey][c])) {
-          sections[sectionKey][c].sort((a, b) => (a.start_date || '').localeCompare(b.start_date || ''));
-        }
-      });
-    });
-
     return sections;
   }, [profiles]);
 
@@ -776,31 +767,33 @@ const App = () => {
                         </div>
                     )}
                     {activeAdminTab === 'positions' && (
-                        <div className="space-y-6">
-                             <div className="flex justify-between items-center mb-4">
+                        <div className="space-y-8 animate-fade-in">
+                             <div className="flex justify-between items-center">
                                 <h3 className="font-bold text-lg text-navy dark:text-white flex items-center">
                                   <Layers className="w-5 h-5 mr-2 text-gold"/> Official Archive Roles
                                 </h3>
                                 <button 
                                   onClick={() => setEditForm(prev => ({ ...prev, archiveAssignments: [...(prev.archiveAssignments || []), { id: 0, user_id: editForm.id || '', category_id: (allCategories && allCategories.length > 0) ? allCategories[0].id : 0, start_date: '', end_date: '', title_note: '' }] }))} 
-                                  className="text-xs bg-navy text-white px-4 py-2 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"
+                                  className="text-xs bg-navy text-white px-5 py-2.5 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"
                                 >
-                                  <Plus className="w-4 h-4 mr-1 text-gold" /> Assign Role
+                                  <Plus className="w-4 h-4 mr-1.5 text-gold" /> Assign Role
                                 </button>
                              </div>
-                            <div className="space-y-4">
+
+                            <div className="space-y-6">
                               {(editForm.archiveAssignments || []).filter(Boolean).map((assign, idx) => (
-                                <div key={idx} className="border border-gray-100 dark:border-gray-800 p-6 rounded-sm bg-white dark:bg-navy-light/10 space-y-4 group animate-fade-in relative">
+                                <div key={idx} className="border border-gray-100 dark:border-gray-800 p-6 rounded-sm bg-gray-50/50 dark:bg-navy-light/10 group relative shadow-sm">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start pr-12">
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Category</label>
+                                        <div className="space-y-2">
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Category</label>
                                             <select 
-                                              className="w-full border border-gray-200 p-3 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-sm font-medium focus:ring-1 focus:ring-gold outline-none" 
+                                              className="w-full border border-gray-200 p-3 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-sm font-medium focus:ring-1 focus:ring-gold outline-none bg-white transition-shadow" 
                                               value={assign.category_id} 
                                               onChange={e => { const updated = [...(editForm.archiveAssignments || [])]; updated[idx].category_id = parseInt(e.target.value); setEditForm({...editForm, archiveAssignments: updated}); }}
                                             >
+                                                <option value={0}>Select a category...</option>
                                                 {Object.values(SectionType).map(sect => (
-                                                    <optgroup label={sect} key={sect}>
+                                                    <optgroup label={sect} key={sect} className="font-bold text-navy-light">
                                                         {(allCategories || []).filter(c => c && c.section_type === sect).map(cat => (
                                                             <option key={cat.id} value={cat.id}>{cat.category_name}</option>
                                                         ))}
@@ -808,11 +801,11 @@ const App = () => {
                                                 ))}
                                             </select>
                                         </div>
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Specific Title</label>
+                                        <div className="space-y-2">
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Specific Title</label>
                                             <input 
                                               placeholder="e.g. Chairman" 
-                                              className="w-full border border-gray-200 p-3 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-sm focus:ring-1 focus:ring-gold outline-none" 
+                                              className="w-full border border-gray-200 p-3 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-sm focus:ring-1 focus:ring-gold outline-none bg-white placeholder-gray-300" 
                                               value={assign.title_note || ''} 
                                               onChange={e => { const updated = [...(editForm.archiveAssignments || [])]; updated[idx].title_note = e.target.value; setEditForm({...editForm, archiveAssignments: updated}); }} 
                                             />
@@ -820,17 +813,38 @@ const App = () => {
                                     </div>
                                     <button 
                                       onClick={() => { const updated = [...(editForm.archiveAssignments || [])]; updated.splice(idx, 1); setEditForm({...editForm, archiveAssignments: updated}); }} 
-                                      className="absolute top-1/2 -translate-y-1/2 right-6 p-2 text-red-300 hover:text-red-500 transition-colors"
+                                      className="absolute top-1/2 -translate-y-1/2 right-6 p-2 text-red-300 hover:text-red-500 transition-colors bg-white dark:bg-navy rounded-full shadow-sm"
+                                      title="Remove Role"
                                     >
                                       <Trash2 className="w-5 h-5" />
                                     </button>
                                 </div>
                             ))}
+
+                            {(editForm.archiveAssignments || []).length === 0 && (
+                                <div className="text-center py-12 border-2 border-dashed border-gray-100 rounded-sm">
+                                    <Layers className="w-10 h-10 text-gray-200 mx-auto mb-3" />
+                                    <p className="text-gray-400 text-sm italic font-serif">No official archive roles assigned yet.</p>
+                                </div>
+                            )}
                           </div>
                         </div>
                     )}
                 </div>
-                <div className="p-6 border-t border-gray-100 dark:border-gray-700 flex justify-end space-x-4 sticky bottom-0 bg-white dark:bg-navy z-20"><button onClick={() => setIsEditing(false)} className="px-6 py-2.5 text-sm font-bold text-gray-500 hover:text-gray-700 transition-colors">Discard</button><button onClick={handleSaveDossier} className="bg-navy dark:bg-gold text-white dark:text-navy px-10 py-2.5 rounded-sm font-bold flex items-center shadow-lg transform active:scale-95 transition-all"><Save className="w-4 h-4 mr-2" /> Save Dossier</button></div>
+                <div className="p-6 border-t border-gray-100 dark:border-gray-700 flex justify-end items-center space-x-8 sticky bottom-0 bg-white dark:bg-navy z-20">
+                    <button 
+                      onClick={() => setIsEditing(false)} 
+                      className="text-sm font-bold text-gray-400 hover:text-navy transition-colors tracking-widest"
+                    >
+                      Discard
+                    </button>
+                    <button 
+                      onClick={handleSaveDossier} 
+                      className="bg-navy dark:bg-gold text-white dark:text-navy px-12 py-3 rounded-sm font-bold flex items-center shadow-xl transform active:scale-95 transition-all"
+                    >
+                      <Save className="w-5 h-5 mr-2.5" /> Save Dossier
+                    </button>
+                </div>
               </div>
             </div>
           )}
