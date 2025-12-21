@@ -699,14 +699,12 @@ const App = () => {
                             </div>
                             <div className="space-y-4">
                               {(editForm.archiveAssignments || []).filter(Boolean).map((assign, idx) => {
-                                const selectedCat = allCategories.find(c => c.id === assign.category_id);
-                                const isDatedSector = selectedCat && [SectionType.POLITICS, SectionType.JUDICIARY, SectionType.SECURITY].includes(selectedCat.section_type);
                                 return (
                                   <div key={idx} className="bg-[#F9FAFB] dark:bg-navy-light/20 p-6 border border-gray-100 dark:border-gray-800 rounded-sm relative shadow-sm">
-                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end pr-10">
+                                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-end pr-10">
                                           <div>
-                                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Category</label>
-                                              <select className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 text-sm focus:ring-1 focus:ring-gold outline-none" value={assign.category_id} onChange={e => { const updated = [...(editForm.archiveAssignments || [])]; updated[idx].category_id = parseInt(e.target.value); setEditForm({...editForm, archiveAssignments: updated}); }}>
+                                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">CATEGORY</label>
+                                              <select className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 text-sm focus:ring-1 focus:ring-gold outline-none bg-white" value={assign.category_id} onChange={e => { const updated = [...(editForm.archiveAssignments || [])]; updated[idx].category_id = parseInt(e.target.value); setEditForm({...editForm, archiveAssignments: updated}); }}>
                                                   <option value={0}>Select Category...</option>
                                                   {Object.values(SectionType).map(sect => (
                                                       <optgroup label={sect} key={sect}>
@@ -718,21 +716,17 @@ const App = () => {
                                               </select>
                                           </div>
                                           <div>
-                                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Specific Title</label>
-                                              <input placeholder="e.g. CEO or Minister" className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 text-sm focus:ring-1 focus:ring-gold outline-none" value={assign.title_note || ''} onChange={e => { const updated = [...(editForm.archiveAssignments || [])]; updated[idx].title_note = e.target.value; setEditForm({...editForm, archiveAssignments: updated}); }} />
+                                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">SPECIFIC TITLE</label>
+                                              <input placeholder="e.g. CEO or Minister" className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 text-sm focus:ring-1 focus:ring-gold outline-none bg-white" value={assign.title_note || ''} onChange={e => { const updated = [...(editForm.archiveAssignments || [])]; updated[idx].title_note = e.target.value; setEditForm({...editForm, archiveAssignments: updated}); }} />
                                           </div>
-                                          {isDatedSector && (
-                                            <>
-                                              <div>
-                                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Start Date</label>
-                                                <input placeholder="e.g. 2010" className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 text-sm focus:ring-1 focus:ring-gold outline-none" value={assign.start_date || ''} onChange={e => { const updated = [...(editForm.archiveAssignments || [])]; updated[idx].start_date = e.target.value; setEditForm({...editForm, archiveAssignments: updated}); }} />
-                                              </div>
-                                              <div>
-                                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">End Date</label>
-                                                <input placeholder="e.g. 2014" className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 text-sm focus:ring-1 focus:ring-gold outline-none" value={assign.end_date || ''} onChange={e => { const updated = [...(editForm.archiveAssignments || [])]; updated[idx].end_date = e.target.value; setEditForm({...editForm, archiveAssignments: updated}); }} />
-                                              </div>
-                                            </>
-                                          )}
+                                          <div>
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">START DATE</label>
+                                            <input placeholder="e.g. 2010" className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 text-sm focus:ring-1 focus:ring-gold outline-none bg-white" value={assign.start_date || ''} onChange={e => { const updated = [...(editForm.archiveAssignments || [])]; updated[idx].start_date = e.target.value; setEditForm({...editForm, archiveAssignments: updated}); }} />
+                                          </div>
+                                          <div>
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">END DATE</label>
+                                            <input placeholder="e.g. 2014 or Present" className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 text-sm focus:ring-1 focus:ring-gold outline-none bg-white" value={assign.end_date || ''} onChange={e => { const updated = [...(editForm.archiveAssignments || [])]; updated[idx].end_date = e.target.value; setEditForm({...editForm, archiveAssignments: updated}); }} />
+                                          </div>
                                       </div>
                                       <button onClick={() => { const updated = [...(editForm.archiveAssignments || [])]; updated.splice(idx, 1); setEditForm({...editForm, archiveAssignments: updated}); }} className="absolute top-1/2 -translate-y-1/2 right-4 text-red-400 hover:text-red-600"><Trash2 className="w-5 h-5"/></button>
                                   </div>
@@ -947,19 +941,19 @@ const App = () => {
                         {selectedProfile?.verified && (<div className="absolute -bottom-3 -right-3 bg-white p-1 rounded-full shadow-sm cursor-pointer hover:scale-110 transition-transform" onClick={() => setShowCertificate(true)}>{getVerificationIcon(selectedProfile?.verificationLevel)}</div>)}
                       </div>
                     </div>
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 text-gray-800">
                         <div className="lg:col-span-2">
                             <div className="mb-8"><span className="text-sm font-bold tracking-widest uppercase text-gold">{selectedProfile?.category}</span><h1 className="text-4xl font-serif font-bold text-navy dark:text-white mb-2">{selectedProfile?.name}</h1><p className="text-xl text-gray-500 dark:text-gray-400 font-light">{selectedProfile?.title}</p></div>
                             <div className="prose prose-slate max-w-none text-gray-800"><h3 className="text-navy dark:text-gold font-serif text-xl border-b border-gray-200 dark:border-gray-700 pb-2 mb-4">{t.about}</h3><p className="text-gray-700 dark:text-gray-300 leading-relaxed text-lg whitespace-pre-line">{selectedProfile?.fullBio}</p></div>
-                            <div className="mt-12"><h3 className="text-navy dark:text-gold font-serif text-xl border-b border-gray-200 dark:border-gray-700 pb-2 mb-4">{t.timeline}</h3><Timeline events={selectedProfile?.timeline || []} /></div>
+                            <div className="mt-12 text-gray-800"><h3 className="text-navy dark:text-gold font-serif text-xl border-b border-gray-200 dark:border-gray-700 pb-2 mb-4">{t.timeline}</h3><Timeline events={selectedProfile?.timeline || []} /></div>
                             
-                            <div className="mt-16">
+                            <div className="mt-16 text-gray-800">
                                 <div className="flex border-b border-gray-100 dark:border-gray-700 mb-8 space-x-8">
                                     {['archive', 'news', 'podcast'].map((tab) => (
                                         <button key={tab} onClick={() => setActiveTab(tab as any)} className={`pb-4 text-xs font-bold tracking-[0.2em] uppercase transition-all relative ${activeTab === tab ? 'text-navy dark:text-gold' : 'text-gray-300 hover:text-gray-500'}`}>{tab === 'archive' ? t.tab_archive : tab === 'news' ? t.tab_news : t.tab_podcast}{activeTab === tab && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-navy dark:bg-gold"></div>}</button>
                                     ))}
                                 </div>
-                                <div className="animate-fade-in min-h-[200px]">
+                                <div className="animate-fade-in min-h-[200px] text-gray-800">
                                     {activeTab === 'archive' && (<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">{(selectedProfile?.archives || []).length > 0 ? selectedProfile?.archives?.map((item) => (<a key={item.id} href={item.url || '#'} target="_blank" className="group flex items-center p-4 bg-slate dark:bg-navy-light rounded-sm border border-transparent hover:border-gold transition-all"><div className="p-3 bg-white dark:bg-navy rounded text-gold mr-4">{item.type === 'PDF' ? <FileText className="w-6 h-6" /> : <ImageIcon className="w-6 h-6" />}</div><div className="flex-1 min-w-0"><h4 className="text-sm font-bold text-navy dark:text-white truncate">{item.title}</h4></div><ExternalLink className="w-4 h-4 text-gray-300 opacity-0 group-hover:opacity-100" /></a>)) : <div className="col-span-2 py-12 text-center text-gray-400 italic">{t.no_docs}</div>}</div>)}
                                     {activeTab === 'news' && (<div className="space-y-4">{(selectedProfile?.news || []).length > 0 ? selectedProfile?.news?.map((item) => (<div key={item.id} className="p-5 bg-white dark:bg-navy-light border border-gray-100 dark:border-gray-700 rounded-sm hover:shadow-lg transition-all"><div className="flex justify-between items-start mb-3"><span className="text-[10px] font-bold text-gold uppercase bg-gold/10 px-2 py-0.5 rounded">{item.source}</span><span className="text-[10px] font-mono text-gray-400">{item.date}</span></div><h4 className="text-lg font-serif font-bold text-navy dark:text-white mb-2">{item.title}</h4><p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{item.summary}</p></div>)) : <div className="py-12 text-center text-gray-400 italic">{t.no_news}</div>}</div>)}
                                     {activeTab === 'podcast' && (<div className="grid grid-cols-1 gap-3">{(selectedProfile?.podcasts || []).length > 0 ? selectedProfile?.podcasts?.map((item) => (<div key={item.id} className="flex items-center p-4 bg-navy dark:bg-navy-light text-white rounded-sm group hover:bg-navy-light transition-all shadow-xl border border-gold/10"><div className="p-3 bg-gold rounded-full mr-4 text-navy"><Play className="w-5 h-5 fill-current" /></div><div className="flex-1 min-w-0"><h4 className="text-sm font-bold truncate tracking-wide">{item.title}</h4><p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">{item.source}</p></div></div>)) : <div className="py-12 text-center text-gray-400 italic">{t.no_podcasts}</div>}</div>)}
@@ -967,7 +961,7 @@ const App = () => {
                             </div>
                         </div>
 
-                        <div className="space-y-6">
+                        <div className="space-y-6 text-gray-800">
                             <div className="bg-slate dark:bg-navy-light p-6 rounded-sm border border-gray-200 dark:border-navy">
                                 <h4 className="font-serif font-bold text-navy dark:text-white mb-4">{t.key_info}</h4>
                                 <div className="space-y-4 text-sm text-gray-800">
