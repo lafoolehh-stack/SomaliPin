@@ -19,15 +19,11 @@ const App = () => {
   const [language, setLanguage] = useState<Language>('en');
   const [darkMode, setDarkMode] = useState(false);
   
-  // Certificate State
   const [showCertificate, setShowCertificate] = useState(false);
-  
-  // Dynamic Data State
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [allCategories, setAllCategories] = useState<ArchiveCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Admin State
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
   const [adminSubView, setAdminSubView] = useState<'dossiers' | 'categories'>('dossiers');
@@ -37,7 +33,6 @@ const App = () => {
   const [activeAdminTab, setActiveAdminTab] = useState<'basic' | 'timeline' | 'archive' | 'positions' | 'news' | 'podcast'>('basic');
   const [isLocking, setIsLocking] = useState(false); 
 
-  // Category Manager State
   const [newCatName, setNewCatName] = useState('');
   const [newCatSection, setNewCatSection] = useState<SectionType>(SectionType.BUSINESS);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
@@ -53,6 +48,7 @@ const App = () => {
   const handleProfileClick = (profile: Profile) => {
     setSelectedProfile(profile);
     setView('profile');
+    setActiveTab('archive');
     window.scrollTo(0, 0);
   };
 
@@ -157,7 +153,7 @@ const App = () => {
       });
       setProfiles(mappedProfiles);
     } catch (err) {
-      console.error('fetchDossiers crash:', err);
+      console.error('fetchDossiers error:', err);
     } finally {
       setIsLoading(false);
     }
@@ -457,7 +453,6 @@ const App = () => {
             </div>
           ) : (
             <div className="flex flex-col md:flex-row gap-8">
-              {/* Sidebar */}
               <div className="w-full md:w-64 space-y-2">
                 <button onClick={() => setAdminSubView('dossiers')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-sm font-bold transition-all ${adminSubView === 'dossiers' ? 'bg-navy text-white dark:bg-gold dark:text-navy' : 'bg-white dark:bg-navy text-gray-500 hover:bg-gray-50'}`}>
                   <User className="w-5 h-5" /> <span>Dossiers</span>
@@ -467,7 +462,6 @@ const App = () => {
                 </button>
               </div>
 
-              {/* Main Content Area */}
               <div className="flex-1 bg-white dark:bg-navy rounded-sm shadow-sm p-6 overflow-hidden min-h-[60vh]">
                 {adminSubView === 'dossiers' ? (
                   <>
@@ -527,14 +521,14 @@ const App = () => {
                     <div className="bg-slate dark:bg-navy-light p-6 rounded-sm border border-gray-200 dark:border-gray-800 shadow-inner">
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="flex-1">
-                          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Sector (Archive Section)</label>
-                          <select className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 text-sm font-medium focus:ring-2 focus:ring-gold outline-none" value={newCatSection} onChange={e => setNewCatSection(e.target.value as SectionType)}>
+                          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Sector</label>
+                          <select className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 text-sm focus:ring-2 focus:ring-gold outline-none" value={newCatSection} onChange={e => setNewCatSection(e.target.value as SectionType)}>
                             {Object.values(SectionType).map(s => <option key={s} value={s}>{s}</option>)}
                           </select>
                         </div>
                         <div className="flex-1">
                           <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Category Name</label>
-                          <input className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 text-sm focus:ring-2 focus:ring-gold outline-none" value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="e.g. Hospitals, SYL, Banks..." />
+                          <input className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 text-sm focus:ring-2 focus:ring-gold outline-none" value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="e.g. Banks, Hospitals..." />
                         </div>
                         <button onClick={handleAddCategory} disabled={isAddingCategory} className="self-end bg-navy dark:bg-gold text-white dark:text-navy h-[42px] px-6 rounded-sm font-bold flex items-center justify-center shadow-md hover:bg-navy-light transition-all disabled:opacity-50">
                           {isAddingCategory ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />} 
@@ -549,11 +543,11 @@ const App = () => {
                         return (
                           <div key={section} className="bg-white dark:bg-navy-light/30 border border-gray-100 dark:border-gray-800 p-5 rounded-sm flex flex-col h-full shadow-sm">
                             <h3 className="text-[11px] font-bold text-gold uppercase tracking-[0.2em] border-b border-gray-100 dark:border-gray-800 pb-3 mb-4 flex justify-between items-center">{section} <span className="bg-gray-50 dark:bg-navy px-2 py-0.5 rounded text-[10px] text-gray-400">({cats.length})</span></h3>
-                            <div className="space-y-1.5 overflow-y-auto max-h-[300px] flex-grow pr-1 custom-scrollbar">
-                              {cats.length === 0 ? <p className="text-[11px] text-gray-300 italic py-4 text-center">No categories registered.</p> : cats.map(c => (
+                            <div className="space-y-1.5 overflow-y-auto max-h-[300px] flex-grow pr-1">
+                              {cats.length === 0 ? <p className="text-[11px] text-gray-300 italic py-4 text-center">No categories.</p> : cats.map(c => (
                                 <div key={c.id} className="flex justify-between items-center text-xs bg-slate/50 dark:bg-navy-light/40 px-3 py-2.5 rounded-sm group hover:bg-white dark:hover:bg-navy transition-colors border border-transparent hover:border-gray-100 dark:hover:border-gray-700">
                                   <span className="font-semibold text-navy-light dark:text-gray-200">{c.category_name}</span>
-                                  <button onClick={() => handleDeleteCategory(c.id)} className="text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"><Trash2 className="w-3.5 h-3.5" /></button>
+                                  <button onClick={() => handleDeleteCategory(c.id)} className="text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-1"><Trash2 className="w-3.5 h-3.5" /></button>
                                 </div>
                               ))}
                             </div>
@@ -589,21 +583,15 @@ const App = () => {
                                 <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Headline Role</label><input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.title || ''} onChange={(e) => setEditForm({...editForm, title: e.target.value})} /></div>
                                 <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Location</label><input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.location || ''} onChange={(e) => setEditForm({...editForm, location: e.target.value})} /></div>
                                 <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Display Category</label><input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.category || ''} onChange={(e) => setEditForm({...editForm, category: e.target.value})} /></div>
-                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Lifecycle Status</label><select className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.status || 'ACTIVE'} onChange={(e) => setEditForm({...editForm, status: e.target.value as ProfileStatus})}><option value="ACTIVE">Active</option><option value="DECEASED">Deceased</option><option value="RETIRED">Retired</option><option value="CLOSED">Closed (Business)</option></select></div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Date Start/Born</label><input type="text" placeholder="e.g. 1960" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.dateStart || ''} onChange={(e) => setEditForm({...editForm, dateStart: e.target.value})} /></div>
-                                    <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Date End/Died</label><input type="text" placeholder="e.g. 2020" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.dateEnd || ''} onChange={(e) => setEditForm({...editForm, dateEnd: e.target.value})} /></div>
-                                </div>
+                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Lifecycle Status</label><select className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.status || 'ACTIVE'} onChange={(e) => setEditForm({...editForm, status: e.target.value as ProfileStatus})}><option value="ACTIVE">Active</option><option value="DECEASED">Deceased</option><option value="RETIRED">Retired</option><option value="CLOSED">Closed</option></select></div>
                             </div>
                             <div className="space-y-5">
                                 <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Verification Status</label><select className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.verified ? 'Verified' : 'Unverified'} onChange={(e) => setEditForm({...editForm, verified: e.target.value === 'Verified'})}><option value="Unverified">Unverified</option><option value="Verified">Verified</option></select></div>
                                 <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Honors Tier</label><select className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.verificationLevel || 'Standard'} onChange={(e) => setEditForm({...editForm, verificationLevel: e.target.value as VerificationLevel})}><option value="Standard">Standard</option><option value="Golden">Golden</option><option value="Hero">Hero</option><option value="Nobel">Nobel</option></select></div>
-                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Reputation Score</label><input type="number" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.influence?.support || 0} onChange={(e) => setEditForm({...editForm, influence: { ...editForm.influence!, support: parseInt(e.target.value) }})} /></div>
-                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Profile Image</label><div className="flex items-center space-x-3 bg-slate/50 dark:bg-navy-light/30 p-2 rounded-sm border border-dashed border-gray-200 dark:border-gray-700">{editForm.imageUrl ? <img src={editForm.imageUrl} alt="Preview" className="w-12 h-12 object-cover rounded shadow-sm" /> : <div className="w-12 h-12 bg-gray-100 dark:bg-navy flex items-center justify-center rounded text-gray-400"><ImageIcon className="w-6 h-6"/></div>}<input type="file" accept="image/*" onChange={handleImageUpload} className="text-xs file:mr-4 file:py-1.5 file:px-3 file:rounded-sm file:border-0 file:text-[10px] file:font-bold file:uppercase file:bg-navy file:text-gold cursor-pointer" /></div></div>
-                                <div className="py-2"><label className="flex items-center space-x-3 cursor-pointer group"><input type="checkbox" checked={editForm.isOrganization || false} onChange={(e) => setEditForm({...editForm, isOrganization: e.target.checked})} className="h-5 w-5 rounded border-gray-300 text-gold focus:ring-gold" /><span className="text-sm font-bold text-navy-light dark:text-gray-300 group-hover:text-gold transition-colors">Is Organization/Company?</span></label></div>
+                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Profile Image</label><input type="file" accept="image/*" onChange={handleImageUpload} className="text-xs file:mr-4 file:py-1.5 file:px-3 file:rounded-sm file:border-0 file:text-[10px] file:font-bold file:uppercase file:bg-navy file:text-gold cursor-pointer" /></div>
                                 <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Short Bio</label><textarea className="w-full border p-2.5 rounded-sm h-24 dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none resize-none" value={editForm.shortBio || ''} onChange={(e) => setEditForm({...editForm, shortBio: e.target.value})} /></div>
                             </div>
-                            <div className="md:col-span-2"><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Full Dossier Biography</label><textarea className="w-full border p-3 rounded-sm h-56 font-serif dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.fullBio || ''} onChange={(e) => setEditForm({ ...editForm, fullBio: e.target.value })} /></div>
+                            <div className="md:col-span-2"><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Full Biography</label><textarea className="w-full border p-3 rounded-sm h-56 font-serif dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.fullBio || ''} onChange={(e) => setEditForm({ ...editForm, fullBio: e.target.value })} /></div>
                         </div>
                     )}
                     {activeAdminTab === 'timeline' && (
@@ -709,9 +697,9 @@ const App = () => {
         {view === 'archive-explorer' ? (
           <ArchiveExplorer sectionsToShow={[SectionType.POLITICS, SectionType.JUDICIARY, SectionType.SECURITY]} title={t.archive_explorer_title} description={t.archive_explorer_desc} />
         ) : view === 'business-archive' ? (
-          <ArchiveExplorer sectionsToShow={[SectionType.BUSINESS]} title={`🏛️ ${t.sec_business} Archive`} description={`Explore a comprehensive directory of Somali commercial history, corporate leadership, and innovative business entities.`} />
+          <ArchiveExplorer sectionsToShow={[SectionType.BUSINESS]} title={`🏛️ ${t.sec_business} Archive`} description={`Explore a comprehensive directory of Somali commercial history and innovative business entities.`} />
         ) : view === 'arts-culture-archive' ? (
-          <ArchiveExplorer sectionsToShow={[SectionType.ARTS_CULTURE]} title={`🏛️ ${t.sec_arts_culture} Archive`} description={`Celebrating the creators, musicians, artists, and scholars who have shaped the rich cultural tapestry of the Somali people.`} />
+          <ArchiveExplorer sectionsToShow={[SectionType.ARTS_CULTURE]} title={`🏛️ ${t.sec_arts_culture} Archive`} description={`Celebrating the creators and scholars who have shaped the rich cultural tapestry of the Somali people.`} />
         ) : view === 'home' ? (
           <>
             <section className="bg-navy pb-16 pt-10 px-4 text-center border-b border-gold/20">
@@ -725,36 +713,30 @@ const App = () => {
               </div>
             </section>
 
-            {/* NEW SECTOR CARDS SECTION */}
             <section className="max-w-6xl mx-auto px-4 py-16 -mt-10 relative z-10">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {/* National Registry */}
                 <div onClick={() => setView('archive-explorer')} className="group bg-white dark:bg-navy-light p-8 rounded-sm shadow-2xl border border-gray-100 dark:border-navy cursor-pointer hover:-translate-y-2 transition-all duration-300">
                   <div className="w-14 h-14 bg-navy dark:bg-gold text-gold dark:text-navy rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                     <Landmark className="w-7 h-7" />
                   </div>
                   <h3 className="text-xl font-serif font-bold text-navy dark:text-white mb-3">National Registry</h3>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm mb-6 leading-relaxed">Official directory of political leadership, judicial history, and security forces from 1960 to the present.</p>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm mb-6 leading-relaxed">Official directory of political leadership and security forces.</p>
                   <div className="flex items-center text-xs font-bold text-gold uppercase tracking-widest group-hover:gap-2 transition-all">Explore Registry <ArrowRight className="w-4 h-4 ml-1" /></div>
                 </div>
-
-                {/* Business Archive */}
                 <div onClick={() => setView('business-archive')} className="group bg-white dark:bg-navy-light p-8 rounded-sm shadow-2xl border border-gray-100 dark:border-navy cursor-pointer hover:-translate-y-2 transition-all duration-300 border-t-4 border-t-gold">
                   <div className="w-14 h-14 bg-gold text-navy rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                     <Briefcase className="w-7 h-7" />
                   </div>
-                  <h3 className="text-xl font-serif font-bold text-navy dark:text-white mb-3">Business & Commerce</h3>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm mb-6 leading-relaxed">Tracking the history of Somali entrepreneurship, major corporations, banking institutions, and economic pioneers.</p>
+                  <h3 className="text-xl font-serif font-bold text-navy dark:text-white mb-3">Business (Ganacsiga)</h3>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm mb-6 leading-relaxed">Tracking Somali entrepreneurship and corporate pioneers.</p>
                   <div className="flex items-center text-xs font-bold text-gold uppercase tracking-widest group-hover:gap-2 transition-all">Explore Business <ArrowRight className="w-4 h-4 ml-1" /></div>
                 </div>
-
-                {/* Arts & Culture Archive */}
                 <div onClick={() => setView('arts-culture-archive')} className="group bg-white dark:bg-navy-light p-8 rounded-sm shadow-2xl border border-gray-100 dark:border-navy cursor-pointer hover:-translate-y-2 transition-all duration-300">
                   <div className="w-14 h-14 bg-navy dark:bg-white text-white dark:text-navy rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                     <Palette className="w-7 h-7" />
                   </div>
                   <h3 className="text-xl font-serif font-bold text-navy dark:text-white mb-3">Arts & Culture</h3>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm mb-6 leading-relaxed">Preserving the legacy of Somali musicians, poets, artists, and cultural custodians who shaped our nation's identity.</p>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm mb-6 leading-relaxed">Preserving the legacy of Somali artists and custodians.</p>
                   <div className="flex items-center text-xs font-bold text-gold uppercase tracking-widest group-hover:gap-2 transition-all">Explore Culture <ArrowRight className="w-4 h-4 ml-1" /></div>
                 </div>
               </div>
@@ -769,28 +751,28 @@ const App = () => {
           </>
         ) : (
           <div className="max-w-5xl mx-auto px-4 py-12 animate-fade-in">
-            <button onClick={handleBack} className="group flex items-center text-navy dark:text-gold font-medium mb-8 hover:text-gold transition-colors rtl:flex-row-reverse"><ChevronLeft className="h-5 w-5 mr-1 group-hover:-translate-x-1 transition-transform rtl:rotate-180 rtl:ml-1 rtl:mr-0" />{t.back_directory}</button>
+            <button onClick={handleBack} className="group flex items-center text-navy dark:text-gold font-medium mb-8 hover:text-gold transition-colors"><ChevronLeft className="h-5 w-5 mr-1" />{t.back_directory}</button>
             {selectedProfile && selectedProfile.locked ? (<ArchivistWorkDesk />) : selectedProfile ? (
               <div className="bg-white dark:bg-navy shadow-xl rounded-sm overflow-hidden mb-12">
-                <div className="h-48 relative bg-navy"><div className="absolute inset-0 bg-black/20 pattern-grid-lg"></div></div>
+                <div className="h-48 relative bg-navy"><div className="absolute inset-0 bg-black/20"></div></div>
                 <div className="px-8 pb-12">
                     <div className="relative flex justify-between items-end -mt-20 mb-8"><div className="relative"><img src={selectedProfile.imageUrl} className="w-40 h-40 object-cover rounded-sm border-4 border-white shadow-md" />{selectedProfile.verified && (<div className="absolute -bottom-3 -right-3 bg-white p-1 rounded-full shadow-sm cursor-pointer hover:scale-110 transition-transform" onClick={() => setShowCertificate(true)}>{getVerificationIcon(selectedProfile.verificationLevel)}</div>)}</div></div>
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
                         <div className="lg:col-span-2">
-                            <div className="mb-8"><div className="flex flex-wrap items-center gap-3 mb-4"><span className="text-sm font-bold tracking-widest uppercase text-gold">{selectedProfile.category}</span></div><h1 className="text-4xl font-serif font-bold text-navy dark:text-white mb-2">{selectedProfile.name}</h1><p className="text-xl text-gray-500 dark:text-gray-400 font-light">{selectedProfile.title}</p>{selectedProfile.location && (<div className="flex items-center text-gray-400 text-sm mt-3"><MapPin className="h-4 w-4 mr-1 rtl:ml-1 rtl:mr-0" />{selectedProfile.location}</div>)}</div>
-                            <div className="prose prose-slate max-w-none rtl:text-right"><h3 className="text-navy dark:text-gold font-serif text-xl border-b border-gray-200 dark:border-gray-700 pb-2 mb-4">{t.about}</h3><p className="text-gray-700 dark:text-gray-300 leading-relaxed text-lg whitespace-pre-line">{selectedProfile.fullBio}</p></div>
+                            <div className="mb-8"><div className="flex flex-wrap items-center gap-3 mb-4"><span className="text-sm font-bold tracking-widest uppercase text-gold">{selectedProfile.category}</span></div><h1 className="text-4xl font-serif font-bold text-navy dark:text-white mb-2">{selectedProfile.name}</h1><p className="text-xl text-gray-500 dark:text-gray-400 font-light">{selectedProfile.title}</p></div>
+                            <div className="prose prose-slate max-w-none"><h3 className="text-navy dark:text-gold font-serif text-xl border-b border-gray-200 dark:border-gray-700 pb-2 mb-4">{t.about}</h3><p className="text-gray-700 dark:text-gray-300 leading-relaxed text-lg whitespace-pre-line">{selectedProfile.fullBio}</p></div>
                             <div className="mt-12"><h3 className="text-navy dark:text-gold font-serif text-xl border-b border-gray-200 dark:border-gray-700 pb-2 mb-4">{t.timeline}</h3><Timeline events={selectedProfile.timeline} /></div>
                             
                             <div className="mt-16">
-                                <div className="flex border-b border-gray-100 dark:border-gray-700 mb-8 overflow-x-auto space-x-8 rtl:space-x-reverse">
+                                <div className="flex border-b border-gray-100 dark:border-gray-700 mb-8 overflow-x-auto space-x-8">
                                     {['archive', 'news', 'podcast'].map((tab) => (
-                                        <button key={tab} onClick={() => setActiveTab(tab as any)} className={`pb-4 text-xs font-bold tracking-[0.2em] uppercase transition-all relative ${activeTab === tab ? 'text-navy dark:text-gold' : 'text-gray-300 hover:text-gray-500'}`}>{tab === 'archive' ? t.tab_archive : tab === 'news' ? t.tab_news : t.tab_podcast}{activeTab === tab && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-navy dark:bg-gold animate-slide-right"></div>}</button>
+                                        <button key={tab} onClick={() => setActiveTab(tab as any)} className={`pb-4 text-xs font-bold tracking-[0.2em] uppercase transition-all relative ${activeTab === tab ? 'text-navy dark:text-gold' : 'text-gray-300 hover:text-gray-500'}`}>{tab === 'archive' ? t.tab_archive : tab === 'news' ? t.tab_news : t.tab_podcast}{activeTab === tab && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-navy dark:bg-gold"></div>}</button>
                                     ))}
                                 </div>
                                 <div className="animate-fade-in min-h-[200px]">
-                                    {activeTab === 'archive' && (<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">{selectedProfile.archives && selectedProfile.archives.length > 0 ? selectedProfile.archives.map((item) => (<a key={item.id} href={item.url || '#'} target="_blank" rel="noopener noreferrer" className="group flex items-center p-4 bg-slate dark:bg-navy-light rounded-sm border border-transparent hover:border-gold transition-all"><div className="p-3 bg-white dark:bg-navy rounded text-gold mr-4 rtl:ml-4 rtl:mr-0 group-hover:scale-110 transition-transform">{item.type === 'PDF' ? <FileText className="w-6 h-6" /> : item.type === 'AWARD' ? <Award className="w-6 h-6" /> : <ImageIcon className="w-6 h-6" />}</div><div className="flex-1 min-w-0"><h4 className="text-sm font-bold text-navy dark:text-white truncate">{item.title}</h4><p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">{item.date}</p></div><ExternalLink className="w-4 h-4 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity" /></a>)) : <div className="col-span-2 py-12 text-center text-gray-400 italic bg-slate/50 rounded-sm border border-dashed">{t.no_docs}</div>}</div>)}
-                                    {activeTab === 'news' && (<div className="space-y-4">{selectedProfile.news && selectedProfile.news.length > 0 ? selectedProfile.news.map((item) => (<div key={item.id} className="p-5 bg-white dark:bg-navy-light border border-gray-100 dark:border-gray-700 rounded-sm hover:shadow-lg transition-all group"><div className="flex justify-between items-start mb-3"><span className="text-[10px] font-bold text-gold uppercase bg-gold/10 px-2 py-0.5 rounded">{item.source}</span><span className="text-[10px] font-mono text-gray-400">{item.date}</span></div><h4 className="text-lg font-serif font-bold text-navy dark:text-white mb-2 group-hover:text-gold transition-colors">{item.title}</h4><p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-4">{item.summary}</p>{item.url && <a href={item.url} target="_blank" className="inline-flex items-center text-[10px] font-bold text-navy dark:text-gold uppercase tracking-widest hover:underline"><Globe className="w-3 h-3 mr-1" /> {t.search_btn}</a>}</div>)) : <div className="py-12 text-center text-gray-400 italic bg-slate/50 rounded-sm border border-dashed">{t.no_news}</div>}</div>)}
-                                    {activeTab === 'podcast' && (<div className="grid grid-cols-1 gap-3">{selectedProfile.podcasts && selectedProfile.podcasts.length > 0 ? selectedProfile.podcasts.map((item) => (<div key={item.id} className="flex items-center p-4 bg-navy dark:bg-navy-light text-white rounded-sm group hover:bg-navy-light transition-all shadow-xl border border-gold/10"><div className="p-3 bg-gold rounded-full mr-4 rtl:ml-4 rtl:mr-0 text-navy group-hover:scale-110 transition-transform"><Play className="w-5 h-5 fill-current" /></div><div className="flex-1 min-w-0"><h4 className="text-sm font-bold truncate tracking-wide">{item.title}</h4><p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">{item.source} • {item.duration}</p></div><div className="flex items-center space-x-3 rtl:space-x-reverse opacity-40"><Headphones className="w-4 h-4" /><span className="text-[10px] font-mono">{item.date}</span></div></div>)) : <div className="py-12 text-center text-gray-400 italic bg-slate/50 rounded-sm border border-dashed">{t.no_podcasts}</div>}</div>)}
+                                    {activeTab === 'archive' && (<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">{selectedProfile.archives && selectedProfile.archives.length > 0 ? selectedProfile.archives.map((item) => (<a key={item.id} href={item.url || '#'} target="_blank" className="group flex items-center p-4 bg-slate dark:bg-navy-light rounded-sm border border-transparent hover:border-gold transition-all"><div className="p-3 bg-white dark:bg-navy rounded text-gold mr-4">{item.type === 'PDF' ? <FileText className="w-6 h-6" /> : <ImageIcon className="w-6 h-6" />}</div><div className="flex-1 min-w-0"><h4 className="text-sm font-bold text-navy dark:text-white truncate">{item.title}</h4><p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">{item.date}</p></div><ExternalLink className="w-4 h-4 text-gray-300 opacity-0 group-hover:opacity-100" /></a>)) : <div className="col-span-2 py-12 text-center text-gray-400 italic">{t.no_docs}</div>}</div>)}
+                                    {activeTab === 'news' && (<div className="space-y-4">{selectedProfile.news && selectedProfile.news.length > 0 ? selectedProfile.news.map((item) => (<div key={item.id} className="p-5 bg-white dark:bg-navy-light border border-gray-100 dark:border-gray-700 rounded-sm hover:shadow-lg transition-all group"><div className="flex justify-between items-start mb-3"><span className="text-[10px] font-bold text-gold uppercase bg-gold/10 px-2 py-0.5 rounded">{item.source}</span><span className="text-[10px] font-mono text-gray-400">{item.date}</span></div><h4 className="text-lg font-serif font-bold text-navy dark:text-white mb-2 group-hover:text-gold transition-colors">{item.title}</h4><p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-4">{item.summary}</p>{item.url && <a href={item.url} target="_blank" className="inline-flex items-center text-[10px] font-bold text-navy dark:text-gold uppercase hover:underline"><Globe className="w-3 h-3 mr-1" /> {t.search_btn}</a>}</div>)) : <div className="py-12 text-center text-gray-400 italic">{t.no_news}</div>}</div>)}
+                                    {activeTab === 'podcast' && (<div className="grid grid-cols-1 gap-3">{selectedProfile.podcasts && selectedProfile.podcasts.length > 0 ? selectedProfile.podcasts.map((item) => (<div key={item.id} className="flex items-center p-4 bg-navy dark:bg-navy-light text-white rounded-sm group hover:bg-navy-light transition-all shadow-xl border border-gold/10"><div className="p-3 bg-gold rounded-full mr-4 text-navy"><Play className="w-5 h-5 fill-current" /></div><div className="flex-1 min-w-0"><h4 className="text-sm font-bold truncate tracking-wide">{item.title}</h4><p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">{item.source} • {item.duration}</p></div><div className="flex items-center space-x-3 opacity-40"><Headphones className="w-4 h-4" /><span className="text-[10px] font-mono">{item.date}</span></div></div>)) : <div className="py-12 text-center text-gray-400 italic">{t.no_podcasts}</div>}</div>)}
                                 </div>
                             </div>
                         </div>
@@ -800,11 +782,9 @@ const App = () => {
                                 <h4 className="font-serif font-bold text-navy dark:text-white mb-4">{t.key_info}</h4>
                                 <div className="space-y-4 text-sm">
                                     <div className="flex items-center"><Calendar className="h-5 w-5 mr-3 text-gold" /><div><span className="block text-gray-400 text-xs uppercase">{selectedProfile.isOrganization ? t.lbl_est : t.lbl_born}</span><span className="font-medium">{selectedProfile.dateStart}</span></div></div>
-                                    {selectedProfile.dateEnd && (<div className="flex items-center"><Clock className="h-5 w-5 mr-3 text-gold" /><div><span className="block text-gray-400 text-xs uppercase">{selectedProfile.isOrganization ? t.lbl_closed : t.lbl_died}</span><span className="font-medium text-gray-800 dark:text-gray-200">{selectedProfile.dateEnd}</span></div></div>)}
-                                    <div className="flex items-center"><Activity className="h-5 w-5 mr-3 text-gold" /><div><span className="block text-gray-400 text-xs uppercase">{t.lbl_status}</span><span className={`font-medium px-2 py-0.5 rounded text-xs inline-block mt-0.5 ${selectedProfile.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : selectedProfile.status === 'DECEASED' ? 'bg-gray-200 text-gray-800' : selectedProfile.status === 'RETIRED' ? 'bg-orange-100 text-orange-800' : 'bg-red-100 text-red-800'}`}>{getStatusLabel(selectedProfile.status)}</span></div></div>
+                                    <div className="flex items-center"><Activity className="h-5 w-5 mr-3 text-gold" /><div><span className="block text-gray-400 text-xs uppercase">{t.lbl_status}</span><span className={`font-medium px-2 py-0.5 rounded text-xs inline-block mt-0.5 ${selectedProfile.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{getStatusLabel(selectedProfile.status)}</span></div></div>
                                     <div className="w-full h-px bg-gray-200 dark:bg-gray-700 my-2"></div>
                                     <div className="flex items-center cursor-pointer hover:bg-gray-100 dark:hover:bg-navy p-1 rounded transition-colors" onClick={() => setShowCertificate(true)}><Building2 className="h-5 w-5 mr-3 text-gold" /><div><span className="block text-gray-400 text-xs uppercase">{t.label_affiliation}</span><span className="font-medium text-gray-800 dark:text-gray-200 underline decoration-dotted">{getVerificationLabel(selectedProfile.verificationLevel)}</span></div></div>
-                                    <div className="flex items-center"><User className="h-5 w-5 mr-3 text-gold" /><div><span className="block text-gray-400 text-xs uppercase">{t.label_role}</span><span className="font-medium text-gray-800 dark:text-gray-200">{selectedProfile.category}</span></div></div>
                                     <h5 className="font-serif font-bold text-navy dark:text-white text-sm mt-6 mb-2">{t.archive_positions}</h5>
                                     {selectedProfile.archiveAssignments && selectedProfile.archiveAssignments.length > 0 ? (
                                       <ul className="space-y-3">{selectedProfile.archiveAssignments.map((assignment, idx) => (<li key={idx} className="flex flex-col text-xs text-gray-600 dark:text-gray-300 border-l-2 border-gold pl-2"><span className="font-bold text-navy dark:text-white">{assignment.title_note}</span><span className="text-gray-500 dark:text-gray-400 text-[10px] italic">({assignment.category?.category_name || 'N/A'})</span><span className="text-[10px] font-mono mt-0.5">{assignment.start_date} - {assignment.end_date || 'Present'}</span></li>))}</ul>
@@ -820,8 +800,8 @@ const App = () => {
         )}
       </main>
 
-      <footer className="bg-navy text-white pt-16 pb-8 border-t border-gold relative">
-        <div className="max-w-6xl mx-auto px-4"><div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12"><div className="space-y-4"><div className="flex items-center space-x-2 rtl:space-x-reverse"><BrandPin className="h-6 w-6 text-gold" /><span className="text-xl font-serif font-bold">SomaliPin</span></div><p className="text-gray-400 text-sm leading-relaxed">{t.footer_desc}</p></div></div><div className="border-t border-white/10 pt-8 text-center text-xs text-gray-500"><p>&copy; {new Date().getFullYear()} {t.rights}</p></div></div>
+      <footer className="bg-navy text-white pt-16 pb-8 border-t border-gold">
+        <div className="max-w-6xl mx-auto px-4"><div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12"><div className="space-y-4"><div className="flex items-center space-x-2"><BrandPin className="h-6 w-6 text-gold" /><span className="text-xl font-serif font-bold">SomaliPin</span></div><p className="text-gray-400 text-sm leading-relaxed">{t.footer_desc}</p></div></div><div className="border-t border-white/10 pt-8 text-center text-xs text-gray-500"><p>&copy; {new Date().getFullYear()} {t.rights}</p></div></div>
       </footer>
     </div>
   );

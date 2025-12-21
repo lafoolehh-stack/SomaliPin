@@ -29,7 +29,7 @@ export enum Category {
     title: string;
     date: string;
     size?: string;
-    url?: string; // Added URL field for file links
+    url?: string; 
   }
   
   export interface NewsItem {
@@ -38,7 +38,7 @@ export enum Category {
     source: string;
     date: string;
     summary: string;
-    url?: string; // Added URL field for news links
+    url?: string; 
   }
 
   export interface PodcastItem {
@@ -46,17 +46,16 @@ export enum Category {
     title: string;
     date: string;
     duration: string;
-    source: string; // e.g. "Daljir", "BBC"
+    source: string; 
     url?: string;
   }
   
   export interface InfluenceStats {
-    support: number; // Percentage
+    support: number; 
     neutral: number;
     opposition: number;
   }
 
-  // New interfaces for Archive structure
   export enum SectionType {
     POLITICS = 'POLITICS',
     JUDICIARY = 'JUDICIARY',
@@ -73,20 +72,19 @@ export enum Category {
 
   export interface ArchiveAssignment {
     id: number;
-    user_id: string; // Corresponds to Profile.id
+    user_id: string; 
     category_id: number;
     start_date: string;
     end_date?: string;
     title_note: string;
-    category?: ArchiveCategory; // Joined category details
+    category?: ArchiveCategory; 
   }
 
-  // Frontend Profile Interface
   export interface Profile {
     id: string;
     name: string;
     title: string;
-    category: string; // Changed from Category enum to string to allow manual input
+    category: string; 
     categoryLabel?: string; 
     verified: boolean;
     verificationLevel?: VerificationLevel;
@@ -103,11 +101,10 @@ export enum Category {
     status: ProfileStatus;
     dateStart: string; 
     dateEnd?: string;
-    locked?: boolean; // Existing field for security/locking
-    archiveAssignments?: ArchiveAssignment[]; // New field for structured archive positions
+    locked?: boolean; 
+    archiveAssignments?: ArchiveAssignment[]; 
   }
 
-  // Supabase Database Row Interface
   export interface DossierDB {
     id: string;
     created_at?: string;
@@ -119,7 +116,7 @@ export enum Category {
     image_url: string;
     category: string;
     verification_level: string;
-    details: any; // JSONB column for extra fields
+    details: any; 
   }
   
   export interface SearchResult {

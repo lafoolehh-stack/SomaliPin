@@ -72,7 +72,6 @@ export const UI_TEXT = {
     lvl_hero: "National Hero",
     lvl_standard: "Verified Entity",
     lvl_unverified: "Unverified",
-    // Lifecycle & Status
     lbl_status: "Current Status",
     lbl_born: "Born",
     lbl_died: "Died",
@@ -82,7 +81,6 @@ export const UI_TEXT = {
     status_deceased: "Deceased",
     status_retired: "Retired",
     status_closed: "Closed",
-    // National Archive
     archive_explorer_title: "🏛️ National Registry Explorer",
     archive_explorer_desc: "An organized directory of historical leadership across Politics, Judiciary, Security, and Business sectors.",
     sec_politics: "Politics (Siyaasadda)",
@@ -113,14 +111,14 @@ export const UI_TEXT = {
     click_search: "Guji \"Baar\" si aad u weydiiso Kaydka Sirdoonka.",
     featured_dossiers: "Diiwaanada Ugu Muhiimsan",
     section_what_we_do: "Maxaan qabanaa?",
-    service_1_title: "Dhisidda Sumcadda",
-    service_1_desc: "Waxaan shaqsiyaadka u samaynaa \"Digital Dossiers\" heer caalami ah. Waxaanu dhisnaa profile-kaaga si uu u yeesho muuqaal mas'uuliyadeed.",
-    service_2_title: "Hubinta & Sugidda",
-    service_2_desc: "Adeegga \"Verified Entity\" wuxuu hubinayaa in xogtaadu tahay mid rasmi ah. Waxaanu ku siinaynaa calaamadda hubinta iyo QR Code u gaar ah.",
-    service_3_title: "Dib-u-habaynta Dhaxalka",
-    service_3_desc: "Waxaanu ururinaa, saxnaa, oo aanu casriyeynaa dokumentiyada taariikhiga ah ee Soomaaliya (1960–Maanta).",
-    service_4_title: "Xog-Raadinta Casriga ah",
-    service_4_desc: "Platform-keenu wuxuu u shaqeeyaa sidii matoor xog-raadineed (Search Engine) oo kale. Xogtaada waxaa si fudud u heli kara cilmi-baarayaasha.",
+    service_1_title: "Reputation Building",
+    service_1_desc: "Waxaan shaqsiyaadka u samaynaa \"Digital Dossiers\" heer caalami ah.",
+    service_2_title: "Verification & Security",
+    service_2_desc: "Adeegga \"Verified Entity\" wuxuu hubinayaa in xogtaadu tahay mid rasmi ah.",
+    service_3_title: "Legacy Preservation",
+    service_3_desc: "Waxaanu ururinaa, saxnaa, oo aanu casriyeynaa dokumentiyada taariikhiga ah (1960–Maanta).",
+    service_4_title: "Modern Intelligence",
+    service_4_desc: "Platform-keenu wuxuu u shaqeeyaa sidii matoor xog-raadineed oo kale.",
     back_directory: "Ku laabo Diiwaanka",
     contact_office: "La Xiriir Xafiiska",
     about: "Faahfaahin",
@@ -142,12 +140,12 @@ export const UI_TEXT = {
     no_news: "Ma jiraan warar dhowaan la xiriira profile-kan.",
     no_podcasts: "Ma jiraan wax podcast ah oo loo hayo profile-kan.",
     sentiment_title: "Falanqaynta Ra'yiga Dadweynaha",
-    sentiment_desc: "Xog la isku geeyay oo ku salaysan aragtida dadweynaha, sahanno la hubiyay, iyo cabbirrada saamaynta bulshada.",
+    sentiment_desc: "Xog la isku geeyay oo ku salaysan aragtida dadweynaha.",
     sentiment_support: "Taageero",
     sentiment_neutral: "Dhexdhexaad",
     sentiment_oppose: "Diidmo",
     last_updated: "Cusbooneysiinta u dambaysay: Okt 2024",
-    footer_desc: "Diiwaanka dhijitaalka ah ee rasmiga ah ee heerka sare ee Soomaaliya. Kaydinta tagtada, xaqiijinta timaadada.",
+    footer_desc: "Diiwaanka dhijitaalka ah ee rasmiga ah ee heerka sare ee Soomaaliya.",
     footer_platform: "Madal",
     footer_directory: "Diiwaanka",
     footer_verify: "Hubinta",
@@ -164,7 +162,6 @@ export const UI_TEXT = {
     lvl_hero: "Halyey Qaran",
     lvl_standard: "Rasmi",
     lvl_unverified: "Lama Xaqiijin",
-    // Lifecycle & Status
     lbl_status: "Xaaladda",
     lbl_born: "Dhalashada",
     lbl_died: "Dhimashada",
@@ -174,9 +171,8 @@ export const UI_TEXT = {
     status_deceased: "Geeriyooday",
     status_retired: "Hoolgab",
     status_closed: "Xirmay",
-    // National Archive
     archive_explorer_title: "🏛️ Sahamiyaha Keydka Qaranka",
-    archive_explorer_desc: "Diiwaan habaysan oo muujinaya hoggaamiyeyaashii soo maray waaxyaha Siyaasadda, Garsoorka, Amniga, iyo Ganacsiga.",
+    archive_explorer_desc: "Diiwaan habaysan oo muujinaya hoggaamiyeyaashii soo maray Siyaasadda, Garsoorka, Amniga, iyo Ganacsiga.",
     sec_politics: "Siyaasadda",
     sec_judiciary: "Garsoorka",
     sec_security: "Amniga & Ciidanka",
@@ -196,7 +192,7 @@ export const UI_TEXT = {
     nav_login: "دخول",
     hero_title_1: "اكتشف تاريخ",
     hero_title_2: "التميز الصومالي",
-    hero_desc: "السجل الرقمي الرسمي للسياسيين وقادة الأعمال والسجلات التاريخية. موثق. معتمد. خالد.",
+    hero_desc: "السجل الرقمي الرسمي للسياسيين وقادة الأعمال والسجلات التاريخية.",
     search_placeholder: "ابحث عن الأسماء، الشركات، أو التاريخ...",
     search_btn: "بحث",
     archive_result: "نتيجة بحث الأرشيف",
@@ -206,13 +202,13 @@ export const UI_TEXT = {
     featured_dossiers: "ملفات مميزة",
     section_what_we_do: "ماذا نقدم؟",
     service_1_title: "بناء السمعة",
-    service_1_desc: "نقوم بإنشاء ملفات رقمية عالمية المستوى للأفراد. نبني ملفك الشخصي ليكون له حضور رسمي ومسؤول.",
+    service_1_desc: "نقوم بإنشاء ملفات رقمية عالمية المستوى للأفراد.",
     service_2_title: "التحقق والأمان",
-    service_2_desc: "تضمن خدمة \"الكيان الموثق\" صحة البيانات. نوفر شارة التحقق ورمز استجابة سريعة (QR) فريد.",
+    service_2_desc: "تضمن خدمة \"الكيان الموثق\" صحة البيانات.",
     service_3_title: "إرث الماضي",
-    service_3_desc: "نقوم بجمع وتصحيح وتحديث الوثائق التاريخية الصومالية (1960-الآن) وتحويلها إلى تنسيقات رقمية.",
+    service_3_desc: "نقوم بجمع وتصحيح وتحديث الوثائق التاريخية الصومالية.",
     service_4_title: "الاستخبارات الحديثة",
-    service_4_desc: "تعمل منصتنا كمحرك بحث مخصص. تصبح بياناتك سهلة الوصول للباحثين والمستثمرين.",
+    service_4_desc: "تعمل منصتنا كمحرك بحث مخصص.",
     back_directory: "العودة إلى الدليل",
     contact_office: "اتصل بالمكتب",
     about: "حول",
@@ -228,18 +224,18 @@ export const UI_TEXT = {
     tab_podcast: "بودكاست",
     upload_doc: "تحميل مستند",
     click_upload: "انقر للتحميل",
-    upload_hint: "PDF، صور (JPG، PNG)، أو شهادات",
+    upload_hint: "PDF، صور، أو شهادات",
     no_docs: "لا توجد مستندات عامة متاحة في هذا الملف حتى الآن.",
     related_reports: "التقارير والإشارات ذات الصلة",
     no_news: "لا توجد مقالات إخبارية حديثة مرتبطة بهذا الملف.",
     no_podcasts: "لا توجد ملفات بودكاست متاحة لهذا الملف الشخصي.",
     sentiment_title: "تحليل المشاعر العامة",
-    sentiment_desc: "بيانات مجمعة بناءً على التصور العام والاستطلاعات المؤكدة ومقاييس التأثير الاجتماعي.",
+    sentiment_desc: "بيانات مجمعة بناءً على التصور العام.",
     sentiment_support: "دعم",
     sentiment_neutral: "محايد",
     sentiment_oppose: "معارضة",
     last_updated: "آخر تحديث: أكتوبر 2024",
-    footer_desc: "السجل الرقمي الرسمي للتميز الصومالي. أرشفة الماضي، والتحقق من الحاضر، وإلهام المستقبل.",
+    footer_desc: "السجل الرقمي الرسمي للتميز الصومالي.",
     footer_platform: "المنصة",
     footer_directory: "الدليل",
     footer_verify: "التحقق",
@@ -256,7 +252,6 @@ export const UI_TEXT = {
     lvl_hero: "بطل وطني",
     lvl_standard: "كيان رسمي",
     lvl_unverified: "غير موثق",
-    // Lifecycle & Status
     lbl_status: "الحالة",
     lbl_born: "الميلاد",
     lbl_died: "الوفاة",
@@ -266,9 +261,8 @@ export const UI_TEXT = {
     status_deceased: "متوفي",
     status_retired: "متقاعد",
     status_closed: "مغلق",
-    // National Archive
     archive_explorer_title: "🏛️ مستكشف السجل الوطني",
-    archive_explorer_desc: "دليل منظم للقيادات التاريخية عبر قطاعات السياسة والقضاء والأمن والأعمال.",
+    archive_explorer_desc: "دليل منظم للقيادات التاريخية عبر السياسة والقضاء والأمن والأعمال.",
     sec_politics: "السياسة",
     sec_judiciary: "القضاء",
     sec_security: "الأمن والدفاع",
@@ -280,135 +274,8 @@ export const UI_TEXT = {
   }
 };
 
-const CATEGORY_MAP: Record<Category, keyof typeof UI_TEXT['en']> = {
-  [Category.POLITICS]: 'nav_politics',
-  [Category.BUSINESS]: 'nav_business',
-  [Category.HISTORY]: 'nav_history',
-  [Category.ARTS]: 'nav_arts'
-};
-
-const RAW_DATA = [
-  {
-    id: '1',
-    category: Category.HISTORY,
-    verified: true,
-    verificationLevel: VerificationLevel.GOLDEN,
-    imageUrl: 'https://picsum.photos/200/200?grayscale',
-    influence: { support: 95, neutral: 3, opposition: 2 },
-    isOrganization: false,
-    status: 'DECEASED' as ProfileStatus,
-    dateStart: '1908',
-    dateEnd: '2007',
-    content: {
-      en: {
-        name: 'Aden Adde',
-        title: 'First President of Somalia',
-        location: 'Mogadishu, Somalia',
-        shortBio: 'Aden Abdullah Osman Daar was a Somali politician who served as the first President of the Somali Republic from 1960 to 1967.',
-        fullBio: 'Aden Abdullah Osman Daar (Aden Adde) is celebrated as the father of Somali democracy. Born in Beledweyne, he joined the Somali Youth League (SYL) in 1944 and rose through the ranks to become a pivotal figure in the independence movement. His presidency is remembered for its peaceful transfer of power, a historic precedent in post-colonial Africa.',
-        timeline: [
-            { year: '1908', title: 'Birth', description: 'Born in Beledweyne, Hiiraan region.' },
-            { year: '1944', title: 'SYL Member', description: 'Joined the Somali Youth League.' },
-            { year: '1960', title: 'Presidency', description: 'Elected as the first President of the Somali Republic.' },
-            { year: '1967', title: 'Peaceful Transfer', description: 'First African leader to peacefully hand over power to a democratically elected successor.' }
-        ],
-        archives: [
-            { id: 'a1', type: 'PDF' as const, title: 'Official Independence Speech 1960', date: 'Jul 1, 1960', size: '2.4 MB' },
-            { id: 'a2', type: 'IMAGE' as const, title: 'Inauguration Ceremony Photo', date: 'Jul 1, 1960', size: '4.1 MB' },
-            { id: 'a3', type: 'AWARD' as const, title: 'Order of the Star of Somalia', date: '1965', size: 'High Res' }
-        ],
-        news: [
-            { id: 'n1', title: 'The Legacy of Aden Adde: A Model for Democracy', source: 'Historical Review', date: 'June 2023', summary: 'An in-depth look at how the first president established democratic norms in the horn of Africa.' },
-            { id: 'n2', title: 'Airport Renaming Ceremony Anniversary', source: 'Mogadishu Times', date: 'Jan 2024', summary: 'Celebrations mark the anniversary of renaming Mogadishu International Airport in his honor.' }
-        ],
-        podcasts: [
-            { id: 'p1', title: 'Ep. 12: The Founders of the Republic', date: 'Sep 2023', duration: '45 min', source: 'Somali History Podcast', url: '#' },
-            { id: 'p2', title: 'Aden Adde: A Life of Service', date: 'Aug 2023', duration: '32 min', source: 'Daljir Radio', url: '#' }
-        ]
-      },
-      so: {
-        name: 'Aadan Cadde',
-        title: 'Madaxweynihii Ugu Horeeyay ee Soomaaliya',
-        location: 'Muqdisho, Soomaaliya',
-        shortBio: 'Aadan Cabdulle Cusmaan Daar wuxuu ahaa siyaasi Soomaaliyeed oo noqdoor Madaxweynihii ugu horeeyay ee Jamhuuriyadda Soomaaliya intii u dhaxaysay 1960 ilaa 1967.',
-        fullBio: 'Aadan Cabdulle Cusmaan Daar (Aadan Cadde) waxaa lagu tiriyaa aabaha dimuqraadiyadda Soomaaliya. Wuxuu ku dhashay Beledweyne, wuxuuna ku biiray Ururkii Dhalinyarada Soomaaliyeed (SYL) 1944. Madaxweynanimadiisii waxaa lagu xusuustaa xil-wareejintii nabadeed, taasoo ahayd dhacdo taariikhi ah Afrika.',
-        timeline: [
-            { year: '1908', title: 'Dhalasho', description: 'Wuxuu ku dhashay Beledweyne, gobolka Hiiraan.' },
-            { year: '1944', title: 'Xubin SYL', description: 'Wuxuu ku biiray Ururkii Dhalinyarada Soomaaliyeed.' },
-            { year: '1960', title: 'Madaxweynenimo', description: 'Waxaa loo doortay Madaxweynihii ugu horeeyay ee Jamhuuriyadda Soomaaliya.' },
-            { year: '1967', title: 'Xil Wareejin', description: 'Hoggaamiyihii ugu horeeyay ee Afrika ee si nabad ah xilka u wareejiya.' }
-        ],
-        archives: [
-            { id: 'a1', type: 'PDF' as const, title: 'Khudbaddii Xorriyadda 1960', date: 'Luulyo 1, 1960', size: '2.4 MB' },
-            { id: 'a2', type: 'IMAGE' as const, title: 'Sawirka Xafladda Caleema Saarka', date: 'Luulyo 1, 1960', size: '4.1 MB' },
-            { id: 'a3', type: 'AWARD' as const, title: 'Abaalmarinta Xiddigta Soomaaliya', date: '1965', size: 'Sare' }
-        ],
-        news: [
-            { id: 'n1', title: 'Dhaxalkii Aadan Cadde: Tusaale u ah Dimuqraadiyadda', source: 'Dib u eegista Taariikhda', date: 'Juun 2023', summary: 'Eegid qoto dheer sida madaxweynihii ugu horeeyay u hirgeliyay nidaamka dimuqraadiyadda Geeska Afrika.' },
-            { id: 'n2', title: 'Xuska Magac-bixinta Garoonka Diyaaradaha', source: 'Wargeyska Muqdisho', date: 'Jan 2024', summary: 'Dabaaldegyo lagu xusayo sannad-guurada magac-bixinta Garoonka Caalamiga ah ee Aadan Cadde.' }
-        ],
-        podcasts: [
-            { id: 'p1', title: 'Xalqada 12aad: Aasaasayaashii Jamhuuriyadda', date: 'Sab 2023', duration: '45 daqiiqo', source: 'Somali History Podcast', url: '#' },
-            { id: 'p2', title: 'Aadan Cadde: Nolol Shaqo', date: 'Ago 2023', duration: '32 daqiiqo', source: 'Daljir Radio', url: '#' }
-        ]
-      },
-      ar: {
-        name: 'آدم عدي',
-        title: 'أول رئيس للصومال',
-        location: 'مقديشو، الصومال',
-        shortBio: 'آدم عبد الله عثمان دار كان سياسياً صومالياً شغل منصب أول رئيس لجمهورية الصومال من 1960 إلى 1967.',
-        fullBio: 'يحتفل بآدم عبد الله عثمان دار (آدم عدي) كأب للديمقراطية الصومالية. ولد في بلدوين، وانضم إلى رابطة الشباب الصومالي (SYL) في عام 1944. وتُذكر رئاسته بانتقال السلطة السلمي، وهي سابقة تاريخية في أفريقيا ما بعد الاستعمار.',
-        timeline: [
-            { year: '1908', title: 'الميلاد', description: 'ولد في بلدوين، منطقة هيران.' },
-            { year: '1944', title: 'عضو SYL', description: 'انضم إلى رابطة الشباب الصومالي.' },
-            { year: '1960', title: 'الرئاسة', description: 'انتخب كأول رئيس لجمهورية الصومال.' },
-            { year: '1967', title: 'النقل السلمي', description: 'أول زعيم أفريقي يسلم السلطة سلمياً لخليفة منتخب ديمقراطياً.' }
-        ],
-        archives: [
-            { id: 'a1', type: 'PDF' as const, title: 'خطاب الاستقلال الرسمي 1960', date: '1 يوليو 1960', size: '2.4 MB' },
-            { id: 'a2', type: 'IMAGE' as const, title: 'صورة حفل التنصيب', date: '1 يوليو 1960', size: '4.1 MB' },
-            { id: 'a3', type: 'AWARD' as const, title: 'وسام نجمة الصومال', date: '1965', size: 'دقة عالية' }
-        ],
-        news: [
-            { id: 'n1', title: 'إرث آدم عدي: نموذج للديمقراطية', source: 'المراجعة التاريخية', date: 'يونيو 2023', summary: 'نظرة متعمقة حول كيفية ترسيخ الرئيس الأول للمعايير الديمقراطية في القرن الأفريقي.' },
-            { id: 'n2', title: 'ذكرى إعادة تسمية المطار', source: 'أوقات مقديشو', date: 'يناير 2024', summary: 'احتفالات بمناسبة ذكرى إعادة تسمية مطار مقديشو الدولي تكريماً له.' }
-        ],
-        podcasts: [
-            { id: 'p1', title: 'الحلقة 12: مؤسسو الجمهورية', date: 'سبتمبر 2023', duration: '45 دقيقة', source: 'بودكاست التاريخ الصومالي', url: '#' },
-            { id: 'p2', title: 'آدم عدي: حياة الخدمة', date: 'أغسطس 2023', duration: '32 دقيقة', source: 'راديو دالجير', url: '#' }
-        ]
-      }
-    }
-  },
-];
-
 export const getProfiles = (lang: Language): Profile[] => {
-  return RAW_DATA.map(p => {
-    const mappedKey = Object.values(Category).includes(p.category as Category) 
-      ? CATEGORY_MAP[p.category as Category] 
-      : null;
-      
-    return {
-      id: p.id,
-      category: p.category,
-      categoryLabel: mappedKey ? (UI_TEXT[lang][mappedKey] || p.category) : p.category,
-      verified: p.verified,
-      verificationLevel: p.verificationLevel,
-      imageUrl: p.imageUrl,
-      influence: p.influence,
-      isOrganization: p.isOrganization,
-      status: p.status,
-      dateStart: p.dateStart,
-      dateEnd: p.dateEnd,
-      archives: p.content[lang].archives || [],
-      news: p.content[lang].news || [],
-      podcasts: p.content[lang].podcasts || [],
-      name: p.content[lang].name,
-      title: p.content[lang].title,
-      location: p.content[lang].location,
-      shortBio: p.content[lang].shortBio,
-      fullBio: p.content[lang].fullBio,
-      timeline: p.content[lang].timeline
-    };
-  });
+    // This is a placeholder since data now comes from Supabase.
+    // In a real scenario, this would return the static 'featured' data if needed.
+    return [];
 };
