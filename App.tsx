@@ -19,6 +19,7 @@ import { supabase, isSupabaseConfigured } from './services/supabaseClient';
 
 const App = () => {
   const [view, setView] = useState<'home' | 'profile' | 'admin' | 'archive-explorer' | 'business-archive' | 'arts-culture-archive'>('home');
+  // Fix: Initialize selectedProfile with null instead of itself
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'archive' | 'news' | 'podcast'>('archive');
@@ -544,7 +545,7 @@ const App = () => {
                                  <Unlock className="w-3 h-3 mr-1" /> Unlock All
                              </button>
                         </div>
-                        <button onClick={() => { setEditForm({ name: '', title: '', category: '', shortBio: '', fullBio: '', verified: false, verificationLevel: VerificationLevel.STANDARD, status: 'ACTIVE', timeline: [], archives: [], news: [], podcasts: [], archiveAssignments: [], isOrganization: false, dateStart: '', dateEnd: '' }); setIsEditing(true); }} className="bg-green-600 text-white px-4 py-2 rounded-sm flex items-center hover:bg-green-700 shadow-sm"><Plus className="w-4 h-4 mr-2" /> Add New</button>
+                        <button onClick={() => { setEditForm({ name: '', title: '', category: '', shortBio: '', fullBio: '', verified: false, verificationLevel: VerificationLevel.STANDARD, status: 'ACTIVE', timeline: [], archives: [], news: [], podcasts: [], archiveAssignments: [], isOrganization: false, dateStart: '', dateEnd: '', imageUrl: '' }); setIsEditing(true); }} className="bg-green-600 text-white px-4 py-2 rounded-sm flex items-center hover:bg-green-700 shadow-sm"><Plus className="w-4 h-4 mr-2" /> Add New</button>
                       </div>
                     </div>
                     <div className="overflow-x-auto">
@@ -674,6 +675,8 @@ const App = () => {
                                   <div 
                                     className={`w-full h-32 border-2 border-dashed rounded-sm flex items-center justify-center cursor-pointer transition-colors ${isUploadingImage ? 'bg-gray-100 dark:bg-navy-light/50 border-gray-300' : 'border-gray-200 dark:border-gray-600 hover:border-gold hover:bg-slate dark:hover:bg-navy-light'}`}
                                     onClick={() => !isUploadingImage && fileInputRef.current?.click()}
+                                    role="button"
+                                    aria-label="Upload profile picture"
                                   >
                                     {isUploadingImage ? (
                                       <Loader2 className="w-6 h-6 text-gold animate-spin" />
@@ -685,6 +688,7 @@ const App = () => {
                                           onClick={(e) => { e.stopPropagation(); setEditForm(prev => ({ ...prev, imageUrl: '' })); if(fileInputRef.current) fileInputRef.current.value = ''; }}
                                           className="absolute top-1 right-1 p-1 bg-black/50 text-white rounded-full hover:bg-black/70 transition-colors"
                                           title="Clear Image"
+                                          aria-label="Clear image"
                                         >
                                           <X className="w-4 h-4" />
                                         </button>
