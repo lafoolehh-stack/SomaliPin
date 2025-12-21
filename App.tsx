@@ -627,17 +627,30 @@ const App = () => {
                   <h2 className="text-2xl font-serif font-bold text-navy dark:text-white">Dossier Workspace</h2>
                   <button onClick={() => setIsEditing(false)} className="p-2 hover:bg-slate dark:hover:bg-navy-light rounded-full transition-colors"><X className="w-6 h-6 text-gray-400" /></button>
                 </div>
+                
                 <div className="flex border-b border-gray-200 dark:border-gray-700 px-6 bg-gray-50 dark:bg-navy-light overflow-x-auto">
-                    {['basic', 'timeline', 'positions', 'archive', 'news', 'podcast'].map((tab) => (
-                         <button key={tab} className={`py-3 px-4 text-sm font-bold border-b-2 transition-colors whitespace-nowrap capitalize ${activeAdminTab === tab ? 'border-navy text-navy dark:border-gold dark:text-gold' : 'border-transparent text-gray-500 hover:text-navy dark:text-gray-400 dark:hover:text-white'}`} onClick={() => setActiveAdminTab(tab as any)}>
-                            {tab === 'positions' ? 'Registry Positions' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                    {[
+                      {id: 'basic', label: 'Basic Info'},
+                      {id: 'timeline', label: 'Timeline'},
+                      {id: 'positions', label: 'Registry Positions'},
+                      {id: 'archive', label: 'Archive'},
+                      {id: 'news', label: 'News'},
+                      {id: 'podcast', label: 'Podcast'}
+                    ].map((tab) => (
+                         <button 
+                            key={tab.id} 
+                            className={`py-3 px-4 text-sm font-bold border-b-2 transition-colors whitespace-nowrap uppercase tracking-widest ${activeAdminTab === tab.id ? 'border-navy text-navy dark:border-gold dark:text-gold' : 'border-transparent text-gray-400 hover:text-navy dark:text-gray-500 dark:hover:text-white'}`} 
+                            onClick={() => setActiveAdminTab(tab.id as any)}
+                         >
+                            {tab.label}
                         </button>
                     ))}
                 </div>
-                <div className="p-8">
+
+                <div className="p-8 flex-1 overflow-y-auto">
                     {activeAdminTab === 'basic' && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="space-y-5 text-gray-800">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-gray-800">
+                            <div className="space-y-5">
                                 <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Full Name</label><input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.name || ''} onChange={(e) => setEditForm({...editForm, name: e.target.value})} /></div>
                                 <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Headline Role</label><input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.title || ''} onChange={(e) => setEditForm({...editForm, title: e.target.value})} /></div>
                                 <div className="grid grid-cols-2 gap-4">
@@ -657,152 +670,46 @@ const App = () => {
                                 
                                 <div className="mt-4 p-4 border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-navy/30 rounded-sm text-gray-800">
                                   <div className="mb-4">
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Profile Image URL (Manual)</label>
-                                    <input 
-                                      type="text" 
-                                      className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white text-xs font-mono" 
-                                      placeholder="https://example.com/image.jpg"
-                                      value={editForm.imageUrl || ''} 
-                                      onChange={(e) => setEditForm({...editForm, imageUrl: e.target.value})} 
-                                    />
+                                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Profile Image URL</label>
+                                    <input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white text-xs" value={editForm.imageUrl || ''} onChange={(e) => setEditForm({...editForm, imageUrl: e.target.value})} />
                                   </div>
-
                                   <div className="relative">
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">OR Upload Picture (Admin Only)</label>
-                                    <input 
-                                      type="file" 
-                                      accept="image/*" 
-                                      onChange={handleImageUpload} 
-                                      ref={fileInputRef} 
-                                      className="hidden" 
-                                      disabled={isUploadingImage}
-                                    />
-                                    <div 
-                                      className={`w-full h-32 border-2 border-dashed rounded-sm flex items-center justify-center cursor-pointer transition-colors ${isUploadingImage ? 'bg-gray-100 dark:bg-navy-light/50 border-gray-300' : 'border-gray-200 dark:border-gray-600 hover:border-gold hover:bg-slate dark:hover:bg-navy-light'}`}
-                                      onClick={() => !isUploadingImage && fileInputRef.current?.click()}
-                                      role="button"
-                                      aria-label="Upload profile picture"
-                                    >
-                                      {isUploadingImage ? (
-                                        <Loader2 className="w-6 h-6 text-gold animate-spin" />
-                                      ) : editForm.imageUrl && editForm.imageUrl.length > 5 ? (
-                                        <div className="relative w-full h-full flex items-center justify-center p-2">
-                                          <img src={editForm.imageUrl} alt="Profile Preview" className="max-h-full max-w-full object-contain shadow-sm" />
-                                          <button 
-                                            type="button" 
-                                            onClick={(e) => { e.stopPropagation(); setEditForm(prev => ({ ...prev, imageUrl: '' })); if(fileInputRef.current) fileInputRef.current.value = ''; }}
-                                            className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors shadow-lg"
-                                            title="Clear Image"
-                                          >
-                                            <X className="w-3 h-3" />
-                                          </button>
-                                        </div>
-                                      ) : (
-                                        <div className="flex flex-col items-center text-gray-400">
-                                          <Upload className="w-6 h-6 mb-2" />
-                                          <span className="text-[10px] font-bold uppercase tracking-widest">Click to upload</span>
-                                        </div>
-                                      )}
+                                    <input type="file" accept="image/*" onChange={handleImageUpload} ref={fileInputRef} className="hidden" disabled={isUploadingImage} />
+                                    <div className="w-full h-24 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-sm flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 dark:hover:bg-navy-light" onClick={() => fileInputRef.current?.click()}>
+                                      {isUploadingImage ? <Loader2 className="w-5 h-5 animate-spin text-gold" /> : <><Upload className="w-5 h-5 mb-1 text-gray-400" /><span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Upload Photo</span></>}
                                     </div>
                                   </div>
                                 </div>
-
-                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Short Bio</label><textarea className="w-full border p-2.5 rounded-sm h-20 dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none resize-none" value={editForm.shortBio || ''} onChange={(e) => setEditForm({...editForm, shortBio: e.target.value})} /></div>
+                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Short Bio</label><textarea className="w-full border p-2.5 rounded-sm h-20 dark:bg-navy-light dark:border-gray-600 dark:text-white text-sm" value={editForm.shortBio || ''} onChange={(e) => setEditForm({...editForm, shortBio: e.target.value})} /></div>
                             </div>
-                            <div className="md:col-span-2"><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Full Biography</label><textarea className="w-full border p-3 rounded-sm h-56 font-serif dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.fullBio || ''} onChange={(e) => setEditForm({ ...editForm, fullBio: e.target.value })} /></div>
+                            <div className="md:col-span-2"><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Full Biography</label><textarea className="w-full border p-3 rounded-sm h-48 dark:bg-navy-light dark:border-gray-600 dark:text-white text-sm" value={editForm.fullBio || ''} onChange={(e) => setEditForm({ ...editForm, fullBio: e.target.value })} /></div>
                         </div>
                     )}
-                    {activeAdminTab === 'timeline' && (
-                        <div className="space-y-6">
-                            <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-navy dark:text-white flex items-center"><Activity className="w-5 h-5 mr-2 text-gold"/> Historical Timeline</h3><button onClick={() => setEditForm(prev => ({ ...prev, timeline: [...(prev.timeline || []), { year: '', title: '', description: '' }] }))} className="text-xs bg-navy text-gold px-4 py-2 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"><Plus className="w-4 h-4 mr-1" /> Add Entry</button></div>
-                            <div className="space-y-4">{(editForm.timeline || []).filter(Boolean).map((event, idx) => (
-                                <div key={idx} className="flex gap-4 items-start border p-4 rounded-sm bg-slate/30 dark:bg-navy-light/40 animate-fade-in group">
-                                  <input placeholder="Year" className="w-24 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white font-mono text-sm" value={event.year || ''} onChange={e => { const t = [...(editForm.timeline || [])]; t[idx].year = e.target.value; setEditForm({...editForm, timeline: t}); }} />
-                                  <div className="flex-1 space-y-3"><input placeholder="Entry Title" className="w-full border p-2 rounded-sm font-bold dark:bg-navy dark:border-gray-600 dark:text-white text-sm" value={event.title || ''} onChange={e => { const t = [...(editForm.timeline || [])]; t[idx].title = e.target.value; setEditForm({...editForm, timeline: t}); }} /><textarea placeholder="Event description..." className="w-full border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs resize-none h-20" value={event.description || ''} onChange={e => { const t = [...(editForm.timeline || [])]; t[idx].description = e.target.value; setEditForm({...editForm, timeline: t}); }} /></div>
-                                  <button onClick={() => { const t = [...(editForm.timeline || [])]; t.splice(idx,1); setEditForm({...editForm, timeline: t}); }} className="text-red-400 hover:text-red-600 p-2"><Trash2 className="w-5 h-5" /></button>
-                                </div>
-                            ))}</div>
-                        </div>
-                    )}
-                    {activeAdminTab === 'archive' && (
-                        <div className="space-y-6">
-                            <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-navy dark:text-white flex items-center"><FileText className="w-5 h-5 mr-2 text-gold"/> Archive Documents</h3><button onClick={() => setEditForm(prev => ({ ...prev, archives: [...(prev.archives || []), { id: Date.now().toString(), type: 'PDF', title: '', date: '', url: '' }] }))} className="text-xs bg-navy text-gold px-4 py-2 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"><Plus className="w-4 h-4 mr-1" /> Add Doc</button></div>
-                            <div className="space-y-4">{(editForm.archives || []).filter(Boolean).map((item, idx) => (
-                                <div key={idx} className="flex gap-4 items-center border p-4 rounded-sm bg-[#F9FAFB] dark:bg-navy-light/40 group">
-                                    <select className="w-24 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={item.type} onChange={e => { const a = [...(editForm.archives || [])]; a[idx].type = e.target.value as any; setEditForm({...editForm, archives: a}); }}>
-                                        <option value="PDF">PDF</option>
-                                        <option value="IMAGE">IMAGE</option>
-                                        <option value="AWARD">AWARD</option>
-                                    </select>
-                                    <input placeholder="Document Title" className="flex-1 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={item.title || ''} onChange={e => { const a = [...(editForm.archives || [])]; a[idx].title = e.target.value; setEditForm({...editForm, archives: a}); }} />
-                                    <input placeholder="File Link" className="flex-1 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={item.url || ''} onChange={e => { const a = [...(editForm.archives || [])]; a[idx].url = e.target.value; setEditForm({...editForm, archives: a}); }} />
-                                    <button onClick={() => { const a = [...(editForm.archives || [])]; a.splice(idx,1); setEditForm({...editForm, archives: a}); }} className="text-red-400 p-2"><Trash2 className="w-5 h-5"/></button>
-                                </div>
-                            ))}</div>
-                        </div>
-                    )}
-                    {activeAdminTab === 'news' && (
-                        <div className="space-y-6">
-                            <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-navy dark:text-white flex items-center"><Newspaper className="w-5 h-5 mr-2 text-gold"/> News Reports</h3><button onClick={() => setEditForm(prev => ({ ...prev, news: [...(prev.news || []), { id: Date.now().toString(), title: '', source: '', date: '', summary: '', url: '' }] }))} className="text-xs bg-navy text-gold px-4 py-2 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"><Plus className="w-4 h-4 mr-1" /> Add News</button></div>
-                            <div className="space-y-4">{(editForm.news || []).filter(Boolean).map((item, idx) => (
-                                <div key={idx} className="border p-4 rounded-sm bg-[#F9FAFB] dark:bg-navy-light/40 group space-y-3">
-                                    <div className="flex gap-4">
-                                        <input placeholder="Headline" className="flex-1 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs font-bold" value={item.title || ''} onChange={e => { const n = [...(editForm.news || [])]; n[idx].title = e.target.value; setEditForm({...editForm, news: n}); }} />
-                                        <input placeholder="Source" className="w-40 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={item.source || ''} onChange={e => { const n = [...(editForm.news || [])]; n[idx].source = e.target.value; setEditForm({...editForm, news: n}); }} />
-                                        <button onClick={() => { const n = [...(editForm.news || [])]; n.splice(idx,1); setEditForm({...editForm, news: n}); }} className="text-red-400 p-2"><Trash2 className="w-5 h-5"/></button>
-                                    </div>
-                                    <textarea placeholder="Summary..." className="w-full border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs h-16 resize-none" value={item.summary || ''} onChange={e => { const n = [...(editForm.news || [])]; n[idx].summary = e.target.value; setEditForm({...editForm, news: n}); }} />
-                                </div>
-                            ))}</div>
-                        </div>
-                    )}
-                    {activeAdminTab === 'podcast' && (
-                        <div className="space-y-6">
-                            <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-navy dark:text-white flex items-center"><Headphones className="w-5 h-5 mr-2 text-gold"/> Podcast Library</h3><button onClick={() => setEditForm(prev => ({ ...prev, podcasts: [...(prev.podcasts || []), { id: Date.now().toString(), title: '', date: '', duration: '', source: '', url: '' }] }))} className="text-xs bg-navy text-gold px-4 py-2 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"><Plus className="w-4 h-4 mr-1" /> Add Clip</button></div>
-                            <div className="space-y-4">{(editForm.podcasts || []).filter(Boolean).map((item, idx) => (
-                                <div key={idx} className="border p-4 rounded-sm bg-[#F9FAFB] dark:bg-navy-light/40 group space-y-3">
-                                    <div className="flex gap-4">
-                                        <input placeholder="Episode Title" className="flex-1 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs font-bold" value={item.title || ''} onChange={e => { const p = [...(editForm.podcasts || [])]; p[idx].title = e.target.value; setEditForm({...editForm, podcasts: p}); }} />
-                                        <input placeholder="Audio URL" className="flex-1 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={item.url || ''} onChange={e => { const p = [...(editForm.podcasts || [])]; p[idx].url = e.target.value; setEditForm({...editForm, podcasts: p}); }} />
-                                        <button onClick={() => { const p = [...(editForm.podcasts || [])]; p.splice(idx,1); setEditForm({...editForm, podcasts: p}); }} className="text-red-400 p-2"><Trash2 className="w-5 h-5"/></button>
-                                    </div>
-                                </div>
-                            ))}</div>
-                        </div>
-                    )}
-                    {activeAdminTab === 'positions' && (
-                        <div className="space-y-8 animate-fade-in text-gray-800">
-                             <div className="flex justify-between items-center">
-                                <h3 className="font-bold text-lg text-navy dark:text-white flex items-center">
-                                  <Layers className="w-5 h-5 mr-2 text-gold"/> Official Archive Roles
-                                </h3>
-                                <button 
-                                  onClick={() => setEditForm(prev => ({ ...prev, archiveAssignments: [...(prev.archiveAssignments || []), { id: Date.now(), user_id: editForm.id || '', category_id: (allCategories && allCategories.length > 0) ? allCategories[0].id : 0, start_date: '', end_date: '', title_note: '' }] }))} 
-                                  className="text-xs bg-[#0A2647] text-white px-5 py-2.5 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"
-                                >
-                                  <Plus className="w-4 h-4 mr-1.5 text-gold" /> Assign Role
-                                </button>
-                             </div>
 
-                            <div className="space-y-6">
+                    {activeAdminTab === 'positions' && (
+                        <div className="space-y-6 animate-fade-in text-gray-800">
+                            <div className="flex justify-between items-center pb-4 border-b border-gray-100 dark:border-gray-700">
+                                <h3 className="font-bold text-lg text-navy dark:text-white">Official Registry Roles</h3>
+                                <button 
+                                  onClick={() => setEditForm(prev => ({ ...prev, archiveAssignments: [...(prev.archiveAssignments || []), { id: Date.now(), user_id: editForm.id || '', category_id: 0, start_date: '', end_date: '', title_note: '' }] }))} 
+                                  className="text-xs bg-navy text-gold px-5 py-2.5 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"
+                                >
+                                  <Plus className="w-4 h-4 mr-1.5" /> Assign Role
+                                </button>
+                            </div>
+                            <div className="space-y-4">
                               {(editForm.archiveAssignments || []).filter(Boolean).map((assign, idx) => {
                                 const selectedCat = allCategories.find(c => c.id === assign.category_id);
-                                // Determine if sector needs dates (POLITICS, JUDICIARY, SECURITY)
-                                const isDatedSector = selectedCat && ![SectionType.BUSINESS, SectionType.ARTS_CULTURE].includes(selectedCat.section_type);
-
+                                const isDatedSector = selectedCat && [SectionType.POLITICS, SectionType.JUDICIARY, SectionType.SECURITY].includes(selectedCat.section_type);
                                 return (
-                                  <div key={idx} className="border border-gray-100 dark:border-gray-800 p-8 rounded-sm bg-[#F9FAFB] dark:bg-navy-light/10 group relative shadow-sm">
-                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start pr-12">
-                                          <div className="space-y-2">
-                                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">CATEGORY</label>
-                                              <select 
-                                                className="w-full border border-gray-200 p-3.5 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-sm font-medium focus:ring-1 focus:ring-blue-400 outline-none bg-white transition-shadow" 
-                                                value={assign.category_id} 
-                                                onChange={e => { const updated = [...(editForm.archiveAssignments || [])]; updated[idx].category_id = parseInt(e.target.value); setEditForm({...editForm, archiveAssignments: updated}); }}
-                                              >
+                                  <div key={idx} className="bg-[#F9FAFB] dark:bg-navy-light/20 p-6 border border-gray-100 dark:border-gray-800 rounded-sm relative shadow-sm">
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end pr-10">
+                                          <div>
+                                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Category</label>
+                                              <select className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 text-sm focus:ring-1 focus:ring-gold outline-none" value={assign.category_id} onChange={e => { const updated = [...(editForm.archiveAssignments || [])]; updated[idx].category_id = parseInt(e.target.value); setEditForm({...editForm, archiveAssignments: updated}); }}>
                                                   <option value={0}>Select Category...</option>
                                                   {Object.values(SectionType).map(sect => (
-                                                      <optgroup label={sect} key={sect} className="font-bold text-navy-light">
+                                                      <optgroup label={sect} key={sect}>
                                                           {(allCategories || []).filter(c => c && c.section_type === sect).map(cat => (
                                                               <option key={cat.id} value={cat.id}>{cat.category_name}</option>
                                                           ))}
@@ -810,72 +717,116 @@ const App = () => {
                                                   ))}
                                               </select>
                                           </div>
-                                          <div className="space-y-2">
-                                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">SPECIFIC TITLE</label>
-                                              <input 
-                                                placeholder="e.g. Chairman" 
-                                                className="w-full border border-gray-200 p-3.5 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-sm focus:ring-1 focus:ring-blue-400 outline-none bg-white placeholder-gray-300" 
-                                                value={assign.title_note || ''} 
-                                                onChange={e => { const updated = [...(editForm.archiveAssignments || [])]; updated[idx].title_note = e.target.value; setEditForm({...editForm, archiveAssignments: updated}); }} 
-                                              />
+                                          <div>
+                                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Specific Title</label>
+                                              <input placeholder="e.g. CEO or Minister" className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 text-sm focus:ring-1 focus:ring-gold outline-none" value={assign.title_note || ''} onChange={e => { const updated = [...(editForm.archiveAssignments || [])]; updated[idx].title_note = e.target.value; setEditForm({...editForm, archiveAssignments: updated}); }} />
                                           </div>
-                                          
                                           {isDatedSector && (
                                             <>
-                                              <div className="space-y-2 animate-fade-in">
-                                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">START DATE</label>
-                                                <input 
-                                                  placeholder="e.g. 1990" 
-                                                  className="w-full border border-gray-200 p-3.5 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-sm focus:ring-1 focus:ring-blue-400 outline-none bg-white placeholder-gray-300" 
-                                                  value={assign.start_date || ''} 
-                                                  onChange={e => { const updated = [...(editForm.archiveAssignments || [])]; updated[idx].start_date = e.target.value; setEditForm({...editForm, archiveAssignments: updated}); }} 
-                                                />
+                                              <div>
+                                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Start Date</label>
+                                                <input placeholder="e.g. 2010" className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 text-sm focus:ring-1 focus:ring-gold outline-none" value={assign.start_date || ''} onChange={e => { const updated = [...(editForm.archiveAssignments || [])]; updated[idx].start_date = e.target.value; setEditForm({...editForm, archiveAssignments: updated}); }} />
                                               </div>
-                                              <div className="space-y-2 animate-fade-in">
-                                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">END DATE</label>
-                                                <input 
-                                                  placeholder="e.g. 2004 or Present" 
-                                                  className="w-full border border-gray-200 p-3.5 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-sm focus:ring-1 focus:ring-blue-400 outline-none bg-white placeholder-gray-300" 
-                                                  value={assign.end_date || ''} 
-                                                  onChange={e => { const updated = [...(editForm.archiveAssignments || [])]; updated[idx].end_date = e.target.value; setEditForm({...editForm, archiveAssignments: updated}); }} 
-                                                />
+                                              <div>
+                                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">End Date</label>
+                                                <input placeholder="e.g. 2014" className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 text-sm focus:ring-1 focus:ring-gold outline-none" value={assign.end_date || ''} onChange={e => { const updated = [...(editForm.archiveAssignments || [])]; updated[idx].end_date = e.target.value; setEditForm({...editForm, archiveAssignments: updated}); }} />
                                               </div>
                                             </>
                                           )}
                                       </div>
-                                      <button 
-                                        onClick={() => { const updated = [...(editForm.archiveAssignments || [])]; updated.splice(idx, 1); setEditForm({...editForm, archiveAssignments: updated}); }} 
-                                        className="absolute top-1/2 -translate-y-1/2 right-6 p-2 text-red-400 hover:text-red-600 transition-colors bg-white dark:bg-navy rounded-full shadow-sm"
-                                        title="Remove Role"
-                                      >
-                                        <Trash2 className="w-5 h-5" />
-                                      </button>
+                                      <button onClick={() => { const updated = [...(editForm.archiveAssignments || [])]; updated.splice(idx, 1); setEditForm({...editForm, archiveAssignments: updated}); }} className="absolute top-1/2 -translate-y-1/2 right-4 text-red-400 hover:text-red-600"><Trash2 className="w-5 h-5"/></button>
                                   </div>
                                 );
                               })}
+                              {(editForm.archiveAssignments || []).length === 0 && <p className="text-center py-10 text-gray-400 italic">No archive assignments added.</p>}
+                            </div>
+                        </div>
+                    )}
 
-                            {(editForm.archiveAssignments || []).length === 0 && (
-                                <div className="text-center py-16 border-2 border-dashed border-gray-100 rounded-sm">
-                                    <Layers className="w-12 h-12 text-gray-200 mx-auto mb-3" />
-                                    <p className="text-gray-400 text-sm italic font-serif">No official archive roles assigned yet.</p>
-                                </div>
-                            )}
-                          </div>
+                    {activeAdminTab === 'archive' && (
+                        <div className="space-y-6 text-gray-800">
+                            <div className="flex justify-between items-center pb-4 border-b border-gray-100 dark:border-gray-700">
+                                <h3 className="font-bold text-lg text-navy dark:text-white">Archive Documents</h3>
+                                <button onClick={() => setEditForm(prev => ({ ...prev, archives: [...(prev.archives || []), { id: Date.now().toString(), type: 'PDF', title: '', date: '', url: '' }] }))} className="text-xs bg-navy text-gold px-5 py-2.5 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"><Plus className="w-4 h-4 mr-1.5" /> Add Doc</button>
+                            </div>
+                            <div className="space-y-4">
+                                {(editForm.archives || []).filter(Boolean).map((item, idx) => (
+                                    <div key={idx} className="bg-[#F9FAFB] p-5 border rounded-sm grid grid-cols-1 md:grid-cols-3 gap-4 relative pr-12">
+                                        <div><label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Type</label><select className="w-full border p-2 rounded-sm text-sm" value={item.type} onChange={e => { const a = [...(editForm.archives || [])]; a[idx].type = e.target.value as any; setEditForm({...editForm, archives: a}); }}><option value="PDF">PDF</option><option value="IMAGE">IMAGE</option><option value="AWARD">AWARD</option></select></div>
+                                        <div><label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Title</label><input className="w-full border p-2 rounded-sm text-sm" value={item.title} onChange={e => { const a = [...(editForm.archives || [])]; a[idx].title = e.target.value; setEditForm({...editForm, archives: a}); }} /></div>
+                                        <div><label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">URL</label><input className="w-full border p-2 rounded-sm text-sm font-mono text-xs" value={item.url} onChange={e => { const a = [...(editForm.archives || [])]; a[idx].url = e.target.value; setEditForm({...editForm, archives: a}); }} /></div>
+                                        <button onClick={() => { const a = [...(editForm.archives || [])]; a.splice(idx, 1); setEditForm({...editForm, archives: a}); }} className="absolute top-4 right-4 text-red-400 hover:text-red-600"><Trash2 className="w-5 h-5"/></button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {activeAdminTab === 'news' && (
+                        <div className="space-y-6 text-gray-800">
+                            <div className="flex justify-between items-center pb-4 border-b border-gray-100 dark:border-gray-700">
+                                <h3 className="font-bold text-lg text-navy dark:text-white">Related News</h3>
+                                <button onClick={() => setEditForm(prev => ({ ...prev, news: [...(prev.news || []), { id: Date.now().toString(), title: '', source: '', date: '', summary: '', url: '' }] }))} className="text-xs bg-navy text-gold px-5 py-2.5 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"><Plus className="w-4 h-4 mr-1.5" /> Add News</button>
+                            </div>
+                            <div className="space-y-4">
+                                {(editForm.news || []).filter(Boolean).map((item, idx) => (
+                                    <div key={idx} className="bg-[#F9FAFB] p-5 border rounded-sm space-y-3 relative pr-12">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div><label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Headline</label><input className="w-full border p-2 rounded-sm text-sm font-bold" value={item.title} onChange={e => { const n = [...(editForm.news || [])]; n[idx].title = e.target.value; setEditForm({...editForm, news: n}); }} /></div>
+                                            <div><label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Source</label><input className="w-full border p-2 rounded-sm text-sm" value={item.source} onChange={e => { const n = [...(editForm.news || [])]; n[idx].source = e.target.value; setEditForm({...editForm, news: n}); }} /></div>
+                                        </div>
+                                        <div><label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Summary</label><textarea className="w-full border p-2 rounded-sm text-xs h-16 resize-none" value={item.summary} onChange={e => { const n = [...(editForm.news || [])]; n[idx].summary = e.target.value; setEditForm({...editForm, news: n}); }} /></div>
+                                        <button onClick={() => { const n = [...(editForm.news || [])]; n.splice(idx, 1); setEditForm({...editForm, news: n}); }} className="absolute top-4 right-4 text-red-400 hover:text-red-600"><Trash2 className="w-5 h-5"/></button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {activeAdminTab === 'podcast' && (
+                        <div className="space-y-6 text-gray-800">
+                            <div className="flex justify-between items-center pb-4 border-b border-gray-100 dark:border-gray-700">
+                                <h3 className="font-bold text-lg text-navy dark:text-white">Podcast Media</h3>
+                                <button onClick={() => setEditForm(prev => ({ ...prev, podcasts: [...(prev.podcasts || []), { id: Date.now().toString(), title: '', date: '', duration: '', source: '', url: '' }] }))} className="text-xs bg-navy text-gold px-5 py-2.5 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"><Plus className="w-4 h-4 mr-1.5" /> Add Clip</button>
+                            </div>
+                            <div className="space-y-4">
+                                {(editForm.podcasts || []).filter(Boolean).map((item, idx) => (
+                                    <div key={idx} className="bg-[#F9FAFB] p-5 border rounded-sm grid grid-cols-2 gap-4 relative pr-12">
+                                        <div><label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Episode Title</label><input className="w-full border p-2 rounded-sm text-sm" value={item.title} onChange={e => { const p = [...(editForm.podcasts || [])]; p[idx].title = e.target.value; setEditForm({...editForm, podcasts: p}); }} /></div>
+                                        <div><label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Audio URL</label><input className="w-full border p-2 rounded-sm text-sm" value={item.url} onChange={e => { const p = [...(editForm.podcasts || [])]; p[idx].url = e.target.value; setEditForm({...editForm, podcasts: p}); }} /></div>
+                                        <button onClick={() => { const p = [...(editForm.podcasts || [])]; p.splice(idx, 1); setEditForm({...editForm, podcasts: p}); }} className="absolute top-4 right-4 text-red-400 hover:text-red-600"><Trash2 className="w-5 h-5"/></button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {activeAdminTab === 'timeline' && (
+                        <div className="space-y-6 text-gray-800">
+                            <div className="flex justify-between items-center pb-4 border-b border-gray-100 dark:border-gray-700">
+                                <h3 className="font-bold text-lg text-navy dark:text-white">Historical Timeline</h3>
+                                <button onClick={() => setEditForm(prev => ({ ...prev, timeline: [...(prev.timeline || []), { year: '', title: '', description: '' }] }))} className="text-xs bg-navy text-gold px-5 py-2.5 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"><Plus className="w-4 h-4 mr-1.5" /> Add Entry</button>
+                            </div>
+                            <div className="space-y-4">
+                                {(editForm.timeline || []).filter(Boolean).map((event, idx) => (
+                                    <div key={idx} className="bg-[#F9FAFB] p-5 border rounded-sm flex gap-4 relative pr-12">
+                                        <input placeholder="Year" className="w-24 border p-2 rounded-sm font-mono text-sm" value={event.year} onChange={e => { const t = [...(editForm.timeline || [])]; t[idx].year = e.target.value; setEditForm({...editForm, timeline: t}); }} />
+                                        <div className="flex-1 space-y-2">
+                                            <input placeholder="Headline" className="w-full border p-2 rounded-sm font-bold text-sm" value={event.title} onChange={e => { const t = [...(editForm.timeline || [])]; t[idx].title = e.target.value; setEditForm({...editForm, timeline: t}); }} />
+                                            <textarea placeholder="Description" className="w-full border p-2 rounded-sm text-xs h-20 resize-none" value={event.description} onChange={e => { const t = [...(editForm.timeline || [])]; t[idx].description = e.target.value; setEditForm({...editForm, timeline: t}); }} />
+                                        </div>
+                                        <button onClick={() => { const t = [...(editForm.timeline || [])]; t.splice(idx, 1); setEditForm({...editForm, timeline: t}); }} className="absolute top-4 right-4 text-red-400 hover:text-red-600"><Trash2 className="w-5 h-5"/></button>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     )}
                 </div>
-                <div className="p-6 border-t border-gray-100 dark:border-gray-700 flex justify-end items-center space-x-12 sticky bottom-0 bg-white dark:bg-navy z-20">
-                    <button 
-                      onClick={() => setIsEditing(false)} 
-                      className="text-sm font-bold text-gray-400 hover:text-navy transition-colors tracking-widest uppercase"
-                    >
-                      Discard
-                    </button>
-                    <button 
-                      onClick={handleSaveDossier} 
-                      className="bg-[#0A2647] dark:bg-gold text-white dark:text-navy px-12 py-3 rounded-sm font-bold flex items-center shadow-lg transform active:scale-95 transition-all"
-                    >
-                      <Save className="w-4 h-4 mr-2.5" /> Save Dossier
+
+                <div className="p-6 border-t border-gray-100 dark:border-gray-700 flex justify-end items-center space-x-8 sticky bottom-0 bg-white dark:bg-navy z-20">
+                    <button onClick={() => setIsEditing(false)} className="text-xs font-bold text-gray-400 hover:text-navy transition-colors uppercase tracking-widest">Discard Changes</button>
+                    <button onClick={handleSaveDossier} className="bg-[#0A2647] dark:bg-gold text-white dark:text-navy px-10 py-3 rounded-sm font-bold flex items-center shadow-lg transform active:scale-95 transition-all">
+                        <Save className="w-4 h-4 mr-2" /> Save Dossier
                     </button>
                 </div>
               </div>
@@ -886,21 +837,32 @@ const App = () => {
     );
   }
 
+  // Home view remains the same but ensure its UI elements are consistent
   return (
     <div className={`min-h-screen bg-slate dark:bg-navy-light dark:text-gray-100 flex flex-col font-sans text-gray-800 ${language === 'ar' ? 'font-arabic' : ''}`}>
       {showCertificate && selectedProfile && (<VerificationCertificate profile={selectedProfile} lang={language} onClose={() => setShowCertificate(false)} />)}
       <nav className="sticky top-0 z-50 bg-navy text-white shadow-lg border-b border-navy-light">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
-            <div className="flex items-center space-x-3 rtl:space-x-reverse cursor-pointer group" onClick={handleBack}><BrandPin className="h-8 w-8 text-gold group-hover:text-white transition-colors" /><div className="flex flex-col"><span className="text-2xl font-serif font-bold tracking-tight">SomaliPin</span><span className="text-[10px] text-gray-400 uppercase tracking-widest">{t.subtitle}</span></div></div>
+            <div className="flex items-center space-x-3 rtl:space-x-reverse cursor-pointer group" onClick={handleBack}>
+              <BrandPin className="h-8 w-8 text-gold group-hover:text-white transition-colors" />
+              <div className="flex flex-col">
+                <span className="text-2xl font-serif font-bold tracking-tight">SomaliPin</span>
+                <span className="text-[10px] text-gray-400 uppercase tracking-widest">{t.subtitle}</span>
+              </div>
+            </div>
             <div className="flex items-center space-x-6 rtl:space-x-reverse">
                 <div className="hidden md:flex space-x-8 rtl:space-x-reverse text-sm font-medium text-gray-300">
                   <span onClick={() => navigateTo('archive-explorer', '/archive')} className={`hover:text-gold cursor-pointer transition-colors flex items-center ${view === 'archive-explorer' ? 'text-gold' : ''}`}><Landmark className="w-4 h-4 mr-2" /> {t.nav_archive}</span>
                   <span onClick={() => navigateTo('business-archive', '/business')} className={`hover:text-gold cursor-pointer transition-colors flex items-center ${view === 'business-archive' ? 'text-gold' : ''}`}><Briefcase className="w-4 h-4 mr-2" /> {t.nav_business}</span>
                   <span onClick={() => navigateTo('arts-culture-archive', '/culture')} className={`hover:text-gold cursor-pointer transition-colors flex items-center ${view === 'arts-culture-archive' ? 'text-gold' : ''}`}><Palette className="w-4 h-4 mr-2" /> {t.nav_arts}</span>
                 </div>
-                <div className="flex items-center bg-navy-light/50 rounded-full px-1 py-1 border border-navy-light"><button onClick={() => setLanguage('en')} className={`px-3 py-1 text-xs font-bold rounded-full transition-all ${language === 'en' ? 'bg-gold text-navy shadow-sm' : 'text-gray-400 hover:text-white'}`}>EN</button><button onClick={() => setLanguage('so')} className={`px-3 py-1 text-xs font-bold rounded-full transition-all ${language === 'so' ? 'bg-gold text-navy shadow-sm' : 'text-gray-400 hover:text-white'}`}>SO</button><button onClick={() => setLanguage('ar')} className={`px-3 py-1 text-xs font-bold rounded-full transition-all ${language === 'ar' ? 'bg-gold text-navy shadow-sm' : 'text-gray-400 hover:text-white'}`}>AR</button></div>
-                <button onClick={() => setDarkMode(!darkMode)} className="p-2 text-gray-400 hover:text-gold transition-colors" title="Toggle Dark Mode">{darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}</button>
+                <div className="flex items-center bg-navy-light/50 rounded-full px-1 py-1 border border-navy-light">
+                  <button onClick={() => setLanguage('en')} className={`px-3 py-1 text-xs font-bold rounded-full transition-all ${language === 'en' ? 'bg-gold text-navy shadow-sm' : 'text-gray-400 hover:text-white'}`}>EN</button>
+                  <button onClick={() => setLanguage('so')} className={`px-3 py-1 text-xs font-bold rounded-full transition-all ${language === 'so' ? 'bg-gold text-navy shadow-sm' : 'text-gray-400 hover:text-white'}`}>SO</button>
+                  <button onClick={() => setLanguage('ar')} className={`px-3 py-1 text-xs font-bold rounded-full transition-all ${language === 'ar' ? 'bg-gold text-navy shadow-sm' : 'text-gray-400 hover:text-white'}`}>AR</button>
+                </div>
+                <button onClick={() => setDarkMode(!darkMode)} className="p-2 text-gray-400 hover:text-gold transition-colors">{darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}</button>
             </div>
           </div>
         </div>
@@ -920,7 +882,10 @@ const App = () => {
                 <h1 className="text-4xl md:text-6xl font-serif font-bold text-white leading-tight">{t.hero_title_1} <br /><span className="text-gold italic">{t.hero_title_2}</span></h1>
                 <p className="text-gray-300 text-lg md:text-xl font-light max-w-2xl mx-auto">{t.hero_desc}</p>
                 <div className="flex flex-wrap justify-center gap-4 mt-8">
-                  <div className="relative w-full max-w-xl group"><div className="absolute inset-y-0 left-0 pl-4 rtl:pl-0 rtl:right-0 rtl:pr-4 flex items-center pointer-events-none"><Search className="h-5 w-5 text-gray-400 group-focus-within:text-navy transition-colors" /></div><input type="text" className="block w-full pl-11 pr-4 rtl:pl-4 rtl:pr-11 py-4 bg-white dark:bg-navy dark:text-white dark:border-gray-600 border-0 rounded-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gold focus:outline-none shadow-xl text-lg" placeholder={t.search_placeholder} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /></div>
+                  <div className="relative w-full max-w-xl group">
+                    <div className="absolute inset-y-0 left-0 pl-4 rtl:pl-0 rtl:right-0 rtl:pr-4 flex items-center pointer-events-none"><Search className="h-5 w-5 text-gray-400 group-focus-within:text-navy transition-colors" /></div>
+                    <input type="text" className="block w-full pl-11 pr-4 rtl:pl-4 rtl:pr-11 py-4 bg-white dark:bg-navy dark:text-white border-0 rounded-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gold focus:outline-none shadow-xl text-lg" placeholder={t.search_placeholder} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                  </div>
                   <button onClick={() => navigateTo('archive-explorer', '/archive')} className="bg-gold hover:bg-gold-dark text-navy px-8 py-4 rounded-sm font-bold flex items-center shadow-xl transition-all"><Landmark className="w-5 h-5 mr-2" /> {t.nav_archive}</button>
                 </div>
               </div>
@@ -929,66 +894,42 @@ const App = () => {
             <section className="max-w-6xl mx-auto px-4 py-16 -mt-10 relative z-10 text-gray-800">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div onClick={() => navigateTo('archive-explorer', '/archive')} className="group bg-white dark:bg-navy-light p-8 rounded-sm shadow-2xl border border-gray-100 dark:border-navy cursor-pointer hover:-translate-y-2 transition-all duration-300">
-                  <div className="w-14 h-14 bg-navy dark:bg-gold text-gold dark:text-navy rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                    <Landmark className="w-7 h-7" />
-                  </div>
+                  <div className="w-14 h-14 bg-navy dark:bg-gold text-gold dark:text-navy rounded-full flex items-center justify-center mb-6"><Landmark className="w-7 h-7" /></div>
                   <h3 className="text-xl font-serif font-bold text-navy dark:text-white mb-3">National Registry</h3>
                   <p className="text-gray-500 dark:text-gray-400 text-sm mb-6 leading-relaxed">Official directory of political leadership and security forces.</p>
-                  <div className="flex items-center text-xs font-bold text-gold uppercase tracking-widest group-hover:gap-2 transition-all">Explore Registry <ArrowRight className="w-4 h-4 ml-1" /></div>
+                  <div className="flex items-center text-xs font-bold text-gold uppercase tracking-widest">Explore Registry <ArrowRight className="w-4 h-4 ml-1" /></div>
                 </div>
                 <div onClick={() => navigateTo('business-archive', '/business')} className="group bg-white dark:bg-navy-light p-8 rounded-sm shadow-2xl border border-gray-100 dark:border-navy cursor-pointer hover:-translate-y-2 transition-all duration-300 border-t-4 border-t-gold">
-                  <div className="w-14 h-14 bg-gold text-navy rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                    <Briefcase className="w-7 h-7" />
-                  </div>
+                  <div className="w-14 h-14 bg-gold text-navy rounded-full flex items-center justify-center mb-6"><Briefcase className="w-7 h-7" /></div>
                   <h3 className="text-xl font-serif font-bold text-navy dark:text-white mb-3">Business (Ganacsiga)</h3>
                   <p className="text-gray-500 dark:text-gray-400 text-sm mb-6 leading-relaxed">Tracking Somali entrepreneurship and corporate pioneers.</p>
-                  <div className="flex items-center text-xs font-bold text-gold uppercase tracking-widest group-hover:gap-2 transition-all">Explore Business <ArrowRight className="w-4 h-4 ml-1" /></div>
+                  <div className="flex items-center text-xs font-bold text-gold uppercase tracking-widest">Explore Business <ArrowRight className="w-4 h-4 ml-1" /></div>
                 </div>
                 <div onClick={() => navigateTo('arts-culture-archive', '/culture')} className="group bg-white dark:bg-navy-light p-8 rounded-sm shadow-2xl border border-gray-100 dark:border-navy cursor-pointer hover:-translate-y-2 transition-all duration-300">
-                  <div className="w-14 h-14 bg-navy dark:bg-white text-white dark:text-navy rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                    <Palette className="w-7 h-7" />
-                  </div>
+                  <div className="w-14 h-14 bg-navy dark:bg-white text-white dark:text-navy rounded-full flex items-center justify-center mb-6"><Palette className="w-7 h-7" /></div>
                   <h3 className="text-xl font-serif font-bold text-navy dark:text-white mb-3">Arts & Culture</h3>
                   <p className="text-gray-500 dark:text-gray-400 text-sm mb-6 leading-relaxed">Preserving the legacy of Somali artists and custodians.</p>
-                  <div className="flex items-center text-xs font-bold text-gold uppercase tracking-widest group-hover:gap-2 transition-all">Explore Culture <ArrowRight className="w-4 h-4 ml-1" /></div>
+                  <div className="flex items-center text-xs font-bold text-gold uppercase tracking-widest">Explore Culture <ArrowRight className="w-4 h-4 ml-1" /></div>
                 </div>
               </div>
             </section>
 
-            <section className="max-w-6xl mx-auto px-4 py-12 border-b border-gray-200 dark:border-gray-700 text-gray-800">
+            <section className="max-w-6xl mx-auto px-4 py-12 text-gray-800">
               <div className="flex justify-between items-end mb-8 border-b border-gray-200 dark:border-gray-700 pb-4">
-                <h2 className="text-3xl font-serif font-bold text-navy dark:text-white flex items-center">
-                  Featured Dossiers (129)
-                  <span className="ml-4 bg-gold/10 text-gold text-sm px-3 py-1 rounded-full border border-gold/20 font-sans tracking-widest">
-                    {profiles.length > 0 ? `${profiles.length}+ RECORDS` : 'VERIFYING...'}
-                  </span>
-                </h2>
+                <h2 className="text-3xl font-serif font-bold text-navy dark:text-white">Featured Dossiers</h2>
               </div>
               {isLoading ? (
                 <div className="flex justify-center py-12"><Loader2 className="animate-spin h-10 w-10 text-gold" /></div>
               ) : (
-                <div className="space-y-12">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 text-gray-800">
-                    {displayedProfiles.filter(Boolean).map((profile) => (
-                      <ProfileCard 
-                        key={profile.id} 
-                        profile={profile} 
-                        onClick={handleProfileClick} 
-                        onVerify={(e) => { e.stopPropagation(); setSelectedProfile(profile); setShowCertificate(true); }} 
-                      />
-                    ))}
-                  </div>
-                  {filteredProfiles.length > displayLimit && (
-                    <div className="flex justify-center pt-8">
-                      <button 
-                        onClick={() => setDisplayLimit(prev => prev + 12)}
-                        className="group flex items-center space-x-2 bg-navy text-white px-10 py-3 rounded-sm font-bold shadow-xl hover:bg-navy-light transition-all border border-gold/20"
-                      >
-                        <RefreshCw className="w-5 h-5 group-hover:rotate-180 transition-transform duration-700" />
-                        <span>LOAD MORE RECORDS</span>
-                      </button>
-                    </div>
-                  )}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {displayedProfiles.filter(Boolean).map((profile) => (
+                    <ProfileCard 
+                      key={profile.id} 
+                      profile={profile} 
+                      onClick={handleProfileClick} 
+                      onVerify={(e) => { e.stopPropagation(); setSelectedProfile(profile); setShowCertificate(true); }} 
+                    />
+                  ))}
                 </div>
               )}
             </section>
@@ -1000,46 +941,40 @@ const App = () => {
               <div className="bg-white dark:bg-navy shadow-xl rounded-sm overflow-hidden mb-12">
                 <div className="h-48 relative bg-navy"><div className="absolute inset-0 bg-black/20"></div></div>
                 <div className="px-8 pb-12">
-                    <div className="relative flex justify-between items-end -mt-20 mb-8"><div className="relative"><img src={selectedProfile?.imageUrl || 'https://via.placeholder.com/150'} className="w-40 h-40 object-cover rounded-sm border-4 border-white shadow-md" />{selectedProfile?.verified && (<div className="absolute -bottom-3 -right-3 bg-white p-1 rounded-full shadow-sm cursor-pointer hover:scale-110 transition-transform" onClick={() => setShowCertificate(true)}>{getVerificationIcon(selectedProfile?.verificationLevel)}</div>)}</div></div>
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 text-gray-800">
+                    <div className="relative flex justify-between items-end -mt-20 mb-8">
+                      <div className="relative">
+                        <img src={selectedProfile?.imageUrl || 'https://via.placeholder.com/150'} className="w-40 h-40 object-cover rounded-sm border-4 border-white shadow-md" />
+                        {selectedProfile?.verified && (<div className="absolute -bottom-3 -right-3 bg-white p-1 rounded-full shadow-sm cursor-pointer hover:scale-110 transition-transform" onClick={() => setShowCertificate(true)}>{getVerificationIcon(selectedProfile?.verificationLevel)}</div>)}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
                         <div className="lg:col-span-2">
-                            <div className="mb-8"><div className="flex flex-wrap items-center gap-3 mb-4"><span className="text-sm font-bold tracking-widest uppercase text-gold">{selectedProfile?.category}</span></div><h1 className="text-4xl font-serif font-bold text-navy dark:text-white mb-2">{selectedProfile?.name}</h1><p className="text-xl text-gray-500 dark:text-gray-400 font-light">{selectedProfile?.title}</p></div>
+                            <div className="mb-8"><span className="text-sm font-bold tracking-widest uppercase text-gold">{selectedProfile?.category}</span><h1 className="text-4xl font-serif font-bold text-navy dark:text-white mb-2">{selectedProfile?.name}</h1><p className="text-xl text-gray-500 dark:text-gray-400 font-light">{selectedProfile?.title}</p></div>
                             <div className="prose prose-slate max-w-none text-gray-800"><h3 className="text-navy dark:text-gold font-serif text-xl border-b border-gray-200 dark:border-gray-700 pb-2 mb-4">{t.about}</h3><p className="text-gray-700 dark:text-gray-300 leading-relaxed text-lg whitespace-pre-line">{selectedProfile?.fullBio}</p></div>
-                            <div className="mt-12 text-gray-800"><h3 className="text-navy dark:text-gold font-serif text-xl border-b border-gray-200 dark:border-gray-700 pb-2 mb-4">{t.timeline}</h3><Timeline events={selectedProfile?.timeline || []} /></div>
+                            <div className="mt-12"><h3 className="text-navy dark:text-gold font-serif text-xl border-b border-gray-200 dark:border-gray-700 pb-2 mb-4">{t.timeline}</h3><Timeline events={selectedProfile?.timeline || []} /></div>
                             
-                            <div className="mt-16 text-gray-800">
-                                <div className="flex border-b border-gray-100 dark:border-gray-700 mb-8 overflow-x-auto space-x-8">
+                            <div className="mt-16">
+                                <div className="flex border-b border-gray-100 dark:border-gray-700 mb-8 space-x-8">
                                     {['archive', 'news', 'podcast'].map((tab) => (
                                         <button key={tab} onClick={() => setActiveTab(tab as any)} className={`pb-4 text-xs font-bold tracking-[0.2em] uppercase transition-all relative ${activeTab === tab ? 'text-navy dark:text-gold' : 'text-gray-300 hover:text-gray-500'}`}>{tab === 'archive' ? t.tab_archive : tab === 'news' ? t.tab_news : t.tab_podcast}{activeTab === tab && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-navy dark:bg-gold"></div>}</button>
                                     ))}
                                 </div>
-                                <div className="animate-fade-in min-h-[200px] text-gray-800">
-                                    {activeTab === 'archive' && (<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">{(selectedProfile?.archives || []).length > 0 ? selectedProfile?.archives?.map((item) => (<a key={item.id} href={item.url || '#'} target="_blank" className="group flex items-center p-4 bg-slate dark:bg-navy-light rounded-sm border border-transparent hover:border-gold transition-all"><div className="p-3 bg-white dark:bg-navy rounded text-gold mr-4">{item.type === 'PDF' ? <FileText className="w-6 h-6" /> : <ImageIcon className="w-6 h-6" />}</div><div className="flex-1 min-w-0"><h4 className="text-sm font-bold text-navy dark:text-white truncate">{item.title}</h4><p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">{item.date}</p></div><ExternalLink className="w-4 h-4 text-gray-300 opacity-0 group-hover:opacity-100" /></a>)) : <div className="col-span-2 py-12 text-center text-gray-400 italic">{t.no_docs}</div>}</div>)}
-                                    {activeTab === 'news' && (<div className="space-y-4">{(selectedProfile?.news || []).length > 0 ? selectedProfile?.news?.map((item) => (<div key={item.id} className="p-5 bg-white dark:bg-navy-light border border-gray-100 dark:border-gray-700 rounded-sm hover:shadow-lg transition-all group"><div className="flex justify-between items-start mb-3"><span className="text-[10px] font-bold text-gold uppercase bg-gold/10 px-2 py-0.5 rounded">{item.source}</span><span className="text-[10px] font-mono text-gray-400">{item.date}</span></div><h4 className="text-lg font-serif font-bold text-navy dark:text-white mb-2 group-hover:text-gold transition-colors">{item.title}</h4><p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-4">{item.summary}</p>{item.url && <a href={item.url} target="_blank" className="inline-flex items-center text-[10px] font-bold text-navy dark:text-gold uppercase hover:underline"><Globe className="w-3 h-3 mr-1" /> {t.search_btn}</a>}</div>)) : <div className="py-12 text-center text-gray-400 italic">{t.no_news}</div>}</div>)}
-                                    {activeTab === 'podcast' && (<div className="grid grid-cols-1 gap-3">{(selectedProfile?.podcasts || []).length > 0 ? selectedProfile?.podcasts?.map((item) => (<div key={item.id} className="flex items-center p-4 bg-navy dark:bg-navy-light text-white rounded-sm group hover:bg-navy-light transition-all shadow-xl border border-gold/10"><div className="p-3 bg-gold rounded-full mr-4 text-navy"><Play className="w-5 h-5 fill-current" /></div><div className="flex-1 min-w-0"><h4 className="text-sm font-bold truncate tracking-wide">{item.title}</h4><p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">{item.source} • {item.duration}</p></div><div className="flex items-center space-x-3 opacity-40"><Headphones className="w-4 h-4" /><span className="text-[10px] font-mono">{item.date}</span></div></div>)) : <div className="py-12 text-center text-gray-400 italic">{t.no_podcasts}</div>}</div>)}
+                                <div className="animate-fade-in min-h-[200px]">
+                                    {activeTab === 'archive' && (<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">{(selectedProfile?.archives || []).length > 0 ? selectedProfile?.archives?.map((item) => (<a key={item.id} href={item.url || '#'} target="_blank" className="group flex items-center p-4 bg-slate dark:bg-navy-light rounded-sm border border-transparent hover:border-gold transition-all"><div className="p-3 bg-white dark:bg-navy rounded text-gold mr-4">{item.type === 'PDF' ? <FileText className="w-6 h-6" /> : <ImageIcon className="w-6 h-6" />}</div><div className="flex-1 min-w-0"><h4 className="text-sm font-bold text-navy dark:text-white truncate">{item.title}</h4></div><ExternalLink className="w-4 h-4 text-gray-300 opacity-0 group-hover:opacity-100" /></a>)) : <div className="col-span-2 py-12 text-center text-gray-400 italic">{t.no_docs}</div>}</div>)}
+                                    {activeTab === 'news' && (<div className="space-y-4">{(selectedProfile?.news || []).length > 0 ? selectedProfile?.news?.map((item) => (<div key={item.id} className="p-5 bg-white dark:bg-navy-light border border-gray-100 dark:border-gray-700 rounded-sm hover:shadow-lg transition-all"><div className="flex justify-between items-start mb-3"><span className="text-[10px] font-bold text-gold uppercase bg-gold/10 px-2 py-0.5 rounded">{item.source}</span><span className="text-[10px] font-mono text-gray-400">{item.date}</span></div><h4 className="text-lg font-serif font-bold text-navy dark:text-white mb-2">{item.title}</h4><p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{item.summary}</p></div>)) : <div className="py-12 text-center text-gray-400 italic">{t.no_news}</div>}</div>)}
+                                    {activeTab === 'podcast' && (<div className="grid grid-cols-1 gap-3">{(selectedProfile?.podcasts || []).length > 0 ? selectedProfile?.podcasts?.map((item) => (<div key={item.id} className="flex items-center p-4 bg-navy dark:bg-navy-light text-white rounded-sm group hover:bg-navy-light transition-all shadow-xl border border-gold/10"><div className="p-3 bg-gold rounded-full mr-4 text-navy"><Play className="w-5 h-5 fill-current" /></div><div className="flex-1 min-w-0"><h4 className="text-sm font-bold truncate tracking-wide">{item.title}</h4><p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">{item.source}</p></div></div>)) : <div className="py-12 text-center text-gray-400 italic">{t.no_podcasts}</div>}</div>)}
                                 </div>
                             </div>
                         </div>
 
-                        <div className="space-y-6 text-gray-800">
+                        <div className="space-y-6">
                             <div className="bg-slate dark:bg-navy-light p-6 rounded-sm border border-gray-200 dark:border-navy">
                                 <h4 className="font-serif font-bold text-navy dark:text-white mb-4">{t.key_info}</h4>
                                 <div className="space-y-4 text-sm text-gray-800">
-                                    <div className="flex items-center"><Calendar className="h-5 w-5 mr-3 text-gold" /><div><span className="block text-gray-400 text-xs uppercase">{selectedProfile?.isOrganization ? t.lbl_est : t.lbl_born}</span><span className="font-medium text-gray-800">{selectedProfile?.dateStart || 'Unknown'}</span></div></div>
-                                    
-                                    {selectedProfile?.dateEnd && (
-                                      <div className="flex items-center">
-                                        <Clock className="h-5 w-5 mr-3 text-gold" />
-                                        <div>
-                                          <span className="block text-gray-400 text-xs uppercase">{selectedProfile.isOrganization ? t.lbl_closed : t.lbl_died}</span>
-                                          <span className="font-medium text-gray-800">{selectedProfile.dateEnd}</span>
-                                        </div>
-                                      </div>
-                                    )}
-
+                                    <div className="flex items-center"><Calendar className="h-5 w-5 mr-3 text-gold" /><div><span className="block text-gray-400 text-xs uppercase">{selectedProfile?.isOrganization ? t.lbl_est : t.lbl_born}</span><span className="font-medium text-gray-800 dark:text-gray-200">{selectedProfile?.dateStart || 'Unknown'}</span></div></div>
                                     <div className="flex items-center"><Activity className="h-5 w-5 mr-3 text-gold" /><div><span className="block text-gray-400 text-xs uppercase">{t.lbl_status}</span><span className={`font-medium px-2 py-0.5 rounded text-xs inline-block mt-0.5 ${selectedProfile?.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{getStatusLabel(selectedProfile?.status || 'ACTIVE')}</span></div></div>
                                     <div className="w-full h-px bg-gray-200 dark:bg-gray-700 my-2"></div>
-                                    <div className="flex items-center cursor-pointer hover:bg-gray-100 dark:hover:bg-navy p-1 rounded transition-colors" onClick={() => setShowCertificate(true)}><Building2 className="h-5 w-5 mr-3 text-gold" /><div><span className="block text-gray-400 text-xs uppercase">{t.label_affiliation}</span><span className="font-medium text-gray-800 dark:text-gray-200 underline decoration-dotted">{getVerificationLabel(selectedProfile?.verificationLevel)}</span></div></div>
+                                    <div className="flex items-center"><Building2 className="h-5 w-5 mr-3 text-gold" /><div><span className="block text-gray-400 text-xs uppercase">{t.label_affiliation}</span><span className="font-medium text-gray-800 dark:text-gray-200">{getVerificationLabel(selectedProfile?.verificationLevel)}</span></div></div>
                                     <h5 className="font-serif font-bold text-navy dark:text-white text-sm mt-6 mb-2">{t.archive_positions}</h5>
                                     {(selectedProfile?.archiveAssignments || []).length > 0 ? (
                                       <ul className="space-y-3">{selectedProfile?.archiveAssignments?.map((assignment, idx) => (<li key={idx} className="flex flex-col text-xs text-gray-600 dark:text-gray-300 border-l-2 border-gold pl-2"><span className="font-bold text-navy dark:text-white">{assignment.title_note}</span><span className="text-gray-500 dark:text-gray-400 text-[10px] italic">({assignment.category?.category_name || 'N/A'})</span>{assignment.start_date && <span className="text-[10px] font-mono mt-0.5">{assignment.start_date} - {assignment.end_date || 'Present'}</span>}</li>))}</ul>
@@ -1056,7 +991,7 @@ const App = () => {
       </main>
 
       <footer className="bg-navy text-white pt-16 pb-8 border-t border-gold">
-        <div className="max-w-6xl mx-auto px-4"><div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12"><div className="space-y-4"><div className="flex items-center space-x-2 cursor-pointer" onClick={handleBack}><BrandPin className="h-6 w-6 text-gold" /><span className="text-xl font-serif font-bold">SomaliPin</span></div><p className="text-gray-400 text-sm leading-relaxed">{t.footer_desc}</p></div></div><div className="border-t border-white/10 pt-8 text-center text-xs text-gray-500"><p>&copy; {new Date().getFullYear()} {t.rights}</p></div></div>
+        <div className="max-w-6xl mx-auto px-4"><div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12"><div className="space-y-4"><div className="flex items-center space-x-2"><BrandPin className="h-6 w-6 text-gold" /><span className="text-xl font-serif font-bold">SomaliPin</span></div><p className="text-gray-400 text-sm leading-relaxed">{t.footer_desc}</p></div></div><div className="border-t border-white/10 pt-8 text-center text-xs text-gray-500"><p>&copy; {new Date().getFullYear()} {t.rights}</p></div></div>
       </footer>
     </div>
   );
