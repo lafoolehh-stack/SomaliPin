@@ -1,4 +1,5 @@
 
+
 import { Category, Profile, VerificationLevel, Language, ProfileStatus } from './types';
 
 export const UI_TEXT = {
@@ -80,7 +81,10 @@ export const UI_TEXT = {
     status_active: "Active",
     status_deceased: "Deceased",
     status_retired: "Retired",
-    status_closed: "Closed"
+    status_closed: "Closed",
+    // New
+    archive_positions: "Archive Positions",
+    no_archive_positions: "No archive positions recorded for this profile."
   },
   so: {
     subtitle: "Kaydka Hal-abuurka Soomaaliyeed",
@@ -160,7 +164,10 @@ export const UI_TEXT = {
     status_active: "Shaqeeya",
     status_deceased: "Geeriyooday",
     status_retired: "Hoolgab",
-    status_closed: "Xirmay"
+    status_closed: "Xirmay",
+    // New
+    archive_positions: "Jagooyinka Kaydka",
+    no_archive_positions: "Ma jiraan jagooyin kayd ah oo loo diiwaan geliyay profile-kan."
   },
   ar: {
     subtitle: "أرشيف التميز الصومالي",
@@ -240,7 +247,10 @@ export const UI_TEXT = {
     status_active: "نشط",
     status_deceased: "متوفي",
     status_retired: "متقاعد",
-    status_closed: "مغلق"
+    status_closed: "مغلق",
+    // New
+    archive_positions: "المناصب الأرشيفية",
+    no_archive_positions: "لم يتم تسجيل أي مناصب أرشيفية لهذا الملف الشخصي."
   }
 };
 

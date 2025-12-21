@@ -1,12 +1,12 @@
 import * as React from 'react';
 import { useState, useEffect } from 'react';
-import { Search, MapPin, ChevronLeft, Building2, User, BookOpen, Upload, FileText, Image as ImageIcon, Award, Newspaper, Globe, Calendar, Clock, Activity, Lock, Plus, Trash2, Edit2, Save, X, Database, Link as LinkIcon, AlertCircle, Sun, Moon, Mic, Headphones, PlayCircle, Unlock, Shield, Loader2 } from 'lucide-react';
+import { Search, MapPin, ChevronLeft, Building2, User, BookOpen, Upload, FileText, ImageIcon, Award, Newspaper, Globe, Calendar, Clock, Activity, Lock, Plus, Trash2, Edit2, Save, X, Database, Link, AlertCircle, Sun, Moon, Mic, Headphones, PlayCircle, Unlock, Shield, Loader2, Briefcase } from 'lucide-react';
 import { BrandPin, VerifiedBadge, HeroBadge, GoldenBadge, StandardBadge, NobelBadge } from './components/Icons';
 import ProfileCard from './components/ProfileCard';
 import Timeline from './components/Timeline';
 import VerificationCertificate from './components/VerificationCertificate';
 import { getProfiles, UI_TEXT } from './constants';
-import { Profile, Category, ArchiveItem, NewsItem, PodcastItem, VerificationLevel, Language, DossierDB, ProfileStatus, TimelineEvent } from './types';
+import { Profile, Category, ArchiveItem, NewsItem, PodcastItem, VerificationLevel, Language, DossierDB, ProfileStatus, TimelineEvent, ArchiveCategory, ArchiveAssignment, SectionType } from './types';
 import { askArchive } from './services/geminiService';
 import { supabase, isSupabaseConfigured } from './services/supabaseClient';
 
@@ -25,17 +25,18 @@ const App = () => {
   
   // Dynamic Data State
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [allCategories, setAllCategories] = useState<ArchiveCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Admin State
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
   const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState<Partial<DossierDB>>({});
+  const [editForm, setEditForm] = useState<Partial<DossierDB & { archiveAssignments: ArchiveAssignment[] }>>({});
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [activeAdminTab, setActiveAdminTab] = useState<'basic' | 'timeline' | 'archive' | 'news' | 'podcast'>('basic');
-  const [uploadingDoc, setUploadingDoc] = useState<string | null>(null); // Track which doc ID is uploading
-  const [isLocking, setIsLocking] = useState(false); // Loading state for locking operations
+  const [activeAdminTab, setActiveAdminTab] = useState<'basic' | 'timeline' | 'archive' | 'positions' | 'news' | 'podcast'>('basic');
+  const [uploadingDoc, setUploadingDoc] = useState<string | null>(null); 
+  const [isLocking, setIsLocking] = useState(false); 
 
   const t = UI_TEXT[language];
 
@@ -71,61 +72,104 @@ const App = () => {
       setIsLoading(true);
 
       if (!isSupabaseConfigured) {
-        console.warn('Supabase is not configured properly.');
         setProfiles([]);
         setIsLoading(false);
         return;
       }
 
-      const { data, error } = await supabase.from('dossiers').select('*').order('created_at', { ascending: false });
+      // 1. Fetch all dossiers
+      const { data: dossiersData, error: dossiersError } = await supabase.from('dossiers').select('*').order('created_at', { ascending: false });
       
-      if (error) {
-        console.error('Supabase Error fetching dossiers:', error);
+      if (dossiersError) {
+        console.error('Error fetching dossiers:', dossiersError.message);
         setProfiles([]); 
-      } else if (data) {
-        // Safe mapping with defensive checks
-        const mappedProfiles: Profile[] = data.map((d: DossierDB) => {
-          const details = d.details || {};
-          
-          const localizedFullBio = details.fullBio?.[language] || details.fullBio?.en || d.bio || '';
-          
-          // Fallback logic for dynamic arrays: check localized first, then root details, then empty
-          const timeline = details.timeline || [];
-          const archives = details.archives || [];
-          const news = details.news || [];
-          const podcasts = details.podcasts || [];
-          
-          const rawCategory = d.category || Category.POLITICS;
-
-          return {
-            id: d.id || 'unknown',
-            name: d.full_name || 'Unnamed Profile',
-            title: d.role || '',
-            category: rawCategory,
-            categoryLabel: getCategoryLabel(rawCategory),
-            verified: d.status === 'Verified',
-            verificationLevel: (d.verification_level as VerificationLevel) || VerificationLevel.STANDARD,
-            imageUrl: d.image_url || 'https://via.placeholder.com/150',
-            shortBio: d.bio || '',
-            fullBio: localizedFullBio,
-            timeline: timeline,
-            location: details.location || '',
-            archives: archives,
-            news: news,
-            podcasts: podcasts,
-            influence: { support: d.reputation_score || 0, neutral: 100 - (d.reputation_score || 0), opposition: 0 },
-            isOrganization: details.isOrganization || false,
-            status: details.status || 'ACTIVE',
-            dateStart: details.dateStart || 'Unknown',
-            dateEnd: details.dateEnd,
-            locked: details.locked || false
-          };
-        });
-        setProfiles(mappedProfiles);
+        setIsLoading(false);
+        return;
       }
+
+      // 2. Fetch all archive categories
+      const { data: categoriesData, error: categoriesError } = await supabase.from('archive_categories').select('*');
+      if (!categoriesError && categoriesData) {
+        setAllCategories(categoriesData);
+      }
+
+      // 3. Fetch all archive assignments
+      const { data: assignmentsData, error: assignmentsError } = await supabase
+        .from('archive_assignments')
+        .select(`
+          id,
+          user_id,
+          category_id,
+          start_date,
+          end_date,
+          title_note,
+          archive_categories (
+            category_name,
+            section_type
+          )
+        `);
+
+      if (assignmentsError) {
+        console.error('Error fetching assignments:', assignmentsError.message);
+      }
+
+      const profileAssignmentsMap = new Map<string, ArchiveAssignment[]>();
+      assignmentsData?.forEach((assignment: any) => {
+        const userId = assignment.user_id;
+        const mappedAssignment: ArchiveAssignment = {
+          id: assignment.id,
+          user_id: assignment.user_id,
+          category_id: assignment.category_id,
+          start_date: assignment.start_date || '',
+          end_date: assignment.end_date || '',
+          title_note: assignment.title_note || '',
+          category: assignment.archive_categories ? {
+            id: assignment.category_id,
+            category_name: assignment.archive_categories.category_name,
+            section_type: assignment.archive_categories.section_type
+          } : undefined,
+        };
+
+        if (!profileAssignmentsMap.has(userId)) {
+          profileAssignmentsMap.set(userId, []);
+        }
+        profileAssignmentsMap.get(userId)?.push(mappedAssignment);
+      });
+
+      // 4. Map dossiers to Profile interface
+      const mappedProfiles: Profile[] = (dossiersData || []).map((d: DossierDB) => {
+        const details = d.details || {};
+        const localizedFullBio = details.fullBio?.[language] || details.fullBio?.en || d.bio || '';
+        const rawCategory = d.category || Category.POLITICS;
+
+        return {
+          id: d.id || 'unknown',
+          name: d.full_name || 'Unnamed Profile',
+          title: d.role || '',
+          category: rawCategory,
+          categoryLabel: getCategoryLabel(rawCategory),
+          verified: d.status === 'Verified',
+          verificationLevel: (d.verification_level as VerificationLevel) || VerificationLevel.STANDARD,
+          imageUrl: d.image_url || 'https://via.placeholder.com/150',
+          shortBio: d.bio || '',
+          fullBio: localizedFullBio,
+          timeline: details.timeline || [],
+          location: details.location || '',
+          archives: details.archives || [],
+          news: details.news || [],
+          podcasts: details.podcasts || [],
+          influence: { support: d.reputation_score || 0, neutral: 100 - (d.reputation_score || 0), opposition: 0 },
+          isOrganization: details.isOrganization || false,
+          status: details.status || 'ACTIVE',
+          dateStart: details.dateStart || 'Unknown',
+          dateEnd: details.dateEnd,
+          locked: details.locked || false,
+          archiveAssignments: profileAssignmentsMap.get(d.id) || [],
+        };
+      });
+      setProfiles(mappedProfiles);
     } catch (err) {
-      console.error('Unexpected crash in fetchDossiers:', err);
-      setProfiles([]);
+      console.error('fetchDossiers crash:', err);
     } finally {
       setIsLoading(false);
     }
@@ -187,64 +231,45 @@ const App = () => {
     try {
       const newLockedState = !profile.locked;
       const { data, error } = await supabase.from('dossiers').select('details').eq('id', profile.id).single();
+      if (error || !data) throw new Error('Could not fetch latest details');
       
-      if (error || !data) throw new Error('Could not fetch details');
-
       const updatedDetails = { ...data.details, locked: newLockedState };
-
-      const { error: updateError } = await supabase.from('dossiers')
+      
+      const { error: updateError } = await supabase
+        .from('dossiers')
         .update({ details: updatedDetails })
         .eq('id', profile.id);
-
+        
       if (updateError) throw updateError;
       
-      // Update local state
       setProfiles(profiles.map(p => p.id === profile.id ? { ...p, locked: newLockedState } : p));
+      alert(`Dossier ${newLockedState ? 'LOCKED' : 'UNLOCKED'} successfully.`);
     } catch (err: any) {
-      alert('Failed to toggle lock: ' + err.message);
+      console.error('Lock Toggle Error:', err);
+      alert('Failed to toggle lock: ' + (err.message || 'Check RLS policies for dossiers table.'));
     }
   };
 
   const handleGlobalLock = async (shouldLock: boolean) => {
     const action = shouldLock ? 'LOCK' : 'UNLOCK';
     if (!window.confirm(`⚠️ WARNING: This will ${action} ALL ${profiles.length} dossiers.\n\nAre you sure you want to proceed?`)) return;
-    
     setIsLocking(true);
     try {
-      // We process updates in batches to be safe, though promise.all is fine for small datasets.
-      // We need to fetch current details for each to preserve other nested data.
+      const { data: allDossiers, error: fetchError } = await supabase.from('dossiers').select('id, details');
+      if (fetchError || !allDossiers) throw new Error('Failed to fetch dossier details');
       
-      // 1. Fetch all dossiers with their IDs and details
-      const { data: allDossiers, error: fetchError } = await supabase
-        .from('dossiers')
-        .select('id, details');
-
-      if (fetchError || !allDossiers) throw new Error('Failed to fetch dossier details for bulk update.');
-
-      // 2. Prepare update promises
       const updatePromises = allDossiers.map(dossier => {
         const currentDetails = dossier.details || {};
-        // Only update if the state is different to save writes
-        if (!!currentDetails.locked !== shouldLock) {
-           return supabase
-            .from('dossiers')
-            .update({ 
-                details: { ...currentDetails, locked: shouldLock } 
-            })
-            .eq('id', dossier.id);
-        }
-        return Promise.resolve();
+        return supabase
+          .from('dossiers')
+          .update({ details: { ...currentDetails, locked: shouldLock } })
+          .eq('id', dossier.id);
       });
-
-      // 3. Execute all updates
-      await Promise.all(updatePromises);
       
-      // 4. Refresh local state
+      await Promise.all(updatePromises);
       await fetchDossiers();
       alert(`Success: All dossiers have been ${shouldLock ? 'LOCKED' : 'UNLOCKED'}.`);
-
     } catch (err: any) {
-        console.error('Global lock error:', err);
         alert('Global lock/unlock failed: ' + err.message);
     } finally {
         setIsLocking(false);
@@ -254,25 +279,18 @@ const App = () => {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     try {
       if (!e.target.files || e.target.files.length === 0) return;
-      
       setUploadingImage(true);
       const file = e.target.files[0];
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
       const filePath = `profile_${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('dossier-images')
-        .upload(filePath, file);
-
+      const { error: uploadError } = await supabase.storage.from('dossier-images').upload(filePath, file);
       if (uploadError) {
         alert('Error uploading image: ' + uploadError.message);
       } else {
         const { data } = supabase.storage.from('dossier-images').getPublicUrl(filePath);
         setEditForm({ ...editForm, image_url: data.publicUrl });
       }
-    } catch (err) {
-      console.error('Image upload crash:', err);
     } finally {
       setUploadingImage(false);
     }
@@ -280,23 +298,16 @@ const App = () => {
 
   const handleArchiveUpload = async (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
       if (!e.target.files || e.target.files.length === 0) return;
-      
       const file = e.target.files[0];
       const archives = [...(editForm.details?.archives || [])];
       const currentItem = archives[index];
       setUploadingDoc(currentItem.id || 'new');
-
       try {
         const fileExt = file.name.split('.').pop();
         const fileName = `doc_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-        
         const { error } = await supabase.storage.from('dossier-images').upload(fileName, file);
-        
         if (error) throw error;
-
         const { data } = supabase.storage.from('dossier-images').getPublicUrl(fileName);
-        
-        // Update the specific archive item url
         archives[index] = { ...currentItem, url: data.publicUrl }; 
         setEditForm({ ...editForm, details: { ...editForm.details, archives }});
       } catch (err: any) {
@@ -311,73 +322,98 @@ const App = () => {
   const addTimelineEvent = () => {
       const current = editForm.details?.timeline || [];
       const newItem: TimelineEvent = { year: '', title: '', description: '' };
-      setEditForm({ ...editForm, details: { ...editForm.details, timeline: [...current, newItem] } });
+      setEditForm(prev => ({ ...prev, details: { ...prev.details, timeline: [...current, newItem] } }));
   };
 
   const removeTimelineEvent = (idx: number) => {
       const current = [...(editForm.details?.timeline || [])];
       current.splice(idx, 1);
-      setEditForm({ ...editForm, details: { ...editForm.details, timeline: current } });
+      setEditForm(prev => ({ ...prev, details: { ...prev.details, timeline: current } }));
   };
 
   const updateTimelineEvent = (idx: number, field: keyof TimelineEvent, value: string) => {
       const current = [...(editForm.details?.timeline || [])];
       current[idx] = { ...current[idx], [field]: value };
-      setEditForm({ ...editForm, details: { ...editForm.details, timeline: current } });
+      setEditForm(prev => ({ ...prev, details: { ...prev.details, timeline: current } }));
   };
 
   const addArchiveItem = () => {
       const current = editForm.details?.archives || [];
       const newItem: ArchiveItem = { id: Date.now().toString(), type: 'PDF', title: '', date: '', url: '' };
-      setEditForm({ ...editForm, details: { ...editForm.details, archives: [...current, newItem] } });
+      setEditForm(prev => ({ ...prev, details: { ...prev.details, archives: [...current, newItem] } }));
   };
 
   const removeArchiveItem = (idx: number) => {
       const current = [...(editForm.details?.archives || [])];
       current.splice(idx, 1);
-      setEditForm({ ...editForm, details: { ...editForm.details, archives: current } });
+      setEditForm(prev => ({ ...prev, details: { ...prev.details, archives: current } }));
   };
 
   const updateArchiveItem = (idx: number, field: keyof ArchiveItem, value: string) => {
       const current = [...(editForm.details?.archives || [])];
       current[idx] = { ...current[idx], [field]: value };
-      setEditForm({ ...editForm, details: { ...editForm.details, archives: current } });
+      setEditForm(prev => ({ ...prev, details: { ...prev.details, archives: current } }));
+  };
+
+  const addAssignment = () => {
+    const current = editForm.archiveAssignments || [];
+    const newItem: ArchiveAssignment = { 
+      id: 0, 
+      user_id: editForm.id || '', 
+      category_id: allCategories[0]?.id || 0, 
+      start_date: '', 
+      end_date: '', 
+      title_note: '' 
+    };
+    setEditForm(prev => ({ ...prev, archiveAssignments: [...current, newItem] }));
+  };
+
+  const removeAssignment = (idx: number) => {
+    const current = [...(editForm.archiveAssignments || [])];
+    current.splice(idx, 1);
+    setEditForm(prev => ({ ...prev, archiveAssignments: current }));
+  };
+
+  const updateAssignment = (idx: number, field: keyof ArchiveAssignment, value: any) => {
+    const current = [...(editForm.archiveAssignments || [])];
+    current[idx] = { ...current[idx], [field]: value };
+    setEditForm(prev => ({ ...prev, archiveAssignments: current }));
   };
 
   const addNewsItem = () => {
       const current = editForm.details?.news || [];
       const newItem: NewsItem = { id: Date.now().toString(), title: '', source: '', date: '', summary: '', url: '' };
-      setEditForm({ ...editForm, details: { ...editForm.details, news: [...current, newItem] } });
+      setEditForm(prev => ({ ...prev, details: { ...prev.details, news: [...current, newItem] } }));
   };
 
   const removeNewsItem = (idx: number) => {
       const current = [...(editForm.details?.news || [])];
       current.splice(idx, 1);
-      setEditForm({ ...editForm, details: { ...editForm.details, news: current } });
+      setEditForm(prev => ({ ...prev, details: { ...prev.details, news: current } }));
   };
 
   const updateNewsItem = (idx: number, field: keyof NewsItem, value: string) => {
       const current = [...(editForm.details?.news || [])];
       current[idx] = { ...current[idx], [field]: value };
-      setEditForm({ ...editForm, details: { ...editForm.details, news: current } });
+      setEditForm(prev => ({ ...prev, details: { ...prev.details, news: current } }));
   };
 
   const addPodcastItem = () => {
       const current = editForm.details?.podcasts || [];
       const newItem: PodcastItem = { id: Date.now().toString(), title: '', source: '', date: '', duration: '', url: '' };
-      setEditForm({ ...editForm, details: { ...editForm.details, podcasts: [...current, newItem] } });
+      setEditForm(prev => ({ ...prev, details: { ...prev.details, podcasts: [...current, newItem] } }));
   };
 
   const removePodcastItem = (idx: number) => {
       const current = [...(editForm.details?.podcasts || [])];
       current.splice(idx, 1);
-      setEditForm({ ...editForm, details: { ...editForm.details, podcasts: current } });
+      setEditForm(prev => ({ ...prev, details: { ...prev.details, podcasts: current } }));
   };
 
   const updatePodcastItem = (idx: number, field: keyof PodcastItem, value: string) => {
       const current = [...(editForm.details?.podcasts || [])];
       current[idx] = { ...current[idx], [field]: value };
-      setEditForm({ ...editForm, details: { ...editForm.details, podcasts: current } });
+      setEditForm(prev => ({ ...prev, details: { ...prev.details, podcasts: current } }));
   };
 
   const handleSaveDossier = async () => {
@@ -388,51 +424,67 @@ const App = () => {
       }
 
       const currentFullBio = editForm.details?.fullBio || {};
-      if (editForm.details?.tempFullBio) {
+      if (editForm.details?.tempFullBio !== undefined) {
           currentFullBio['en'] = editForm.details.tempFullBio;
-          // Simple fallback for other languages to ensure data exists
           if (!currentFullBio['so']) currentFullBio['so'] = editForm.details.tempFullBio;
           if (!currentFullBio['ar']) currentFullBio['ar'] = editForm.details.tempFullBio;
       }
 
       const dossierData = {
         full_name: editForm.full_name,
-        role: editForm.role,
-        bio: editForm.bio, 
+        role: editForm.role || '',
+        bio: editForm.bio || '', 
         status: editForm.status || 'Unverified',
-        reputation_score: editForm.reputation_score || 0,
-        image_url: editForm.image_url,
+        reputation_score: Number(editForm.reputation_score) || 0,
+        image_url: editForm.image_url || '',
         category: editForm.category,
         verification_level: editForm.verification_level || 'Standard',
         details: {
           ...editForm.details,
           fullBio: currentFullBio,
-          // Preserve locked state if not explicitly editing it
-          locked: editForm.details?.locked || false 
+          locked: !!editForm.details?.locked 
         }
       };
 
-      if (dossierData.details.tempFullBio) delete dossierData.details.tempFullBio;
+      if ((dossierData.details as any).tempFullBio) delete (dossierData.details as any).tempFullBio;
 
-      let error;
+      let savedDossierId = editForm.id;
+      
       if (editForm.id) {
-        const res = await supabase.from('dossiers').update(dossierData).eq('id', editForm.id);
-        error = res.error;
+        const { error } = await supabase.from('dossiers').update(dossierData).eq('id', editForm.id);
+        if (error) throw new Error(`Dossier Update Failed: ${error.message}`);
       } else {
-        const res = await supabase.from('dossiers').insert([dossierData]);
-        error = res.error;
+        const { data, error } = await supabase.from('dossiers').insert([dossierData]).select();
+        if (error) throw new Error(`Dossier Creation Failed: ${error.message}`);
+        if (!data || data.length === 0) throw new Error('No data returned from dossier creation.');
+        savedDossierId = data[0].id;
       }
 
-      if (error) {
-        alert('Failed to save dossier: ' + error.message);
-      } else {
-        await fetchDossiers();
-        setIsEditing(false);
-        setEditForm({});
+      // Sync Archive Assignments
+      if (savedDossierId) {
+        await supabase.from('archive_assignments').delete().eq('user_id', savedDossierId);
+        
+        const assignmentsToSave = (editForm.archiveAssignments || []).map(a => ({
+          user_id: savedDossierId,
+          category_id: Number(a.category_id),
+          start_date: String(a.start_date || '').trim(),
+          end_date: String(a.end_date || '').trim(),
+          title_note: String(a.title_note || '').trim()
+        }));
+
+        if (assignmentsToSave.length > 0) {
+          const { error: assignError } = await supabase.from('archive_assignments').insert(assignmentsToSave);
+          if (assignError) throw new Error(`Assignment Sync Failed: ${assignError.message}`);
+        }
       }
-    } catch (err) {
-      console.error('Save crash:', err);
-      alert('An unexpected error occurred while saving.');
+
+      await fetchDossiers();
+      setIsEditing(false);
+      setEditForm({});
+      alert('Changes saved successfully!');
+    } catch (err: any) {
+      console.error('Full Save Error Object:', err);
+      alert('Failed to save changes: ' + (err.message || JSON.stringify(err)));
     }
   };
 
@@ -460,6 +512,7 @@ const App = () => {
         image_url: profile.imageUrl,
         category: profile.category,
         verification_level: profile.verificationLevel,
+        archiveAssignments: profile.archiveAssignments || [],
         details: {
           isOrganization: profile.isOrganization,
           status: profile.status,
@@ -479,6 +532,7 @@ const App = () => {
         status: 'Unverified',
         reputation_score: 50,
         verification_level: 'Standard',
+        archiveAssignments: [],
         details: { 
             isOrganization: false, 
             status: 'ACTIVE',
@@ -497,11 +551,7 @@ const App = () => {
   const handleSearchSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
-
-    const hasLocalResults = profiles.some(p => 
-      p.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
+    const hasLocalResults = profiles.some(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
     if (!hasLocalResults) {
       setIsAiLoading(true);
       const summary = await askArchive(searchQuery, language);
@@ -542,33 +592,22 @@ const App = () => {
     }
   };
 
-  // --- COMPONENT: ARCHIVIST WORK DESK ---
   const ArchivistWorkDesk = () => (
       <div className="flex flex-col items-center justify-center min-h-[60vh] bg-slate dark:bg-navy p-8 text-center animate-fade-in">
           <div className="bg-white dark:bg-navy-light p-12 rounded-sm shadow-2xl max-w-2xl w-full border-t-8 border-navy dark:border-gold relative overflow-hidden">
               <div className="absolute top-4 right-4 text-navy/10 dark:text-white/5">
                   <Shield className="w-32 h-32" />
               </div>
-              
               <div className="relative z-10">
                   <div className="inline-block p-4 bg-navy dark:bg-gold rounded-full mb-6 shadow-lg">
                       <Lock className="w-8 h-8 text-white dark:text-navy" />
                   </div>
-                  
-                  <h1 className="text-3xl md:text-4xl font-serif font-bold text-navy dark:text-white mb-2 tracking-tight">
-                      Somalipin
-                  </h1>
-                  <h2 className="text-xl md:text-2xl font-sans font-medium text-gold dark:text-gray-300 uppercase tracking-widest mb-8">
-                      Archivist Work Desk Edition
-                  </h2>
-                  
+                  <h1 className="text-3xl md:text-4xl font-serif font-bold text-navy dark:text-white mb-2 tracking-tight">Somalipin</h1>
+                  <h2 className="text-xl md:text-2xl font-sans font-medium text-gold dark:text-gray-300 uppercase tracking-widest mb-8">Archivist Work Desk Edition</h2>
                   <div className="h-px w-24 bg-gray-300 dark:bg-gray-600 mx-auto mb-8"></div>
-                  
                   <p className="text-gray-600 dark:text-gray-400 text-lg leading-relaxed mb-8">
-                      This dossier is currently secured for archival processing, verification updates, or sensitivity classification. 
-                      Access is temporarily restricted to authorized archivists only.
+                      This dossier is currently secured for archival processing, verification updates, or sensitivity classification. Access is temporarily restricted to authorized archivists only.
                   </p>
-                  
                   <div className="inline-flex items-center space-x-2 text-xs font-bold text-gray-400 uppercase tracking-widest border border-gray-200 dark:border-gray-600 px-4 py-2 rounded-sm">
                       <Activity className="w-3 h-3" />
                       <span>Status: Locked / Maintenance</span>
@@ -578,7 +617,6 @@ const App = () => {
       </div>
   );
 
-  // --- ADMIN VIEW RENDER ---
   if (view === 'admin') {
     return (
       <div className="min-h-screen bg-slate dark:bg-navy-light dark:text-gray-100 p-8 font-sans">
@@ -593,63 +631,31 @@ const App = () => {
           {!isAdminLoggedIn ? (
             <div className="max-w-md mx-auto bg-white dark:bg-navy p-8 rounded-sm shadow-md">
               <h2 className="text-xl font-bold mb-4 dark:text-white">Admin Login</h2>
-              <input 
-                type="password" 
-                placeholder=""
-                className="w-full border p-2 mb-4 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white"
-                value={adminPassword}
-                onChange={(e) => setAdminPassword(e.target.value)}
-              />
-              <button 
-                onClick={handleAdminLogin}
-                className="w-full bg-navy text-white py-2 rounded-sm hover:bg-navy-light dark:bg-gold dark:text-navy"
-              >
-                Login
-              </button>
+              <input type="password" placeholder="" className="w-full border p-2 mb-4 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} />
+              <button onClick={handleAdminLogin} className="w-full bg-navy text-white py-2 rounded-sm hover:bg-navy-light dark:bg-gold dark:text-navy">Login</button>
             </div>
           ) : (
             <>
               <div className="bg-white dark:bg-navy rounded-sm shadow-sm p-6 mb-8">
-                {/* Admin Toolbar */}
                 <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                   <div className="flex items-center gap-4">
                     <h2 className="text-xl font-bold text-gray-700 dark:text-gray-200">Dossier Management</h2>
-                    <span className="px-3 py-1 bg-slate dark:bg-navy-light border border-gray-200 dark:border-gray-600 rounded-full text-xs font-bold text-navy dark:text-gold">
-                      Total: {profiles.length}
-                    </span>
+                    <span className="px-3 py-1 bg-slate dark:bg-navy-light border border-gray-200 dark:border-gray-600 rounded-full text-xs font-bold text-navy dark:text-gold">Total: {profiles.length}</span>
                     {isLocking && <span className="text-xs text-gold animate-pulse flex items-center"><Loader2 className="w-3 h-3 mr-1 animate-spin"/> Processing...</span>}
                   </div>
                   <div className="flex space-x-4 items-center">
-                    {/* Global Lock Controls */}
                     <div className="flex items-center bg-slate dark:bg-navy-light p-1 rounded-sm border border-gray-200 dark:border-gray-600 mr-4">
-                         <button 
-                            onClick={() => handleGlobalLock(true)}
-                            disabled={isLocking}
-                            className={`flex items-center px-3 py-1 text-xs font-bold rounded-sm transition-all ${isLocking ? 'opacity-50 cursor-not-allowed' : 'text-gray-600 dark:text-gray-300 hover:text-red-600 hover:bg-white dark:hover:bg-navy'}`}
-                            title="Lock All Profiles"
-                         >
+                         <button onClick={() => handleGlobalLock(true)} disabled={isLocking} className={`flex items-center px-3 py-1 text-xs font-bold rounded-sm transition-all ${isLocking ? 'opacity-50 cursor-not-allowed' : 'text-gray-600 dark:text-gray-300 hover:text-red-600 hover:bg-white dark:hover:bg-navy'}`} title="Lock All Profiles">
                              <Lock className="w-3 h-3 mr-1" /> Lock All
                          </button>
                          <div className="w-px h-4 bg-gray-300 mx-1"></div>
-                         <button 
-                            onClick={() => handleGlobalLock(false)}
-                            disabled={isLocking}
-                            className={`flex items-center px-3 py-1 text-xs font-bold rounded-sm transition-all ${isLocking ? 'opacity-50 cursor-not-allowed' : 'text-gray-600 dark:text-gray-300 hover:text-green-600 hover:bg-white dark:hover:bg-navy'}`}
-                            title="Unlock All Profiles"
-                         >
+                         <button onClick={() => handleGlobalLock(false)} disabled={isLocking} className={`flex items-center px-3 py-1 text-xs font-bold rounded-sm transition-all ${isLocking ? 'opacity-50 cursor-not-allowed' : 'text-gray-600 dark:text-gray-300 hover:text-green-600 hover:bg-white dark:hover:bg-navy'}`} title="Unlock All Profiles">
                              <Unlock className="w-3 h-3 mr-1" /> Unlock All
                          </button>
                     </div>
-
-                    <button 
-                      onClick={() => openEditModal()}
-                      className="bg-green-600 text-white px-4 py-2 rounded-sm flex items-center hover:bg-green-700 shadow-sm"
-                    >
-                      <Plus className="w-4 h-4 mr-2" /> Add New
-                    </button>
+                    <button onClick={() => openEditModal()} className="bg-green-600 text-white px-4 py-2 rounded-sm flex items-center hover:bg-green-700 shadow-sm"><Plus className="w-4 h-4 mr-2" /> Add New</button>
                   </div>
                 </div>
-
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
@@ -664,41 +670,22 @@ const App = () => {
                     </thead>
                     <tbody>
                       {profiles.length === 0 ? (
-                        <tr>
-                            <td colSpan={6} className="p-8 text-center text-gray-500 italic">
-                                No dossiers found. Click "Add New" to create the first record.
-                            </td>
-                        </tr>
+                        <tr><td colSpan={6} className="p-8 text-center text-gray-500 italic">No dossiers found. Click "Add New" to create the first record.</td></tr>
                       ) : (
                         profiles.map(p => (
                             <tr key={p.id} className={`border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-navy-light ${p.locked ? 'bg-gray-50 dark:bg-navy-light/50' : ''}`}>
                                 <td className="p-3">
-                                    <button 
-                                        onClick={() => handleLockToggle(p)}
-                                        className={`p-1.5 rounded-full transition-colors ${p.locked ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-400 hover:text-green-600'}`}
-                                        title={p.locked ? "Unlock Dossier" : "Lock Dossier"}
-                                    >
+                                    <button onClick={() => handleLockToggle(p)} className={`p-1.5 rounded-full transition-colors ${p.locked ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-400 hover:text-green-600'}`} title={p.locked ? "Unlock Dossier" : "Lock Dossier"}>
                                         {p.locked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
                                     </button>
                                 </td>
-                                <td className="p-3 font-medium text-navy dark:text-white">
-                                    {p.name}
-                                    {p.locked && <span className="ml-2 text-[10px] text-red-500 font-bold uppercase tracking-wider">(Locked)</span>}
-                                </td>
+                                <td className="p-3 font-medium text-navy dark:text-white">{p.name} {p.locked && <span className="ml-2 text-[10px] text-red-500 font-bold uppercase tracking-wider">(Locked)</span>}</td>
                                 <td className="p-3 text-sm text-gray-500 dark:text-gray-400">{p.category}</td>
-                                <td className="p-3">
-                                    <span className={`px-2 py-1 text-xs rounded-full ${p.verified ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'}`}>
-                                    {p.verified ? 'Verified' : 'Unverified'}
-                                    </span>
-                                </td>
+                                <td className="p-3"><span className={`px-2 py-1 text-xs rounded-full ${p.verified ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'}`}>{p.verified ? 'Verified' : 'Unverified'}</span></td>
                                 <td className="p-3 text-sm dark:text-gray-300">{p.verificationLevel}</td>
                                 <td className="p-3 text-right space-x-2">
-                                    <button onClick={() => openEditModal(p)} className="text-blue-600 hover:text-blue-800 dark:text-blue-400">
-                                    <Edit2 className="w-4 h-4" />
-                                    </button>
-                                    <button onClick={() => handleDeleteDossier(p.id)} className="text-red-600 hover:text-red-800 dark:text-red-400">
-                                    <Trash2 className="w-4 h-4" />
-                                    </button>
+                                    <button onClick={() => openEditModal(p)} className="text-blue-600 hover:text-blue-800 dark:text-blue-400"><Edit2 className="w-4 h-4" /></button>
+                                    <button onClick={() => handleDeleteDossier(p.id)} className="text-red-600 hover:text-red-800 dark:text-red-400"><Trash2 className="w-4 h-4" /></button>
                                 </td>
                             </tr>
                         ))
@@ -715,21 +702,18 @@ const App = () => {
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
               <div className="bg-white dark:bg-navy w-full max-w-4xl max-h-[95vh] overflow-y-auto rounded-sm flex flex-col shadow-2xl">
                 <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center sticky top-0 bg-white dark:bg-navy z-10">
-                  <h2 className="text-2xl font-serif font-bold text-navy dark:text-white">
-                    {editForm.id ? 'Edit Dossier' : 'New Dossier'}
-                  </h2>
+                  <h2 className="text-2xl font-serif font-bold text-navy dark:text-white">{editForm.id ? 'Edit Dossier' : 'New Dossier'}</h2>
                   <button onClick={() => setIsEditing(false)}><X className="w-6 h-6 text-gray-400" /></button>
                 </div>
 
-                {/* Tabs */}
                 <div className="flex border-b border-gray-200 dark:border-gray-700 px-6 bg-gray-50 dark:bg-navy-light overflow-x-auto">
-                    {['basic', 'timeline', 'archive', 'news', 'podcast'].map((tab) => (
+                    {['basic', 'timeline', 'positions', 'archive', 'news', 'podcast'].map((tab) => (
                          <button 
                             key={tab}
                             className={`py-3 px-4 text-sm font-bold border-b-2 transition-colors whitespace-nowrap capitalize ${activeAdminTab === tab ? 'border-navy text-navy dark:border-gold dark:text-gold' : 'border-transparent text-gray-500 hover:text-navy dark:text-gray-400 dark:hover:text-white'}`}
                             onClick={() => setActiveAdminTab(tab as any)}
                         >
-                            {tab === 'podcast' ? 'Podcasts' : tab === 'archive' ? 'Archives' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                            {tab === 'positions' ? 'Archive Positions' : tab === 'podcast' ? 'Podcasts' : tab === 'archive' ? 'Archives' : tab.charAt(0).toUpperCase() + tab.slice(1)}
                         </button>
                     ))}
                 </div>
@@ -738,216 +722,96 @@ const App = () => {
                     {activeAdminTab === 'basic' && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-4">
-                                <div>
-                                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
-                                <input 
-                                    type="text" 
-                                    className="w-full border p-2 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white"
-                                    value={editForm.full_name || ''}
-                                    onChange={(e) => setEditForm({...editForm, full_name: e.target.value})}
-                                />
-                                </div>
-                                <div>
-                                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Role/Title</label>
-                                <input 
-                                    type="text" 
-                                    className="w-full border p-2 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white"
-                                    value={editForm.role || ''}
-                                    onChange={(e) => setEditForm({...editForm, role: e.target.value})}
-                                />
-                                </div>
-                                <div>
-                                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Location</label>
-                                <input 
-                                    type="text" 
-                                    className="w-full border p-2 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white"
-                                    value={editForm.details?.location || ''}
-                                    onChange={(e) => setEditForm({
-                                        ...editForm, 
-                                        details: { ...editForm.details, location: e.target.value }
-                                    })}
-                                />
-                                </div>
-                                <div>
-                                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Category</label>
-                                <input 
-                                    type="text" 
-                                    placeholder="e.g. Politics, Business, Sports"
-                                    className="w-full border p-2 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white"
-                                    value={editForm.category || ''}
-                                    onChange={(e) => setEditForm({...editForm, category: e.target.value})}
-                                />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Lifecycle Status</label>
-                                    <select 
-                                        className="w-full border p-2 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white"
-                                        value={editForm.details?.status || 'ACTIVE'}
-                                        onChange={(e) => setEditForm({
-                                            ...editForm, 
-                                            details: { ...editForm.details, status: e.target.value }
-                                        })}
-                                    >
-                                        <option value="ACTIVE">Active</option>
-                                        <option value="DECEASED">Deceased</option>
-                                        <option value="RETIRED">Retired</option>
-                                        <option value="CLOSED">Closed (Business)</option>
-                                    </select>
-                                </div>
+                                <div><label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Full Name</label><input type="text" className="w-full border p-2 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white" value={editForm.full_name || ''} onChange={(e) => setEditForm({...editForm, full_name: e.target.value})} /></div>
+                                <div><label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Role/Title</label><input type="text" className="w-full border p-2 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white" value={editForm.role || ''} onChange={(e) => setEditForm({...editForm, role: e.target.value})} /></div>
+                                <div><label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Location</label><input type="text" className="w-full border p-2 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white" value={editForm.details?.location || ''} onChange={(e) => setEditForm({...editForm, details: { ...editForm.details, location: e.target.value }})} /></div>
+                                <div><label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Category</label><input type="text" placeholder="e.g. Politics, Business, Sports" className="w-full border p-2 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white" value={editForm.category || ''} onChange={(e) => setEditForm({...editForm, category: e.target.value})} /></div>
+                                <div><label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Lifecycle Status</label><select className="w-full border p-2 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white" value={editForm.details?.status || 'ACTIVE'} onChange={(e) => setEditForm({...editForm, details: { ...editForm.details, status: e.target.value }})}><option value="ACTIVE">Active</option><option value="DECEASED">Deceased</option><option value="RETIRED">Retired</option><option value="CLOSED">Closed (Business)</option></select></div>
                                 <div className="grid grid-cols-2 gap-2">
-                                    <div>
-                                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Date Start/Born</label>
-                                        <input 
-                                            type="text" 
-                                            placeholder="e.g. 1960"
-                                            className="w-full border p-2 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white"
-                                            value={editForm.details?.dateStart || ''}
-                                            onChange={(e) => setEditForm({
-                                                ...editForm, 
-                                                details: { ...editForm.details, dateStart: e.target.value }
-                                            })}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Date End/Died</label>
-                                        <input 
-                                            type="text" 
-                                            placeholder="e.g. 2020"
-                                            className="w-full border p-2 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white"
-                                            value={editForm.details?.dateEnd || ''}
-                                            onChange={(e) => setEditForm({
-                                                ...editForm, 
-                                                details: { ...editForm.details, dateEnd: e.target.value }
-                                            })}
-                                        />
-                                    </div>
+                                    <div><label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Date Start/Born</label><input type="text" placeholder="e.g. 1960" className="w-full border p-2 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white" value={editForm.details?.dateStart || ''} onChange={(e) => setEditForm({...editForm, details: { ...editForm.details, dateStart: e.target.value }})} /></div>
+                                    <div><label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Date End/Died</label><input type="text" placeholder="e.g. 2020" className="w-full border p-2 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white" value={editForm.details?.dateEnd || ''} onChange={(e) => setEditForm({...editForm, details: { ...editForm.details, dateEnd: e.target.value }})} /></div>
                                 </div>
                             </div>
-
                             <div className="space-y-4">
-                                <div>
-                                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Verification Status</label>
-                                <select 
-                                    className="w-full border p-2 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white"
-                                    value={editForm.status || 'Unverified'}
-                                    onChange={(e) => setEditForm({...editForm, status: e.target.value as 'Verified' | 'Unverified'})}
-                                >
-                                    <option value="Unverified">Unverified</option>
-                                    <option value="Verified">Verified</option>
-                                </select>
-                                </div>
-                                <div>
-                                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Verification Level</label>
-                                <select 
-                                    className="w-full border p-2 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white"
-                                    value={editForm.verification_level || 'Standard'}
-                                    onChange={(e) => setEditForm({...editForm, verification_level: e.target.value})}
-                                >
-                                    <option value="Standard">Standard</option>
-                                    <option value="Golden">Golden</option>
-                                    <option value="Hero">Hero</option>
-                                    <option value="Nobel">Nobel</option>
-                                </select>
-                                </div>
-                                <div>
-                                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Reputation Score (0-100)</label>
-                                <input 
-                                    type="number" 
-                                    className="w-full border p-2 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white"
-                                    value={editForm.reputation_score || 0}
-                                    onChange={(e) => setEditForm({...editForm, reputation_score: parseInt(e.target.value)})}
-                                />
-                                </div>
-                                <div>
-                                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Profile Image</label>
-                                <div className="flex items-center space-x-2">
-                                    {editForm.image_url && (
-                                    <img src={editForm.image_url} alt="Preview" className="w-10 h-10 object-cover rounded" />
-                                    )}
-                                    <input 
-                                    type="file" 
-                                    accept="image/*"
-                                    onChange={handleImageUpload}
-                                    className="text-sm dark:text-gray-300"
-                                    />
-                                </div>
-                                {uploadingImage && <span className="text-xs text-gold">Uploading...</span>}
-                                </div>
-                                <div>
-                                    <label className="flex items-center space-x-2 mt-4 cursor-pointer">
-                                        <input 
-                                            type="checkbox"
-                                            checked={editForm.details?.isOrganization || false}
-                                            onChange={(e) => setEditForm({
-                                                ...editForm, 
-                                                details: { ...editForm.details, isOrganization: e.target.checked }
-                                            })}
-                                            className="h-4 w-4"
-                                        />
-                                        <span className="text-sm font-bold text-gray-700 dark:text-gray-300">Is Organization/Company?</span>
-                                    </label>
-                                </div>
-                                
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Short Bio</label>
-                                    <textarea 
-                                        className="w-full border p-2 rounded-sm h-20 dark:bg-navy-light dark:border-gray-600 dark:text-white"
-                                        value={editForm.bio || ''}
-                                        onChange={(e) => setEditForm({...editForm, bio: e.target.value})}
-                                    />
-                                </div>
+                                <div><label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Verification Status</label><select className="w-full border p-2 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white" value={editForm.status || 'Unverified'} onChange={(e) => setEditForm({...editForm, status: e.target.value as 'Verified' | 'Unverified'})}><option value="Unverified">Unverified</option><option value="Verified">Verified</option></select></div>
+                                <div><label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Verification Level</label><select className="w-full border p-2 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white" value={editForm.verification_level || 'Standard'} onChange={(e) => setEditForm({...editForm, verification_level: e.target.value})}><option value="Standard">Standard</option><option value="Golden">Golden</option><option value="Hero">Hero</option><option value="Nobel">Nobel</option></select></div>
+                                <div><label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Reputation Score (0-100)</label><input type="number" className="w-full border p-2 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white" value={editForm.reputation_score || 0} onChange={(e) => setEditForm({...editForm, reputation_score: parseInt(e.target.value)})} /></div>
+                                <div><label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Profile Image</label><div className="flex items-center space-x-2">{editForm.image_url && (<img src={editForm.image_url} alt="Preview" className="w-10 h-10 object-cover rounded" />)}<input type="file" accept="image/*" onChange={handleImageUpload} className="text-sm dark:text-gray-300" /></div>{uploadingImage && <span className="text-xs text-gold">Uploading...</span>}</div>
+                                <div><label className="flex items-center space-x-2 mt-4 cursor-pointer"><input type="checkbox" checked={editForm.details?.isOrganization || false} onChange={(e) => setEditForm({...editForm, details: { ...editForm.details, isOrganization: e.target.checked }})} className="h-4 w-4" /><span className="text-sm font-bold text-gray-700 dark:text-gray-300">Is Organization/Company?</span></label></div>
+                                <div><label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Short Bio</label><textarea className="w-full border p-2 rounded-sm h-20 dark:bg-navy-light dark:border-gray-600 dark:text-white" value={editForm.bio || ''} onChange={(e) => setEditForm({...editForm, bio: e.target.value})} /></div>
                             </div>
-                            
                             <div className="md:col-span-2">
                                 <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Full Biography</label>
-                                <textarea 
-                                    className="w-full border p-2 rounded-sm h-40 font-serif dark:bg-navy-light dark:border-gray-600 dark:text-white"
-                                    value={editForm.details?.tempFullBio || ''}
-                                    onChange={(e) => setEditForm({
-                                        ...editForm,
-                                        details: { ...editForm.details, tempFullBio: e.target.value }
-                                    })}
-                                />
+                                <textarea className="w-full border p-2 rounded-sm h-40 font-serif dark:bg-navy-light dark:border-gray-600 dark:text-white" value={(editForm.details as any)?.tempFullBio || ''} onChange={(e) => setEditForm({ ...editForm, details: { ...editForm.details, tempFullBio: e.target.value } as any })} />
                             </div>
                         </div>
                     )}
 
                     {activeAdminTab === 'timeline' && (
                         <div>
+                             <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg dark:text-white">Timeline Events</h3><button onClick={addTimelineEvent} className="text-sm bg-navy text-white px-3 py-1 rounded-sm flex items-center shadow-sm hover:bg-navy-light"><Plus className="w-3 h-3 mr-1" /> Add Event</button></div>
+                            <div className="space-y-4">
+                                {editForm.details?.timeline?.map((event: TimelineEvent, idx: number) => (
+                                    <div key={idx} className="flex gap-2 items-start border p-3 rounded-sm bg-gray-50 dark:bg-navy-light dark:border-gray-600"><input placeholder="Year" className="w-20 border p-1 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white" value={event.year} onChange={e => updateTimelineEvent(idx, 'year', e.target.value)} /><input placeholder="Title" className="w-1/3 border p-1 rounded-sm font-bold dark:bg-navy dark:border-gray-600 dark:text-white" value={event.title} onChange={e => updateTimelineEvent(idx, 'title', e.target.value)} /><textarea placeholder="Description" className="flex-1 border p-1 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white" value={event.description} onChange={e => updateTimelineEvent(idx, 'description', e.target.value)} /><button onClick={() => removeTimelineEvent(idx)} className="text-red-500 hover:text-red-700 p-1"><Trash2 className="w-4 h-4" /></button></div>
+                                ))}
+                                {(!editForm.details?.timeline || editForm.details.timeline.length === 0) && (<p className="text-gray-400 italic text-center py-4 bg-gray-50 dark:bg-navy-light rounded-sm">No timeline events added.</p>)}
+                            </div>
+                        </div>
+                    )}
+
+                    {activeAdminTab === 'positions' && (
+                        <div>
                              <div className="flex justify-between items-center mb-4">
-                                <h3 className="font-bold text-lg dark:text-white">Timeline Events</h3>
-                                <button onClick={addTimelineEvent} className="text-sm bg-navy text-white px-3 py-1 rounded-sm flex items-center shadow-sm hover:bg-navy-light">
-                                    <Plus className="w-3 h-3 mr-1" /> Add Event
+                                <h3 className="font-bold text-lg dark:text-white">Official Archive Positions</h3>
+                                <button onClick={addAssignment} className="text-sm bg-navy text-white px-3 py-1 rounded-sm flex items-center shadow-sm hover:bg-navy-light">
+                                    <Plus className="w-3 h-3 mr-1" /> Add Position
                                 </button>
                             </div>
                             <div className="space-y-4">
-                                {editForm.details?.timeline?.map((event: TimelineEvent, idx: number) => (
-                                    <div key={idx} className="flex gap-2 items-start border p-3 rounded-sm bg-gray-50 dark:bg-navy-light dark:border-gray-600">
-                                        <input 
-                                            placeholder="Year" 
-                                            className="w-20 border p-1 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white"
-                                            value={event.year} 
-                                            onChange={e => updateTimelineEvent(idx, 'year', e.target.value)}
-                                        />
-                                        <input 
-                                            placeholder="Title" 
-                                            className="w-1/3 border p-1 rounded-sm font-bold dark:bg-navy dark:border-gray-600 dark:text-white"
-                                            value={event.title} 
-                                            onChange={e => updateTimelineEvent(idx, 'title', e.target.value)}
-                                        />
-                                        <textarea 
-                                            placeholder="Description" 
-                                            className="flex-1 border p-1 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white"
-                                            value={event.description} 
-                                            onChange={e => updateTimelineEvent(idx, 'description', e.target.value)}
-                                        />
-                                        <button onClick={() => removeTimelineEvent(idx)} className="text-red-500 hover:text-red-700 p-1">
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
+                                {editForm.archiveAssignments?.map((assign: ArchiveAssignment, idx: number) => (
+                                    <div key={idx} className="border p-4 rounded-sm bg-gray-50 dark:bg-navy-light dark:border-gray-600 space-y-3">
+                                        <div className="flex gap-3">
+                                            <div className="flex-1">
+                                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Archive Category</label>
+                                                <select 
+                                                    className="w-full border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-sm"
+                                                    value={assign.category_id}
+                                                    onChange={e => updateAssignment(idx, 'category_id', parseInt(e.target.value))}
+                                                >
+                                                    {allCategories.map(cat => (
+                                                        <option key={cat.id} value={cat.id}>{cat.category_name} ({cat.section_type})</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div className="flex-1">
+                                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Title/Note (e.g. Madaxweyne)</label>
+                                                <input 
+                                                    className="w-full border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-sm"
+                                                    value={assign.title_note}
+                                                    onChange={e => updateAssignment(idx, 'title_note', e.target.value)}
+                                                />
+                                            </div>
+                                            <button onClick={() => removeAssignment(idx)} className="self-end p-2 text-red-500 hover:text-red-700">
+                                                <Trash2 className="w-5 h-5" />
+                                            </button>
+                                        </div>
+                                        <div className="flex gap-3">
+                                            <div className="flex-1">
+                                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Start Date</label>
+                                                <input placeholder="e.g. 1960" className="w-full border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-sm" value={assign.start_date} onChange={e => updateAssignment(idx, 'start_date', e.target.value)} />
+                                            </div>
+                                            <div className="flex-1">
+                                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">End Date</label>
+                                                <input placeholder="e.g. 1967" className="w-full border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-sm" value={assign.end_date} onChange={e => updateAssignment(idx, 'end_date', e.target.value)} />
+                                            </div>
+                                        </div>
                                     </div>
                                 ))}
-                                {(!editForm.details?.timeline || editForm.details.timeline.length === 0) && (
-                                    <p className="text-gray-400 italic text-center py-4 bg-gray-50 dark:bg-navy-light rounded-sm">No timeline events added.</p>
+                                {(!editForm.archiveAssignments || editForm.archiveAssignments.length === 0) && (
+                                    <div className="text-center py-10 bg-gray-50 dark:bg-navy-light rounded-sm border border-dashed border-gray-300 dark:border-gray-600">
+                                        <Briefcase className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                                        <p className="text-gray-400 italic">No historical positions linked yet.</p>
+                                    </div>
                                 )}
                             </div>
                         </div>
@@ -955,206 +819,56 @@ const App = () => {
 
                     {activeAdminTab === 'archive' && (
                         <div>
-                             <div className="flex justify-between items-center mb-4">
-                                <h3 className="font-bold text-lg dark:text-white">Archives & Documents</h3>
-                                <button onClick={addArchiveItem} className="text-sm bg-navy text-white px-3 py-1 rounded-sm flex items-center shadow-sm hover:bg-navy-light">
-                                    <Plus className="w-3 h-3 mr-1" /> Add Document
-                                </button>
-                            </div>
+                             <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg dark:text-white">Archives & Documents</h3><button onClick={addArchiveItem} className="text-sm bg-navy text-white px-3 py-1 rounded-sm flex items-center shadow-sm hover:bg-navy-light"><Plus className="w-3 h-3 mr-1" /> Add Document</button></div>
                             <div className="space-y-4">
                                 {editForm.details?.archives?.map((item: ArchiveItem, idx: number) => (
                                     <div key={idx} className="border p-4 rounded-sm bg-gray-50 dark:bg-navy-light dark:border-gray-600 flex flex-col gap-3">
                                         <div className="flex gap-2">
-                                            <select 
-                                                className="border p-1 rounded-sm w-24 dark:bg-navy dark:border-gray-600 dark:text-white"
-                                                value={item.type}
-                                                onChange={e => updateArchiveItem(idx, 'type', e.target.value as any)}
-                                            >
-                                                <option value="PDF">PDF</option>
-                                                <option value="IMAGE">IMAGE</option>
-                                                <option value="AWARD">AWARD</option>
-                                            </select>
-                                            <input 
-                                                placeholder="Document Title" 
-                                                className="flex-1 border p-1 rounded-sm font-bold dark:bg-navy dark:border-gray-600 dark:text-white"
-                                                value={item.title} 
-                                                onChange={e => updateArchiveItem(idx, 'title', e.target.value)}
-                                            />
-                                            <input 
-                                                placeholder="Date (e.g. 1990)" 
-                                                className="w-24 border p-1 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white"
-                                                value={item.date} 
-                                                onChange={e => updateArchiveItem(idx, 'date', e.target.value)}
-                                            />
-                                             <button onClick={() => removeArchiveItem(idx)} className="text-red-500 hover:text-red-700">
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
+                                            <select className="border p-1 rounded-sm w-24 dark:bg-navy dark:border-gray-600 dark:text-white" value={item.type} onChange={e => updateArchiveItem(idx, 'type', e.target.value as any)}><option value="PDF">PDF</option><option value="IMAGE">IMAGE</option><option value="AWARD">AWARD</option></select>
+                                            <input placeholder="Document Title" className="flex-1 border p-1 rounded-sm font-bold dark:bg-navy dark:border-gray-600 dark:text-white" value={item.title} onChange={e => updateArchiveItem(idx, 'title', e.target.value)} />
+                                            <input placeholder="Date (e.g. 1990)" className="w-24 border p-1 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white" value={item.date} onChange={e => updateArchiveItem(idx, 'date', e.target.value)} />
+                                             <button onClick={() => removeArchiveItem(idx)} className="text-red-500 hover:text-red-700"><Trash2 className="w-4 h-4" /></button>
                                         </div>
                                         <div className="flex items-center gap-4 text-sm">
-                                            {item.url ? (
-                                                <a href={item.url} target="_blank" className="text-blue-600 dark:text-blue-400 flex items-center hover:underline">
-                                                    <LinkIcon className="w-3 h-3 mr-1" /> View Uploaded File
-                                                </a>
-                                            ) : (
-                                                <span className="text-orange-500 flex items-center"><AlertCircle className="w-3 h-3 mr-1"/> No file uploaded</span>
-                                            )}
-                                            
-                                            <label className="cursor-pointer bg-white dark:bg-navy border border-gray-300 dark:border-gray-600 px-2 py-1 rounded-sm hover:bg-gray-50 dark:hover:bg-navy-light flex items-center dark:text-white">
-                                                <Upload className="w-3 h-3 mr-1" /> 
-                                                {uploadingDoc === item.id ? 'Uploading...' : 'Upload File'}
-                                                <input 
-                                                    type="file" 
-                                                    className="hidden" 
-                                                    onChange={(e) => handleArchiveUpload(e, idx)} 
-                                                />
-                                            </label>
-                                            <input 
-                                                placeholder="Or paste URL manually" 
-                                                className="flex-1 border p-1 rounded-sm text-gray-500 text-xs dark:bg-navy dark:border-gray-600 dark:text-gray-300"
-                                                value={item.url || ''} 
-                                                onChange={e => updateArchiveItem(idx, 'url', e.target.value)}
-                                            />
+                                            {item.url ? (<a href={item.url} target="_blank" className="text-blue-600 dark:text-blue-400 flex items-center hover:underline"><Link className="w-3 h-3 mr-1" /> View Uploaded File</a>) : (<span className="text-orange-500 flex items-center"><AlertCircle className="w-3 h-3 mr-1"/> No file uploaded</span>)}
+                                            <label className="cursor-pointer bg-white dark:bg-navy border border-gray-300 dark:border-gray-600 px-2 py-1 rounded-sm hover:bg-gray-50 dark:hover:bg-navy-light flex items-center dark:text-white"><Upload className="w-3 h-3 mr-1" /> {uploadingDoc === item.id ? 'Uploading...' : 'Upload File'}<input type="file" className="hidden" onChange={(e) => handleArchiveUpload(e, idx)} /></label>
+                                            <input placeholder="Or paste URL manually" className="flex-1 border p-1 rounded-sm text-gray-500 text-xs dark:bg-navy dark:border-gray-600 dark:text-gray-300" value={item.url || ''} onChange={e => updateArchiveItem(idx, 'url', e.target.value)} />
                                         </div>
                                     </div>
                                 ))}
-                                 {(!editForm.details?.archives || editForm.details.archives.length === 0) && (
-                                    <p className="text-gray-400 italic text-center py-4 bg-gray-50 dark:bg-navy-light rounded-sm">No documents added.</p>
-                                )}
+                                 {(!editForm.details?.archives || editForm.details.archives.length === 0) && (<p className="text-gray-400 italic text-center py-4 bg-gray-50 dark:bg-navy-light rounded-sm">No documents added.</p>)}
                             </div>
                         </div>
                     )}
 
                     {activeAdminTab === 'news' && (
                         <div>
-                             <div className="flex justify-between items-center mb-4">
-                                <h3 className="font-bold text-lg dark:text-white">News & Reports</h3>
-                                <button onClick={addNewsItem} className="text-sm bg-navy text-white px-3 py-1 rounded-sm flex items-center shadow-sm hover:bg-navy-light">
-                                    <Plus className="w-3 h-3 mr-1" /> Add Article
-                                </button>
-                            </div>
+                             <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg dark:text-white">News & Reports</h3><button onClick={addNewsItem} className="text-sm bg-navy text-white px-3 py-1 rounded-sm flex items-center shadow-sm hover:bg-navy-light"><Plus className="w-3 h-3 mr-1" /> Add Article</button></div>
                             <div className="space-y-4">
                                 {editForm.details?.news?.map((item: NewsItem, idx: number) => (
-                                    <div key={idx} className="flex flex-col gap-2 border p-3 rounded-sm bg-gray-50 dark:bg-navy-light dark:border-gray-600">
-                                        <div className="flex gap-2">
-                                            <input 
-                                                placeholder="Article Title" 
-                                                className="flex-1 border p-1 rounded-sm font-bold dark:bg-navy dark:border-gray-600 dark:text-white"
-                                                value={item.title} 
-                                                onChange={e => updateNewsItem(idx, 'title', e.target.value)}
-                                            />
-                                            <button onClick={() => removeNewsItem(idx)} className="text-red-500 hover:text-red-700">
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <input 
-                                                placeholder="Source (e.g. BBC)" 
-                                                className="w-1/3 border p-1 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white"
-                                                value={item.source} 
-                                                onChange={e => updateNewsItem(idx, 'source', e.target.value)}
-                                            />
-                                            <input 
-                                                placeholder="Date" 
-                                                className="w-1/3 border p-1 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white"
-                                                value={item.date} 
-                                                onChange={e => updateNewsItem(idx, 'date', e.target.value)}
-                                            />
-                                            <input 
-                                                placeholder="Link URL" 
-                                                className="w-1/3 border p-1 rounded-sm text-blue-600 dark:text-blue-400 dark:bg-navy dark:border-gray-600"
-                                                value={item.url || ''} 
-                                                onChange={e => updateNewsItem(idx, 'url', e.target.value)}
-                                            />
-                                        </div>
-                                        <textarea 
-                                            placeholder="Summary" 
-                                            className="w-full border p-1 rounded-sm h-16 dark:bg-navy dark:border-gray-600 dark:text-white"
-                                            value={item.summary} 
-                                            onChange={e => updateNewsItem(idx, 'summary', e.target.value)}
-                                        />
-                                    </div>
+                                    <div key={idx} className="flex flex-col gap-2 border p-3 rounded-sm bg-gray-50 dark:bg-navy-light dark:border-gray-600"><div className="flex gap-2"><input placeholder="Article Title" className="flex-1 border p-1 rounded-sm font-bold dark:bg-navy dark:border-gray-600 dark:text-white" value={item.title} onChange={e => updateNewsItem(idx, 'title', e.target.value)} /><button onClick={() => removeNewsItem(idx)} className="text-red-500 hover:text-red-700"><Trash2 className="w-4 h-4" /></button></div><div className="flex gap-2"><input placeholder="Source (e.g. BBC)" className="w-1/3 border p-1 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white" value={item.source} onChange={e => updateNewsItem(idx, 'source', e.target.value)} /><input placeholder="Date" className="w-1/3 border p-1 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white" value={item.date} onChange={e => updateNewsItem(idx, 'date', e.target.value)} /><input placeholder="Link URL" className="w-1/3 border p-1 rounded-sm text-blue-600 dark:text-blue-400 dark:bg-navy dark:border-gray-600" value={item.url || ''} onChange={e => updateNewsItem(idx, 'url', e.target.value)} /></div><textarea placeholder="Summary" className="w-full border p-1 rounded-sm h-16 dark:bg-navy dark:border-gray-600 dark:text-white" value={item.summary} onChange={e => updateNewsItem(idx, 'summary', e.target.value)} /></div>
                                 ))}
-                                {(!editForm.details?.news || editForm.details.news.length === 0) && (
-                                    <p className="text-gray-400 italic text-center py-4 bg-gray-50 dark:bg-navy-light rounded-sm">No news items added.</p>
-                                )}
+                                {(!editForm.details?.news || editForm.details.news.length === 0) && (<p className="text-gray-400 italic text-center py-4 bg-gray-50 dark:bg-navy-light rounded-sm">No news items added.</p>)}
                             </div>
                         </div>
                     )}
                     
                     {activeAdminTab === 'podcast' && (
                         <div>
-                             <div className="flex justify-between items-center mb-4">
-                                <h3 className="font-bold text-lg dark:text-white">Podcasts</h3>
-                                <button onClick={addPodcastItem} className="text-sm bg-navy text-white px-3 py-1 rounded-sm flex items-center shadow-sm hover:bg-navy-light">
-                                    <Plus className="w-3 h-3 mr-1" /> Add Podcast
-                                </button>
-                            </div>
+                             <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg dark:text-white">Podcasts</h3><button onClick={addPodcastItem} className="text-sm bg-navy text-white px-3 py-1 rounded-sm flex items-center shadow-sm hover:bg-navy-light"><Plus className="w-3 h-3 mr-1" /> Add Podcast</button></div>
                             <div className="space-y-4">
                                 {editForm.details?.podcasts?.map((item: PodcastItem, idx: number) => (
-                                    <div key={idx} className="flex flex-col gap-2 border p-3 rounded-sm bg-gray-50 dark:bg-navy-light dark:border-gray-600">
-                                        <div className="flex gap-2">
-                                            <input 
-                                                placeholder="Episode Title" 
-                                                className="flex-1 border p-1 rounded-sm font-bold dark:bg-navy dark:border-gray-600 dark:text-white"
-                                                value={item.title} 
-                                                onChange={e => updatePodcastItem(idx, 'title', e.target.value)}
-                                            />
-                                            <button onClick={() => removePodcastItem(idx)} className="text-red-500 hover:text-red-700">
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <input 
-                                                placeholder="Source (e.g. Daljir)" 
-                                                className="w-1/3 border p-1 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white"
-                                                value={item.source} 
-                                                onChange={e => updatePodcastItem(idx, 'source', e.target.value)}
-                                            />
-                                            <input 
-                                                placeholder="Date" 
-                                                className="w-1/3 border p-1 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white"
-                                                value={item.date} 
-                                                onChange={e => updatePodcastItem(idx, 'date', e.target.value)}
-                                            />
-                                            <input 
-                                                placeholder="Duration" 
-                                                className="w-1/3 border p-1 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white"
-                                                value={item.duration} 
-                                                onChange={e => updatePodcastItem(idx, 'duration', e.target.value)}
-                                            />
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <input 
-                                                placeholder="Audio/Video Link URL" 
-                                                className="w-full border p-1 rounded-sm text-blue-600 dark:text-blue-400 dark:bg-navy dark:border-gray-600"
-                                                value={item.url || ''} 
-                                                onChange={e => updatePodcastItem(idx, 'url', e.target.value)}
-                                            />
-                                        </div>
-                                    </div>
+                                    <div key={idx} className="flex flex-col gap-2 border p-3 rounded-sm bg-gray-50 dark:bg-navy-light dark:border-gray-600"><div className="flex gap-2"><input placeholder="Episode Title" className="flex-1 border p-1 rounded-sm font-bold dark:bg-navy dark:border-gray-600 dark:text-white" value={item.title} onChange={e => updatePodcastItem(idx, 'title', e.target.value)} /><button onClick={() => removePodcastItem(idx)} className="text-red-500 hover:text-red-700"><Trash2 className="w-4 h-4" /></button></div><div className="flex gap-2"><input placeholder="Source (e.g. Daljir)" className="w-1/3 border p-1 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white" value={item.source} onChange={e => updatePodcastItem(idx, 'source', e.target.value)} /><input placeholder="Date" className="w-1/3 border p-1 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white" value={item.date} onChange={e => updatePodcastItem(idx, 'date', e.target.value)} /><input placeholder="Duration" className="w-1/3 border p-1 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white" value={item.duration} onChange={e => updatePodcastItem(idx, 'duration', e.target.value)} /></div><div className="flex gap-2"><input placeholder="Audio/Video Link URL" className="w-full border p-1 rounded-sm text-blue-600 dark:text-blue-400 dark:bg-navy dark:border-gray-600" value={item.url || ''} onChange={e => updatePodcastItem(idx, 'url', e.target.value)} /></div></div>
                                 ))}
-                                {(!editForm.details?.podcasts || editForm.details.podcasts.length === 0) && (
-                                    <p className="text-gray-400 italic text-center py-4 bg-gray-50 dark:bg-navy-light rounded-sm">No podcasts added.</p>
-                                )}
+                                {(!editForm.details?.podcasts || editForm.details.podcasts.length === 0) && (<p className="text-gray-400 italic text-center py-4 bg-gray-50 dark:bg-navy-light rounded-sm">No podcasts added.</p>)}
                             </div>
                         </div>
                     )}
-
                 </div>
 
                 <div className="p-6 border-t border-gray-100 dark:border-gray-700 flex justify-end space-x-4 sticky bottom-0 bg-white dark:bg-navy z-20">
-                  <button 
-                    onClick={() => setIsEditing(false)}
-                    className="px-4 py-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    onClick={handleSaveDossier}
-                    className="bg-navy text-white px-6 py-2 rounded-sm hover:bg-navy-light dark:bg-gold dark:text-navy flex items-center shadow-sm"
-                  >
-                    <Save className="w-4 h-4 mr-2" /> Save Changes
-                  </button>
+                  <button onClick={() => setIsEditing(false)} className="px-4 py-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white">Cancel</button>
+                  <button onClick={handleSaveDossier} className="bg-navy text-white px-6 py-2 rounded-sm hover:bg-navy-light dark:bg-gold dark:text-navy flex items-center shadow-sm"><Save className="w-4 h-4 mr-2" /> Save Changes</button>
                 </div>
               </div>
             </div>
@@ -1164,484 +878,106 @@ const App = () => {
     );
   }
 
-  // --- MAIN APP RENDER ---
   return (
     <div className={`min-h-screen bg-slate dark:bg-navy-light dark:text-gray-100 flex flex-col font-sans text-gray-800 ${language === 'ar' ? 'font-arabic' : ''}`}>
-      
-      {/* Certificate Modal */}
-      {showCertificate && selectedProfile && (
-        <VerificationCertificate 
-          profile={selectedProfile} 
-          lang={language} 
-          onClose={() => setShowCertificate(false)} 
-        />
-      )}
-
-      {/* Navigation - Sticky */}
+      {showCertificate && selectedProfile && (<VerificationCertificate profile={selectedProfile} lang={language} onClose={() => setShowCertificate(false)} />)}
       <nav className="sticky top-0 z-50 bg-navy text-white shadow-lg border-b border-navy-light">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
-            <div 
-              className="flex items-center space-x-3 rtl:space-x-reverse cursor-pointer group"
-              onClick={handleBack}
-            >
-              <BrandPin className="h-8 w-8 text-gold group-hover:text-white transition-colors" />
-              <div className="flex flex-col">
-                <span className="text-2xl font-serif font-bold tracking-tight">SomaliPin</span>
-                <span className="text-[10px] text-gray-400 uppercase tracking-widest">{t.subtitle}</span>
-              </div>
-            </div>
-            
+            <div className="flex items-center space-x-3 rtl:space-x-reverse cursor-pointer group" onClick={handleBack}><BrandPin className="h-8 w-8 text-gold group-hover:text-white transition-colors" /><div className="flex flex-col"><span className="text-2xl font-serif font-bold tracking-tight">SomaliPin</span><span className="text-[10px] text-gray-400 uppercase tracking-widest">{t.subtitle}</span></div></div>
             <div className="flex items-center space-x-6 rtl:space-x-reverse">
-                {/* Desktop Nav Links */}
-                <div className="hidden md:flex space-x-8 rtl:space-x-reverse text-sm font-medium text-gray-300">
-                    <span className="hover:text-gold cursor-pointer transition-colors">{t.nav_politics}</span>
-                    <span className="hover:text-gold cursor-pointer transition-colors">{t.nav_business}</span>
-                    <span className="hover:text-gold cursor-pointer transition-colors">{t.nav_history}</span>
-                </div>
-
-                {/* Language Switcher */}
-                <div className="flex items-center bg-navy-light/50 rounded-full px-1 py-1 border border-navy-light">
-                    <button 
-                        onClick={() => setLanguage('en')}
-                        className={`px-3 py-1 text-xs font-bold rounded-full transition-all ${language === 'en' ? 'bg-gold text-navy shadow-sm' : 'text-gray-400 hover:text-white'}`}
-                    >
-                        EN
-                    </button>
-                    <button 
-                        onClick={() => setLanguage('so')}
-                        className={`px-3 py-1 text-xs font-bold rounded-full transition-all ${language === 'so' ? 'bg-gold text-navy shadow-sm' : 'text-gray-400 hover:text-white'}`}
-                    >
-                        SO
-                    </button>
-                    <button 
-                        onClick={() => setLanguage('ar')}
-                        className={`px-3 py-1 text-xs font-bold rounded-full transition-all ${language === 'ar' ? 'bg-gold text-navy shadow-sm' : 'text-gray-400 hover:text-white'}`}
-                    >
-                        AR
-                    </button>
-                </div>
-                
-                {/* Dark Mode Toggle */}
-                <button 
-                  onClick={() => setDarkMode(!darkMode)}
-                  className="p-2 text-gray-400 hover:text-gold transition-colors"
-                  title="Toggle Dark Mode"
-                >
-                  {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-                </button>
+                <div className="hidden md:flex space-x-8 rtl:space-x-reverse text-sm font-medium text-gray-300"><span className="hover:text-gold cursor-pointer transition-colors">{t.nav_politics}</span><span className="hover:text-gold cursor-pointer transition-colors">{t.nav_business}</span><span className="hover:text-gold cursor-pointer transition-colors">{t.nav_history}</span></div>
+                <div className="flex items-center bg-navy-light/50 rounded-full px-1 py-1 border border-navy-light"><button onClick={() => setLanguage('en')} className={`px-3 py-1 text-xs font-bold rounded-full transition-all ${language === 'en' ? 'bg-gold text-navy shadow-sm' : 'text-gray-400 hover:text-white'}`}>EN</button><button onClick={() => setLanguage('so')} className={`px-3 py-1 text-xs font-bold rounded-full transition-all ${language === 'so' ? 'bg-gold text-navy shadow-sm' : 'text-gray-400 hover:text-white'}`}>SO</button><button onClick={() => setLanguage('ar')} className={`px-3 py-1 text-xs font-bold rounded-full transition-all ${language === 'ar' ? 'bg-gold text-navy shadow-sm' : 'text-gray-400 hover:text-white'}`}>AR</button></div>
+                <button onClick={() => setDarkMode(!darkMode)} className="p-2 text-gray-400 hover:text-gold transition-colors" title="Toggle Dark Mode">{darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}</button>
             </div>
           </div>
         </div>
       </nav>
 
-      {/* Main Content Area */}
       <main className="flex-grow">
         {view === 'home' ? (
           <>
-            {/* Hero Section */}
             <section className="bg-navy pb-16 pt-10 px-4 text-center border-b border-gold/20">
               <div className="max-w-3xl mx-auto space-y-6">
-                <h1 className="text-4xl md:text-6xl font-serif font-bold text-white leading-tight">
-                  {t.hero_title_1} <br />
-                  <span className="text-gold italic">{t.hero_title_2}</span>
-                </h1>
-                <p className="text-gray-300 text-lg md:text-xl font-light max-w-2xl mx-auto">
-                  {t.hero_desc}
-                </p>
-                
-                {/* Search Bar */}
-                <form onSubmit={handleSearchSubmit} className="relative max-w-xl mx-auto mt-8">
-                  <div className="relative group">
-                    <div className="absolute inset-y-0 left-0 pl-4 rtl:pl-0 rtl:right-0 rtl:pr-4 flex items-center pointer-events-none">
-                      <Search className="h-5 w-5 text-gray-400 group-focus-within:text-navy transition-colors" />
-                    </div>
-                    <input
-                      type="text"
-                      className="block w-full pl-11 pr-4 rtl:pl-4 rtl:pr-11 py-4 bg-white dark:bg-navy dark:text-white dark:border-gray-600 border-0 rounded-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gold focus:outline-none shadow-xl text-lg"
-                      placeholder={t.search_placeholder}
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                    <button 
-                        type="submit"
-                        className="absolute right-2 rtl:right-auto rtl:left-2 top-2 bottom-2 bg-navy text-gold px-4 rounded-sm font-medium hover:bg-navy-light transition-colors"
-                    >
-                        {t.search_btn}
-                    </button>
-                  </div>
-                </form>
+                <h1 className="text-4xl md:text-6xl font-serif font-bold text-white leading-tight">{t.hero_title_1} <br /><span className="text-gold italic">{t.hero_title_2}</span></h1>
+                <p className="text-gray-300 text-lg md:text-xl font-light max-w-2xl mx-auto">{t.hero_desc}</p>
+                <form onSubmit={handleSearchSubmit} className="relative max-w-xl mx-auto mt-8"><div className="relative group"><div className="absolute inset-y-0 left-0 pl-4 rtl:pl-0 rtl:right-0 rtl:pr-4 flex items-center pointer-events-none"><Search className="h-5 w-5 text-gray-400 group-focus-within:text-navy transition-colors" /></div><input type="text" className="block w-full pl-11 pr-4 rtl:pl-4 rtl:pr-11 py-4 bg-white dark:bg-navy dark:text-white dark:border-gray-600 border-0 rounded-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gold focus:outline-none shadow-xl text-lg" placeholder={t.search_placeholder} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /><button type="submit" className="absolute right-2 rtl:right-auto rtl:left-2 top-2 bottom-2 bg-navy text-gold px-4 rounded-sm font-medium hover:bg-navy-light transition-colors">{t.search_btn}</button></div></form>
               </div>
             </section>
-
-            {/* AI Search Result */}
             {aiSummary && (
                 <section className="max-w-6xl mx-auto px-4 -mt-8 mb-12 relative z-10">
                     <div className="bg-white dark:bg-navy p-8 rounded-sm shadow-xl border-t-4 border-gold">
-                        <div className="flex items-center space-x-2 rtl:space-x-reverse mb-4">
-                            <BrandPin className="h-6 w-6 text-navy dark:text-gold" />
-                            <h2 className="text-xl font-serif font-bold text-navy dark:text-white">{t.archive_result}</h2>
-                        </div>
-                        <div className="prose prose-lg text-gray-600 dark:text-gray-300 rtl:text-right">
-                             <p className="leading-relaxed">{aiSummary}</p>
-                        </div>
-                        <div className="mt-4 text-xs text-gray-400 italic text-right rtl:text-left">
-                            {t.generated_by}
-                        </div>
+                        <div className="flex items-center space-x-2 rtl:space-x-reverse mb-4"><BrandPin className="h-6 w-6 text-navy dark:text-gold" /><h2 className="text-xl font-serif font-bold text-navy dark:text-white">{t.archive_result}</h2></div>
+                        <div className="prose prose-lg text-gray-600 dark:text-gray-300 rtl:text-right"><p className="leading-relaxed">{aiSummary}</p></div>
+                        <div className="mt-4 text-xs text-gray-400 italic text-right rtl:text-left">{t.generated_by}</div>
                     </div>
                 </section>
             )}
-
-            {/* Directory Grid */}
             <section className="max-w-6xl mx-auto px-4 py-12 border-b border-gray-200 dark:border-gray-700">
-               {!aiSummary && searchQuery && filteredProfiles.length === 0 && (
-                   <div className="text-center py-12">
-                       <p className="text-gray-500 dark:text-gray-400 text-lg">{t.no_profiles}</p>
-                       <p className="text-sm text-gold mt-2 cursor-pointer hover:underline" onClick={handleSearchSubmit}>{t.click_search}</p>
-                   </div>
-               )}
-
-              <div className="flex justify-between items-end mb-8 border-b border-gray-200 dark:border-gray-700 pb-4">
-                <h2 className="text-3xl font-serif font-bold text-navy dark:text-white flex items-center">
-                  {t.featured_dossiers}
-                  <span className="ml-4 text-base font-sans font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-navy-light px-3 py-1 rounded-full">
-                    ({profiles.length})
-                  </span>
-                </h2>
-                <div className="hidden md:flex space-x-2 rtl:space-x-reverse">
-                   {Object.values(Category).map((cat) => (
-                       <button key={cat} className="text-sm px-3 py-1 text-gray-500 hover:text-navy dark:text-gray-400 dark:hover:text-gold font-medium">
-                           {getCategoryLabel(cat)}
-                       </button>
-                   ))}
-                </div>
-              </div>
-
-              {isLoading ? (
-                <div className="flex justify-center py-12">
-                  <div className="animate-spin h-8 w-8 border-4 border-gold border-t-transparent rounded-full"></div>
-                </div>
-              ) : (
+               {!aiSummary && searchQuery && filteredProfiles.length === 0 && (<div className="text-center py-12"><p className="text-gray-500 dark:text-gray-400 text-lg">{t.no_profiles}</p><p className="text-sm text-gold mt-2 cursor-pointer hover:underline" onClick={handleSearchSubmit}>{t.click_search}</p></div>)}
+              <div className="flex justify-between items-end mb-8 border-b border-gray-200 dark:border-gray-700 pb-4"><h2 className="text-3xl font-serif font-bold text-navy dark:text-white flex items-center">{t.featured_dossiers}<span className="ml-4 text-base font-sans font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-navy-light px-3 py-1 rounded-full">({profiles.length})</span></h2><div className="hidden md:flex space-x-2 rtl:space-x-reverse">{Object.values(Category).map((cat) => (<button key={cat} className="text-sm px-3 py-1 text-gray-500 hover:text-navy dark:text-gray-400 dark:hover:text-gold font-medium">{getCategoryLabel(cat)}</button>))}</div></div>
+              {isLoading ? (<div className="flex justify-center py-12"><div className="animate-spin h-8 w-8 border-4 border-gold border-t-transparent rounded-full"></div></div>) : (
                 <>
-                    {profiles.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {filteredProfiles.map((profile) => (
-                            <ProfileCard 
-                            key={profile.id} 
-                            profile={profile} 
-                            onClick={handleProfileClick} 
-                            onVerify={(e) => handleVerifyClick(e, profile)}
-                            />
-                        ))}
-                        </div>
-                    ) : (
-                        <div className="text-center py-16 bg-white dark:bg-navy border border-dashed border-gray-300 dark:border-gray-700 rounded-sm">
-                            <Database className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                            <h3 className="text-lg font-serif font-bold text-navy dark:text-white mb-2">The Archive is currently empty</h3>
-                            <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-6">
-                                We are currently initializing the digital records. Please log in to the Admin Dashboard to start populating the registry.
-                            </p>
-                            <button 
-                                onClick={() => setView('admin')}
-                                className="inline-flex items-center text-gold font-bold hover:underline"
-                            >
-                                Go to Admin Dashboard <ChevronLeft className="w-4 h-4 ml-1 rotate-180" />
-                            </button>
-                        </div>
-                    )}
+                    {profiles.length > 0 ? (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">{filteredProfiles.map((profile) => (<ProfileCard key={profile.id} profile={profile} onClick={handleProfileClick} onVerify={(e) => handleVerifyClick(e, profile)} />))}</div>) : (<div className="text-center py-16 bg-white dark:bg-navy border border-dashed border-gray-300 dark:border-gray-700 rounded-sm"><Database className="h-12 w-12 text-gray-300 mx-auto mb-4" /><h3 className="text-lg font-serif font-bold text-navy dark:text-white mb-2">The Archive is currently empty</h3><p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-6">We are currently initializing the digital records. Please log in to the Admin Dashboard to start populating the registry.</p><button onClick={() => setView('admin')} className="inline-flex items-center text-gold font-bold hover:underline">Go to Admin Dashboard <ChevronLeft className="w-4 h-4 ml-1 rotate-180" /></button></div>)}
                 </>
               )}
             </section>
-
-            {/* Services */}
-            <section className="max-w-6xl mx-auto px-4 py-12">
-               <h2 className="text-3xl font-serif font-bold text-navy dark:text-white mb-8">{t.section_what_we_do}</h2>
-               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                 <div className="bg-white dark:bg-navy p-6 rounded-sm shadow-sm border-t-4 border-gold hover:shadow-md transition-all">
-                    <div className="mb-4 text-gold"><User className="h-8 w-8" /></div>
-                    <h3 className="text-xl font-serif font-bold text-navy dark:text-white mb-3">{t.service_1_title}</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed font-sans">{t.service_1_desc}</p>
-                 </div>
-                 <div className="bg-white dark:bg-navy p-6 rounded-sm shadow-sm border-t-4 border-gold hover:shadow-md transition-all">
-                    <div className="mb-4 text-gold"><VerifiedBadge className="h-8 w-8" /></div>
-                    <h3 className="text-xl font-serif font-bold text-navy dark:text-white mb-3">{t.service_2_title}</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed font-sans">{t.service_2_desc}</p>
-                 </div>
-                 <div className="bg-white dark:bg-navy p-6 rounded-sm shadow-sm border-t-4 border-gold hover:shadow-md transition-all">
-                    <div className="mb-4 text-gold"><BookOpen className="h-8 w-8" /></div>
-                    <h3 className="text-xl font-serif font-bold text-navy dark:text-white mb-3">{t.service_3_title}</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed font-sans">{t.service_3_desc}</p>
-                 </div>
-                 <div className="bg-white dark:bg-navy p-6 rounded-sm shadow-sm border-t-4 border-gold hover:shadow-md transition-all">
-                    <div className="mb-4 text-gold"><Search className="h-8 w-8" /></div>
-                    <h3 className="text-xl font-serif font-bold text-navy dark:text-white mb-3">{t.service_4_title}</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed font-sans">{t.service_4_desc}</p>
-                 </div>
-               </div>
-            </section>
+            <section className="max-w-6xl mx-auto px-4 py-12"><h2 className="text-3xl font-serif font-bold text-navy dark:text-white mb-8">{t.section_what_we_do}</h2><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"><div className="bg-white dark:bg-navy p-6 rounded-sm shadow-sm border-t-4 border-gold hover:shadow-md transition-all"><div className="mb-4 text-gold"><User className="h-8 w-8" /></div><h3 className="text-xl font-serif font-bold text-navy dark:text-white mb-3">{t.service_1_title}</h3><p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed font-sans">{t.service_1_desc}</p></div><div className="bg-white dark:bg-navy p-6 rounded-sm shadow-sm border-t-4 border-gold hover:shadow-md transition-all"><div className="mb-4 text-gold"><VerifiedBadge className="h-8 w-8" /></div><h3 className="text-xl font-serif font-bold text-navy dark:text-white mb-3">{t.service_2_title}</h3><p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed font-sans">{t.service_2_desc}</p></div><div className="bg-white dark:bg-navy p-6 rounded-sm shadow-sm border-t-4 border-gold hover:shadow-md transition-all"><div className="mb-4 text-gold"><BookOpen className="h-8 w-8" /></div><h3 className="text-xl font-serif font-bold text-navy dark:text-white mb-3">{t.service_3_title}</h3><p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed font-sans">{t.service_3_desc}</p></div><div className="bg-white dark:bg-navy p-6 rounded-sm shadow-sm border-t-4 border-gold hover:shadow-md transition-all"><div className="mb-4 text-gold"><Search className="h-8 w-8" /></div><h3 className="text-xl font-serif font-bold text-navy dark:text-white mb-3">{t.service_4_title}</h3><p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed font-sans">{t.service_4_desc}</p></div></div></section>
           </>
         ) : (
-          /* Profile Detail View */
           <div className="max-w-5xl mx-auto px-4 py-12 animate-fade-in">
-            <button 
-              onClick={handleBack}
-              className="group flex items-center text-navy dark:text-gold font-medium mb-8 hover:text-gold transition-colors rtl:flex-row-reverse"
-            >
-              <ChevronLeft className="h-5 w-5 mr-1 group-hover:-translate-x-1 transition-transform rtl:rotate-180 rtl:ml-1 rtl:mr-0" />
-              {t.back_directory}
-            </button>
-
-            {selectedProfile && selectedProfile.locked ? (
-                 <ArchivistWorkDesk />
-            ) : selectedProfile ? (
+            <button onClick={handleBack} className="group flex items-center text-navy dark:text-gold font-medium mb-8 hover:text-gold transition-colors rtl:flex-row-reverse"><ChevronLeft className="h-5 w-5 mr-1 group-hover:-translate-x-1 transition-transform rtl:rotate-180 rtl:ml-1 rtl:mr-0" />{t.back_directory}</button>
+            {selectedProfile && selectedProfile.locked ? (<ArchivistWorkDesk />) : selectedProfile ? (
               <div className="bg-white dark:bg-navy shadow-xl rounded-sm overflow-hidden mb-12">
-                <div className={`h-48 relative ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'bg-red-900' : 'bg-navy'}`}>
-                    <div className="absolute inset-0 bg-black/20 pattern-grid-lg"></div>
-                </div>
-
+                <div className={`h-48 relative ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'bg-red-900' : 'bg-navy'}`}><div className="absolute inset-0 bg-black/20 pattern-grid-lg"></div></div>
                 <div className="px-8 pb-12">
-                    <div className="relative flex justify-between items-end -mt-20 mb-8">
-                        <div className="relative">
-                            <img 
-                                src={selectedProfile.imageUrl || 'https://via.placeholder.com/150'} 
-                                alt={selectedProfile.name}
-                                className={`w-40 h-40 object-cover rounded-sm border-4 border-white shadow-md ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'grayscale-0' : ''}`}
-                            />
-                            {selectedProfile.verified && (
-                                <div 
-                                  className="absolute -bottom-3 -right-3 rtl:-left-3 rtl:right-auto bg-white p-1 rounded-full shadow-sm cursor-pointer hover:scale-110 transition-transform"
-                                  onClick={() => setShowCertificate(true)}
-                                  title="Click to view Official Certificate"
-                                >
-                                    {getVerificationIcon(selectedProfile.verificationLevel)}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
+                    <div className="relative flex justify-between items-end -mt-20 mb-8"><div className="relative"><img src={selectedProfile.imageUrl || 'https://via.placeholder.com/150'} alt={selectedProfile.name} className={`w-40 h-40 object-cover rounded-sm border-4 border-white shadow-md ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'grayscale-0' : ''}`} />{selectedProfile.verified && (<div className="absolute -bottom-3 -right-3 rtl:-left-3 rtl:right-auto bg-white p-1 rounded-full shadow-sm cursor-pointer hover:scale-110 transition-transform" onClick={() => setShowCertificate(true)} title="Click to view Official Certificate">{getVerificationIcon(selectedProfile.verificationLevel)}</div>)}</div></div>
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
                         <div className="lg:col-span-2">
-                            <div className="mb-8">
-                                <div className="flex flex-wrap items-center gap-3 mb-4">
-                                     <span className={`text-sm font-bold tracking-widest uppercase
-                                        ${selectedProfile.verificationLevel === VerificationLevel.NOBEL ? 'text-purple-700' :
-                                          selectedProfile.verificationLevel === VerificationLevel.HERO ? 'text-red-700' : 'text-gold'}
-                                    `}>
-                                        {selectedProfile.categoryLabel || selectedProfile.category}
-                                    </span>
-                                    
-                                    {/* NEW BUTTON */}
-                                    {selectedProfile.verified && (
-                                         <button 
-                                            onClick={() => setShowCertificate(true)}
-                                            className={`flex items-center px-3 py-1 rounded-full border text-xs font-bold uppercase tracking-wider transition-all
-                                                ${selectedProfile.verificationLevel === VerificationLevel.NOBEL ? 'bg-purple-50 text-purple-800 border-purple-200 hover:bg-purple-100' :
-                                                  selectedProfile.verificationLevel === VerificationLevel.HERO ? 'bg-red-50 text-red-800 border-red-200 hover:bg-red-100' : 
-                                                  selectedProfile.verificationLevel === VerificationLevel.GOLDEN ? 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100' : 
-                                                  'bg-blue-50 text-navy-light border-blue-100 hover:bg-blue-100'}
-                                            `}
-                                         >
-                                            {selectedProfile.verificationLevel === VerificationLevel.NOBEL && <NobelBadge className="w-4 h-4 mr-2" />}
-                                            {selectedProfile.verificationLevel === VerificationLevel.HERO && <HeroBadge className="w-4 h-4 mr-2" />}
-                                            {selectedProfile.verificationLevel === VerificationLevel.GOLDEN && <GoldenBadge className="w-4 h-4 mr-2" />}
-                                            {selectedProfile.verificationLevel === VerificationLevel.STANDARD && <StandardBadge className="w-4 h-4 mr-2" />}
-                                            
-                                            {getVerificationLabel(selectedProfile.verificationLevel)}
-                                         </button>
-                                    )}
-                                </div>
-                                <h1 className="text-4xl font-serif font-bold text-navy dark:text-white mb-2">
-                                    {selectedProfile.name}
-                                </h1>
-                                <p className="text-xl text-gray-500 dark:text-gray-400 font-light">
-                                    {selectedProfile.title}
-                                </p>
-                                {selectedProfile.location && (
-                                    <div className="flex items-center text-gray-400 text-sm mt-3">
-                                        <MapPin className="h-4 w-4 mr-1 rtl:ml-1 rtl:mr-0" />
-                                        {selectedProfile.location}
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="prose prose-slate max-w-none rtl:text-right">
-                                <h3 className="text-navy dark:text-gold font-serif text-xl border-b border-gray-200 dark:border-gray-700 pb-2 mb-4">{t.about}</h3>
-                                <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-lg whitespace-pre-line">
-                                    {selectedProfile.fullBio || selectedProfile.shortBio}
-                                </p>
-                            </div>
-
-                            <div className="mt-12">
-                                <h3 className="text-navy dark:text-gold font-serif text-xl border-b border-gray-200 dark:border-gray-700 pb-2 mb-4">{t.timeline}</h3>
-                                {selectedProfile.timeline && selectedProfile.timeline.length > 0 ? (
-                                    <Timeline events={selectedProfile.timeline} />
-                                ) : (
-                                    <p className="text-gray-400 italic">No timeline events recorded.</p>
-                                )}
-                            </div>
+                            <div className="mb-8"><div className="flex flex-wrap items-center gap-3 mb-4"><span className={`text-sm font-bold tracking-widest uppercase ${selectedProfile.verificationLevel === VerificationLevel.NOBEL ? 'text-purple-700' : selectedProfile.verificationLevel === VerificationLevel.HERO ? 'text-red-700' : 'text-gold'}`}>{selectedProfile.categoryLabel || selectedProfile.category}</span>{selectedProfile.verified && (<button onClick={() => setShowCertificate(true)} className={`flex items-center px-3 py-1 rounded-full border text-xs font-bold uppercase tracking-wider transition-all ${selectedProfile.verificationLevel === VerificationLevel.NOBEL ? 'bg-purple-50 text-purple-800 border-purple-200 hover:bg-purple-100' : selectedProfile.verificationLevel === VerificationLevel.HERO ? 'bg-red-50 text-red-800 border-red-200 hover:bg-red-100' : selectedProfile.verificationLevel === VerificationLevel.GOLDEN ? 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100' : 'bg-blue-50 text-navy-light border-blue-100 hover:bg-blue-100'}`}>{selectedProfile.verificationLevel === VerificationLevel.NOBEL && <NobelBadge className="w-4 h-4 mr-2" />}{selectedProfile.verificationLevel === VerificationLevel.HERO && <HeroBadge className="w-4 h-4 mr-2" />}{selectedProfile.verificationLevel === VerificationLevel.GOLDEN && <GoldenBadge className="w-4 h-4 mr-2" />}{selectedProfile.verificationLevel === VerificationLevel.STANDARD && <StandardBadge className="w-4 h-4 mr-2" />}{getVerificationLabel(selectedProfile.verificationLevel)}</button>)}</div><h1 className="text-4xl font-serif font-bold text-navy dark:text-white mb-2">{selectedProfile.name}</h1><p className="text-xl text-gray-500 dark:text-gray-400 font-light">{selectedProfile.title}</p>{selectedProfile.location && (<div className="flex items-center text-gray-400 text-sm mt-3"><MapPin className="h-4 w-4 mr-1 rtl:ml-1 rtl:mr-0" />{selectedProfile.location}</div>)}</div>
+                            <div className="prose prose-slate max-w-none rtl:text-right"><h3 className="text-navy dark:text-gold font-serif text-xl border-b border-gray-200 dark:border-gray-700 pb-2 mb-4">{t.about}</h3><p className="text-gray-700 dark:text-gray-300 leading-relaxed text-lg whitespace-pre-line">{selectedProfile.fullBio || selectedProfile.shortBio}</p></div>
+                            <div className="mt-12"><h3 className="text-navy dark:text-gold font-serif text-xl border-b border-gray-200 dark:border-gray-700 pb-2 mb-4">{t.timeline}</h3>{selectedProfile.timeline && selectedProfile.timeline.length > 0 ? (<Timeline events={selectedProfile.timeline} />) : (<p className="text-gray-400 italic">No timeline events recorded.</p>)}</div>
                         </div>
-
-                        {/* Sidebar Stats */}
                         <div className="space-y-6">
                             <div className="bg-slate dark:bg-navy-light p-6 rounded-sm border border-gray-200 dark:border-navy">
                                 <h4 className="font-serif font-bold text-navy dark:text-white mb-4">{t.key_info}</h4>
                                 <div className="space-y-4 text-sm">
-                                    
-                                    {/* Lifecycle Dates */}
-                                    <div className="flex items-center">
-                                        <Calendar className={`h-5 w-5 mr-3 rtl:ml-3 rtl:mr-0 ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'text-red-700' : 'text-gold'}`} />
-                                        <div>
-                                            <span className="block text-gray-400 text-xs uppercase">{selectedProfile.isOrganization ? t.lbl_est : t.lbl_born}</span>
-                                            <span className="font-medium text-gray-800 dark:text-gray-200">{selectedProfile.dateStart}</span>
-                                        </div>
-                                    </div>
-
-                                    {selectedProfile.dateEnd && (
-                                        <div className="flex items-center">
-                                            <Clock className={`h-5 w-5 mr-3 rtl:ml-3 rtl:mr-0 ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'text-red-700' : 'text-gold'}`} />
-                                            <div>
-                                                <span className="block text-gray-400 text-xs uppercase">{selectedProfile.isOrganization ? t.lbl_closed : t.lbl_died}</span>
-                                                <span className="font-medium text-gray-800 dark:text-gray-200">{selectedProfile.dateEnd}</span>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Status */}
-                                    <div className="flex items-center">
-                                        <Activity className={`h-5 w-5 mr-3 rtl:ml-3 rtl:mr-0 ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'text-red-700' : 'text-gold'}`} />
-                                        <div>
-                                            <span className="block text-gray-400 text-xs uppercase">{t.lbl_status}</span>
-                                            <span className={`font-medium px-2 py-0.5 rounded text-xs inline-block mt-0.5 ${
-                                                selectedProfile.status === 'ACTIVE' ? 'bg-green-100 text-green-800' :
-                                                selectedProfile.status === 'DECEASED' ? 'bg-gray-200 text-gray-800' :
-                                                selectedProfile.status === 'RETIRED' ? 'bg-orange-100 text-orange-800' :
-                                                'bg-red-100 text-red-800'
-                                            }`}>
-                                                {getStatusLabel(selectedProfile)}
-                                            </span>
-                                        </div>
-                                    </div>
-
+                                    <div className="flex items-center"><Calendar className={`h-5 w-5 mr-3 rtl:ml-3 rtl:mr-0 ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'text-red-700' : 'text-gold'}`} /><div><span className="block text-gray-400 text-xs uppercase">{selectedProfile.isOrganization ? t.lbl_est : t.lbl_born}</span><span className="font-medium text-gray-800 dark:text-gray-200">{selectedProfile.dateStart}</span></div></div>
+                                    {selectedProfile.dateEnd && (<div className="flex items-center"><Clock className={`h-5 w-5 mr-3 rtl:ml-3 rtl:mr-0 ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'text-red-700' : 'text-gold'}`} /><div><span className="block text-gray-400 text-xs uppercase">{selectedProfile.isOrganization ? t.lbl_closed : t.lbl_died}</span><span className="font-medium text-gray-800 dark:text-gray-200">{selectedProfile.dateEnd}</span></div></div>)}
+                                    <div className="flex items-center"><Activity className={`h-5 w-5 mr-3 rtl:ml-3 rtl:mr-0 ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'text-red-700' : 'text-gold'}`} /><div><span className="block text-gray-400 text-xs uppercase">{t.lbl_status}</span><span className={`font-medium px-2 py-0.5 rounded text-xs inline-block mt-0.5 ${selectedProfile.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : selectedProfile.status === 'DECEASED' ? 'bg-gray-200 text-gray-800' : selectedProfile.status === 'RETIRED' ? 'bg-orange-100 text-orange-800' : 'bg-red-100 text-red-800'}`}>{getStatusLabel(selectedProfile)}</span></div></div>
                                     <div className="w-full h-px bg-gray-200 dark:bg-gray-700 my-2"></div>
-
-                                    <div className="flex items-center cursor-pointer hover:bg-gray-100 dark:hover:bg-navy p-1 rounded transition-colors" onClick={() => setShowCertificate(true)}>
-                                        <Building2 className={`h-5 w-5 mr-3 rtl:ml-3 rtl:mr-0 ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'text-red-700' : 'text-gold'}`} />
-                                        <div>
-                                            <span className="block text-gray-400 text-xs uppercase">{t.label_affiliation}</span>
-                                            <span className="font-medium text-gray-800 dark:text-gray-200 underline decoration-dotted">{getVerificationLabel(selectedProfile.verificationLevel)}</span>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center">
-                                        <User className={`h-5 w-5 mr-3 rtl:ml-3 rtl:mr-0 ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'text-red-700' : 'text-gold'}`} />
-                                        <div>
-                                            <span className="block text-gray-400 text-xs uppercase">{t.label_role}</span>
-                                            <span className="font-medium text-gray-800 dark:text-gray-200">{selectedProfile.categoryLabel || selectedProfile.category}</span>
-                                        </div>
-                                    </div>
+                                    <div className="flex items-center cursor-pointer hover:bg-gray-100 dark:hover:bg-navy p-1 rounded transition-colors" onClick={() => setShowCertificate(true)}><Building2 className={`h-5 w-5 mr-3 rtl:ml-3 rtl:mr-0 ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'text-red-700' : 'text-gold'}`} /><div><span className="block text-gray-400 text-xs uppercase">{t.label_affiliation}</span><span className="font-medium text-gray-800 dark:text-gray-200 underline decoration-dotted">{getVerificationLabel(selectedProfile.verificationLevel)}</span></div></div>
+                                    <div className="flex items-center"><User className={`h-5 w-5 mr-3 rtl:ml-3 rtl:mr-0 ${selectedProfile.verificationLevel === VerificationLevel.HERO ? 'text-red-700' : 'text-gold'}`} /><div><span className="block text-gray-400 text-xs uppercase">{t.label_role}</span><span className="font-medium text-gray-800 dark:text-gray-200">{selectedProfile.categoryLabel || selectedProfile.category}</span></div></div>
+                                    {selectedProfile.archiveAssignments && selectedProfile.archiveAssignments.length > 0 ? (
+                                      <>
+                                        <div className="w-full h-px bg-gray-200 dark:bg-gray-700 my-2"></div>
+                                        <h5 className="font-serif font-bold text-navy dark:text-white text-sm mb-2">{t.archive_positions}</h5>
+                                        <ul className="space-y-1">
+                                          {selectedProfile.archiveAssignments.map((assignment, idx) => (
+                                            <li key={idx} className="flex flex-col text-xs text-gray-600 dark:text-gray-300">
+                                              <span className="font-medium">{assignment.title_note}</span>
+                                              <span className="text-gray-500 dark:text-gray-400 text-[10px] italic">({assignment.category?.category_name || 'N/A'}) {assignment.start_date} - {assignment.end_date || 'Present'}</span>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <div className="w-full h-px bg-gray-200 dark:bg-gray-700 my-2"></div>
+                                        <h5 className="font-serif font-bold text-navy dark:text-white text-sm mb-2">{t.archive_positions}</h5>
+                                        <p className="text-gray-400 italic text-xs">{t.no_archive_positions}</p>
+                                      </>
+                                    )}
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-
-                {/* Tabbed Section (Archive, News, Podcast) */}
                 <div className="bg-slate/30 dark:bg-navy-light/30 border-t border-gray-200 dark:border-gray-700 px-8 py-8">
-                    <div className="flex space-x-8 rtl:space-x-reverse border-b border-gray-300 dark:border-gray-600 mb-8 overflow-x-auto">
-                        {['archive', 'news', 'podcast'].map((tab) => (
-                           <button
-                                key={tab}
-                                onClick={() => setActiveTab(tab as any)}
-                                className={`pb-4 text-sm font-bold tracking-widest transition-colors relative whitespace-nowrap uppercase ${
-                                    activeTab === tab ? 'text-navy dark:text-white' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
-                                }`}
-                            >
-                                {tab === 'archive' ? t.tab_archive : tab === 'news' ? t.tab_news : t.tab_podcast}
-                                {activeTab === tab && <span className="absolute bottom-0 left-0 w-full h-1 bg-gold rounded-t-sm"></span>}
-                            </button> 
-                        ))}
-                    </div>
-
-                    {activeTab === 'archive' && (
-                        <div className="animate-fade-in">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                                {(selectedProfile.archives && selectedProfile.archives.length > 0) ? (
-                                    selectedProfile.archives.map((file) => (
-                                        <a 
-                                            key={file.id} 
-                                            href={file.url || '#'}
-                                            target="_blank"
-                                            className="bg-white dark:bg-navy p-4 rounded-sm border border-gray-100 dark:border-gray-700 flex items-start space-x-3 rtl:space-x-reverse hover:shadow-md transition-shadow cursor-pointer"
-                                        >
-                                            <div className="bg-slate dark:bg-navy-light p-2 rounded-sm text-navy dark:text-white">
-                                                {file.type === 'PDF' && <FileText className="h-5 w-5" />}
-                                                {file.type === 'IMAGE' && <ImageIcon className="h-5 w-5" />}
-                                                {file.type === 'AWARD' && <Award className="h-5 w-5 text-gold" />}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-bold text-gray-800 dark:text-gray-200 truncate">{file.title}</p>
-                                                <div className="flex justify-between items-center mt-1">
-                                                    <span className="text-[10px] bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-1.5 rounded">{file.type}</span>
-                                                    <span className="text-[10px] text-gray-400">{file.date}</span>
-                                                </div>
-                                            </div>
-                                        </a>
-                                    ))
-                                ) : (
-                                    <p className="col-span-3 text-center text-gray-400 italic text-sm py-4">{t.no_docs}</p>
-                                )}
-                            </div>
-                        </div>
-                    )}
-
-                    {activeTab === 'news' && (
-                        <div className="animate-fade-in space-y-4">
-                            {(selectedProfile.news && selectedProfile.news.length > 0) ? (
-                                selectedProfile.news.map((news) => (
-                                    <a key={news.id} href={news.url || '#'} target="_blank" className="block bg-white dark:bg-navy p-5 rounded-sm border-l-4 rtl:border-l-0 rtl:border-r-4 border-gold shadow-sm hover:shadow-md transition-shadow">
-                                        <div className="flex justify-between items-start mb-2">
-                                            <h4 className="font-bold text-navy dark:text-white text-base">{news.title}</h4>
-                                            <span className="text-xs text-gray-400 whitespace-nowrap ml-4">{news.date}</span>
-                                        </div>
-                                        <div className="flex items-center text-xs text-gold font-bold uppercase tracking-wider mb-3">
-                                            <Newspaper className="h-3 w-3 mr-1 rtl:ml-1 rtl:mr-0" /> {news.source}
-                                        </div>
-                                        <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{news.summary}</p>
-                                    </a>
-                                ))
-                            ) : (
-                                <p className="text-center text-gray-400 italic text-sm py-4">{t.no_news}</p>
-                            )}
-                        </div>
-                    )}
-                    
-                    {activeTab === 'podcast' && (
-                         <div className="animate-fade-in space-y-4">
-                             {(selectedProfile.podcasts && selectedProfile.podcasts.length > 0) ? (
-                                selectedProfile.podcasts.map((podcast) => (
-                                    <a key={podcast.id} href={podcast.url || '#'} target="_blank" className="flex items-center bg-white dark:bg-navy p-4 rounded-sm shadow-sm hover:shadow-md transition-all group">
-                                        <div className="bg-navy dark:bg-navy-light text-white p-3 rounded-full mr-4 rtl:mr-0 rtl:ml-4 group-hover:bg-gold transition-colors">
-                                            <Headphones className="h-6 w-6" />
-                                        </div>
-                                        <div className="flex-1">
-                                            <h4 className="font-bold text-navy dark:text-white text-base mb-1">{podcast.title}</h4>
-                                            <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 space-x-3 rtl:space-x-reverse">
-                                                <span className="flex items-center"><Mic className="w-3 h-3 mr-1 rtl:ml-1 rtl:mr-0" /> {podcast.source}</span>
-                                                <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
-                                                <span>{podcast.date}</span>
-                                                <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
-                                                <span>{podcast.duration}</span>
-                                            </div>
-                                        </div>
-                                        <div className="text-gray-300 group-hover:text-gold transition-colors">
-                                            <PlayCircle className="h-8 w-8" />
-                                        </div>
-                                    </a>
-                                ))
-                             ) : (
-                                <p className="text-center text-gray-400 italic text-sm py-4">{t.no_podcasts}</p>
-                             )}
-                         </div>
-                    )}
+                    <div className="flex space-x-8 rtl:space-x-reverse border-b border-gray-300 dark:border-gray-600 mb-8 overflow-x-auto">{['archive', 'news', 'podcast'].map((tab) => (<button key={tab} onClick={() => setActiveTab(tab as any)} className={`pb-4 text-sm font-bold tracking-widest transition-colors relative whitespace-nowrap uppercase ${activeTab === tab ? 'text-navy dark:text-white' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}>{tab === 'archive' ? t.tab_archive : tab === 'news' ? t.tab_news : t.tab_podcast}{activeTab === tab && <span className="absolute bottom-0 left-0 w-full h-1 bg-gold rounded-t-sm"></span>}</button>))}</div>
+                    {activeTab === 'archive' && (<div className="animate-fade-in"><div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">{(selectedProfile.archives && selectedProfile.archives.length > 0) ? (selectedProfile.archives.map((file) => (<a key={file.id} href={file.url || '#'} target="_blank" className="bg-white dark:bg-navy p-4 rounded-sm border border-gray-100 dark:border-gray-700 flex items-start space-x-3 rtl:space-x-reverse hover:shadow-md transition-shadow cursor-pointer"><div className="bg-slate dark:bg-navy-light p-2 rounded-sm text-navy dark:text-white">{file.type === 'PDF' && <FileText className="h-5 w-5" />}{file.type === 'IMAGE' && <ImageIcon className="h-5 w-5" />}{file.type === 'AWARD' && <Award className="h-5 w-5 text-gold" />}</div><div className="flex-1 min-w-0"><p className="text-sm font-bold text-gray-800 dark:text-gray-200 truncate">{file.title}</p><div className="flex justify-between items-center mt-1"><span className="text-[10px] bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-1.5 rounded">{file.type}</span><span className="text-[10px] text-gray-400">{file.date}</span></div></div></a>))) : (<p className="col-span-3 text-center text-gray-400 italic text-sm py-4">{t.no_docs}</p>)}</div></div>)}
+                    {activeTab === 'news' && (<div className="animate-fade-in space-y-4">{(selectedProfile.news && selectedProfile.news.length > 0) ? (selectedProfile.news.map((news) => (<a key={news.id} href={news.url || '#'} target="_blank" className="block bg-white dark:bg-navy p-5 rounded-sm border-l-4 rtl:border-l-0 rtl:border-r-4 border-gold shadow-sm hover:shadow-md transition-shadow"><div className="flex justify-between items-start mb-2"><h4 className="font-bold text-navy dark:text-white text-base">{news.title}</h4><span className="text-xs text-gray-400 whitespace-nowrap ml-4">{news.date}</span></div><div className="flex items-center text-xs text-gold font-bold uppercase tracking-wider mb-3"><Newspaper className="h-3 w-3 mr-1 rtl:ml-1 rtl:mr-0" /> {news.source}</div><p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{news.summary}</p></a>))) : (<p className="text-center text-gray-400 italic text-sm py-4">{t.no_news}</p>)}</div>)}
+                    {activeTab === 'podcast' && (<div className="animate-fade-in space-y-4">{(selectedProfile.podcasts && selectedProfile.podcasts.length > 0) ? (selectedProfile.podcasts.map((podcast) => (<a key={podcast.id} href={podcast.url || '#'} target="_blank" className="flex items-center bg-white dark:bg-navy p-4 rounded-sm shadow-sm hover:shadow-md transition-all group"><div className="bg-navy dark:bg-navy-light text-white p-3 rounded-full mr-4 rtl:mr-0 rtl:ml-4 group-hover:bg-gold transition-colors"><Headphones className="h-6 w-6" /></div><div className="flex-1"><h4 className="font-bold text-navy dark:text-white text-base mb-1">{podcast.title}</h4><div className="flex items-center text-xs text-gray-500 dark:text-gray-400 space-x-3 rtl:space-x-reverse"><span className="flex items-center"><Mic className="w-3 h-3 mr-1 rtl:ml-1 rtl:mr-0" /> {podcast.source}</span><span className="w-1 h-1 bg-gray-300 rounded-full"></span><span>{podcast.date}</span><span className="w-1 h-1 bg-gray-300 rounded-full"></span><span>{podcast.duration}</span></div></div><div className="text-gray-300 group-hover:text-gold transition-colors"><PlayCircle className="h-8 w-8" /></div></a>))) : (<p className="text-center text-gray-400 italic text-sm py-4">{t.no_podcasts}</p>)}</div>)}
                 </div>
               </div>
             ) : null}
@@ -1649,33 +985,8 @@ const App = () => {
         )}
       </main>
 
-      {/* Footer */}
       <footer className="bg-navy text-white pt-16 pb-8 border-t border-gold relative">
-        <div className="max-w-6xl mx-auto px-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
-                <div className="space-y-4">
-                    <div className="flex items-center space-x-2 rtl:space-x-reverse">
-                         <BrandPin className="h-6 w-6 text-gold" />
-                         <span className="text-xl font-serif font-bold">SomaliPin</span>
-                    </div>
-                    <p className="text-gray-400 text-sm leading-relaxed">{t.footer_desc}</p>
-                </div>
-                {/* ... other footer columns ... */}
-                <div>
-                     {/* Secret Admin Entry */}
-                     <h5 
-                        className="font-serif font-bold mb-4 text-gold cursor-pointer hover:text-white"
-                        onClick={() => setView('admin')}
-                    >
-                        {t.footer_platform}
-                     </h5>
-                     {/* ... links ... */}
-                </div>
-            </div>
-            <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center text-xs text-gray-500">
-                <p>&copy; {new Date().getFullYear()} {t.rights}</p>
-            </div>
-        </div>
+        <div className="max-w-6xl mx-auto px-4"><div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12"><div className="space-y-4"><div className="flex items-center space-x-2 rtl:space-x-reverse"><BrandPin className="h-6 w-6 text-gold" /><span className="text-xl font-serif font-bold">SomaliPin</span></div><p className="text-gray-400 text-sm leading-relaxed">{t.footer_desc}</p></div><div><h5 className="font-serif font-bold mb-4 text-gold cursor-pointer hover:text-white" onClick={() => setView('admin')}>{t.footer_platform}</h5></div></div><div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center text-xs text-gray-500"><p>&copy; {new Date().getFullYear()} {t.rights}</p></div></div>
       </footer>
     </div>
   );

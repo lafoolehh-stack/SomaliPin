@@ -56,6 +56,29 @@ export enum Category {
     opposition: number;
   }
 
+  // New interfaces for Archive structure
+  export enum SectionType {
+    POLITICS = 'POLITICS',
+    JUDICIARY = 'JUDICIARY',
+    SECURITY = 'SECURITY'
+  }
+
+  export interface ArchiveCategory {
+    id: number;
+    category_name: string;
+    section_type: SectionType;
+  }
+
+  export interface ArchiveAssignment {
+    id: number;
+    user_id: string; // Corresponds to Profile.id
+    category_id: number;
+    start_date: string;
+    end_date?: string;
+    title_note: string;
+    category?: ArchiveCategory; // Joined category details
+  }
+
   // Frontend Profile Interface
   export interface Profile {
     id: string;
@@ -78,7 +101,8 @@ export enum Category {
     status: ProfileStatus;
     dateStart: string; 
     dateEnd?: string;
-    locked?: boolean; // New field for security/locking
+    locked?: boolean; // Existing field for security/locking
+    archiveAssignments?: ArchiveAssignment[]; // New field for structured archive positions
   }
 
   // Supabase Database Row Interface
