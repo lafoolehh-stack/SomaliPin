@@ -1,7 +1,7 @@
 
 import * as React from 'react';
 import { useState, useEffect, useMemo } from 'react';
-import { Search, MapPin, ChevronLeft, ChevronDown, ChevronRight, Building2, User, BookOpen, Upload, FileText, ImageIcon, Award, Newspaper, Globe, Calendar, Clock, Activity, Lock, Plus, Trash2, Edit2, Save, X, Database, Link, AlertCircle, Sun, Moon, Mic, Headphones, PlayCircle, Unlock, Shield, Loader2, Briefcase, Landmark, Gavel, ShieldCheck, ChevronUp, Palette, Settings, Layers, RefreshCw, ExternalLink, Play } from 'lucide-react';
+import { Search, MapPin, ChevronLeft, ChevronDown, ChevronRight, Building2, User, BookOpen, Upload, FileText, ImageIcon, Award, Newspaper, Globe, Calendar, Clock, Activity, Lock, Plus, Trash2, Edit2, Save, X, Database, Link, AlertCircle, Sun, Moon, Mic, Headphones, PlayCircle, Unlock, Shield, Loader2, Briefcase, Landmark, Gavel, ShieldCheck, ChevronUp, Palette, Settings, Layers, RefreshCw, ExternalLink, Play, ArrowRight } from 'lucide-react';
 import { BrandPin, VerifiedBadge, HeroBadge, GoldenBadge, StandardBadge, NobelBadge } from './components/Icons';
 import ProfileCard from './components/ProfileCard';
 import Timeline from './components/Timeline';
@@ -32,12 +32,12 @@ const App = () => {
   const [adminPassword, setAdminPassword] = useState('');
   const [adminSubView, setAdminSubView] = useState<'dossiers' | 'categories'>('dossiers');
   const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState<Partial<DossierDB & { archiveAssignments: ArchiveAssignment[] }>>({});
+  const [editForm, setEditForm] = useState<Partial<Profile>>({});
   const [uploadingImage, setUploadingImage] = useState(false);
   const [activeAdminTab, setActiveAdminTab] = useState<'basic' | 'timeline' | 'archive' | 'positions' | 'news' | 'podcast'>('basic');
   const [isLocking, setIsLocking] = useState(false); 
 
-  // New Category Manager State
+  // Category Manager State
   const [newCatName, setNewCatName] = useState('');
   const [newCatSection, setNewCatSection] = useState<SectionType>(SectionType.BUSINESS);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
@@ -47,6 +47,12 @@ const App = () => {
   const handleBack = () => {
     setView('home');
     setSelectedProfile(null);
+    window.scrollTo(0, 0);
+  };
+
+  const handleProfileClick = (profile: Profile) => {
+    setSelectedProfile(profile);
+    setView('profile');
     window.scrollTo(0, 0);
   };
 
@@ -134,7 +140,7 @@ const App = () => {
           verificationLevel: (d.verification_level as VerificationLevel) || VerificationLevel.STANDARD,
           imageUrl: d.image_url || 'https://via.placeholder.com/150',
           shortBio: d.bio || '',
-          fullBio: details.fullBio?.[language] || details.fullBio?.en || d.bio || '',
+          fullBio: details.fullBio?.[language] || details.fullBio?.en || details.fullBio || d.bio || '',
           timeline: details.timeline || [],
           location: details.location || '',
           archives: details.archives || [],
@@ -166,14 +172,6 @@ const App = () => {
         p.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.title.toLowerCase().includes(searchQuery.toLowerCase())
       );
-
-  const handleProfileClick = (profile: Profile) => {
-    setSelectedProfile(profile);
-    setView('profile');
-    setActiveTab('archive'); 
-    setShowCertificate(false);
-    window.scrollTo(0, 0);
-  };
 
   const handleAdminLogin = () => {
     if (adminPassword === 'NPipin1123@@') {
@@ -226,7 +224,7 @@ const App = () => {
       if (uploadError) alert('Error uploading image: ' + uploadError.message);
       else {
         const { data } = supabase.storage.from('dossier-images').getPublicUrl(filePath);
-        setEditForm({ ...editForm, image_url: data.publicUrl });
+        setEditForm({ ...editForm, imageUrl: data.publicUrl });
       }
     } finally {
       setUploadingImage(false);
@@ -262,34 +260,36 @@ const App = () => {
 
   const handleSaveDossier = async () => {
     try {
-      if (!editForm.full_name || !editForm.category) return alert('Name and Category are required');
-      const currentFullBio = editForm.details?.fullBio || {};
-      if (editForm.details?.tempFullBio !== undefined) {
-          currentFullBio['en'] = editForm.details.tempFullBio;
-          if (!currentFullBio['so']) currentFullBio['so'] = editForm.details.tempFullBio;
-      }
+      if (!editForm.name || !editForm.category) return alert('Name and Category are required');
       
       const dossierData = {
-        full_name: editForm.full_name,
-        role: editForm.role || '',
-        bio: editForm.bio || '', 
-        status: editForm.status || 'Unverified',
-        reputation_score: Number(editForm.reputation_score) || 0,
-        image_url: editForm.image_url || '',
+        full_name: editForm.name,
+        role: editForm.title || '',
+        bio: editForm.shortBio || '', 
+        status: editForm.verified ? 'Verified' : 'Unverified',
+        reputation_score: Number(editForm.influence?.support) || 0,
+        image_url: editForm.imageUrl || '',
         category: editForm.category,
-        verification_level: editForm.verification_level || 'Standard',
+        verification_level: editForm.verificationLevel || 'Standard',
         details: { 
-            ...editForm.details, 
-            fullBio: currentFullBio, 
-            locked: !!editForm.details?.locked 
+            fullBio: editForm.fullBio,
+            location: editForm.location,
+            status: editForm.status,
+            dateStart: editForm.dateStart,
+            dateEnd: editForm.dateEnd,
+            isOrganization: editForm.isOrganization,
+            locked: !!editForm.locked,
+            timeline: editForm.timeline || [],
+            archives: editForm.archives || [],
+            news: editForm.news || [],
+            podcasts: editForm.podcasts || []
         }
       };
       
-      if ((dossierData.details as any).tempFullBio) delete (dossierData.details as any).tempFullBio;
-      
       let savedDossierId = editForm.id;
-      if (editForm.id) await supabase.from('dossiers').update(dossierData).eq('id', editForm.id);
-      else {
+      if (editForm.id) {
+        await supabase.from('dossiers').update(dossierData).eq('id', editForm.id);
+      } else {
         const { data } = await supabase.from('dossiers').insert([dossierData]).select();
         savedDossierId = data?.[0].id;
       }
@@ -486,7 +486,7 @@ const App = () => {
                                  <Unlock className="w-3 h-3 mr-1" /> Unlock All
                              </button>
                         </div>
-                        <button onClick={() => { setEditForm({ status: 'Unverified', reputation_score: 50, verification_level: 'Standard', archiveAssignments: [], details: { isOrganization: false, status: 'ACTIVE', timeline: [], archives: [], news: [], podcasts: [] } }); setIsEditing(true); }} className="bg-green-600 text-white px-4 py-2 rounded-sm flex items-center hover:bg-green-700 shadow-sm"><Plus className="w-4 h-4 mr-2" /> Add New</button>
+                        <button onClick={() => { setEditForm({ name: '', title: '', category: '', shortBio: '', fullBio: '', verified: false, verificationLevel: VerificationLevel.STANDARD, status: 'ACTIVE', timeline: [], archives: [], news: [], podcasts: [], archiveAssignments: [] }); setIsEditing(true); }} className="bg-green-600 text-white px-4 py-2 rounded-sm flex items-center hover:bg-green-700 shadow-sm"><Plus className="w-4 h-4 mr-2" /> Add New</button>
                       </div>
                     </div>
                     <div className="overflow-x-auto">
@@ -506,23 +506,7 @@ const App = () => {
                               <td className="p-3 text-gray-500">{p.category}</td>
                               <td className="p-3"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${p.verified ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{p.verified ? 'VERIFIED' : 'UNVERIFIED'}</span></td>
                               <td className="p-3 text-right space-x-2">
-                                <button onClick={() => { 
-                                  const pDetails = p.archives ? { 
-                                    archives: p.archives, 
-                                    news: p.news, 
-                                    podcasts: p.podcasts, 
-                                    timeline: p.timeline,
-                                    location: p.location,
-                                    isOrganization: p.isOrganization,
-                                    status: p.status,
-                                    dateStart: p.dateStart,
-                                    dateEnd: p.dateEnd,
-                                    tempFullBio: p.fullBio,
-                                    locked: p.locked
-                                  } : { ...p };
-                                  setEditForm({ ...p, full_name: p.name, role: p.title, status: p.verified ? 'Verified' : 'Unverified', reputation_score: p.influence?.support, details: pDetails }); 
-                                  setIsEditing(true); 
-                                }} className="text-navy dark:text-gold hover:underline font-bold">Edit</button>
+                                <button onClick={() => { setEditForm({ ...p }); setIsEditing(true); }} className="text-navy dark:text-gold hover:underline font-bold">Edit</button>
                                 <button onClick={async () => { if(window.confirm('Delete dossier?')) { await supabase.from('dossiers').delete().eq('id', p.id); fetchDossiers(); } }} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4"/></button>
                               </td>
                             </tr>
@@ -601,80 +585,80 @@ const App = () => {
                     {activeAdminTab === 'basic' && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div className="space-y-5">
-                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Full Name</label><input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.full_name || ''} onChange={(e) => setEditForm({...editForm, full_name: e.target.value})} /></div>
-                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Headline Role</label><input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.role || ''} onChange={(e) => setEditForm({...editForm, role: e.target.value})} /></div>
-                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Location</label><input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.details?.location || ''} onChange={(e) => setEditForm({...editForm, details: { ...editForm.details, location: e.target.value }})} /></div>
-                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Primary Display Category</label><input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.category || ''} onChange={(e) => setEditForm({...editForm, category: e.target.value})} /></div>
-                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Lifecycle Status</label><select className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.details?.status || 'ACTIVE'} onChange={(e) => setEditForm({...editForm, details: { ...editForm.details, status: e.target.value }})}><option value="ACTIVE">Active</option><option value="DECEASED">Deceased</option><option value="RETIRED">Retired</option><option value="CLOSED">Closed (Business)</option></select></div>
+                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Full Name</label><input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.name || ''} onChange={(e) => setEditForm({...editForm, name: e.target.value})} /></div>
+                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Headline Role</label><input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.title || ''} onChange={(e) => setEditForm({...editForm, title: e.target.value})} /></div>
+                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Location</label><input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.location || ''} onChange={(e) => setEditForm({...editForm, location: e.target.value})} /></div>
+                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Display Category</label><input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.category || ''} onChange={(e) => setEditForm({...editForm, category: e.target.value})} /></div>
+                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Lifecycle Status</label><select className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.status || 'ACTIVE'} onChange={(e) => setEditForm({...editForm, status: e.target.value as ProfileStatus})}><option value="ACTIVE">Active</option><option value="DECEASED">Deceased</option><option value="RETIRED">Retired</option><option value="CLOSED">Closed (Business)</option></select></div>
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Date Start/Born</label><input type="text" placeholder="e.g. 1960" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.details?.dateStart || ''} onChange={(e) => setEditForm({...editForm, details: { ...editForm.details, dateStart: e.target.value }})} /></div>
-                                    <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Date End/Died</label><input type="text" placeholder="e.g. 2020" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.details?.dateEnd || ''} onChange={(e) => setEditForm({...editForm, details: { ...editForm.details, dateEnd: e.target.value }})} /></div>
+                                    <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Date Start/Born</label><input type="text" placeholder="e.g. 1960" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.dateStart || ''} onChange={(e) => setEditForm({...editForm, dateStart: e.target.value})} /></div>
+                                    <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Date End/Died</label><input type="text" placeholder="e.g. 2020" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.dateEnd || ''} onChange={(e) => setEditForm({...editForm, dateEnd: e.target.value})} /></div>
                                 </div>
                             </div>
                             <div className="space-y-5">
-                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Verification Status</label><select className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.status || 'Unverified'} onChange={(e) => setEditForm({...editForm, status: e.target.value as any})}><option value="Unverified">Unverified</option><option value="Verified">Verified</option></select></div>
-                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Honors Tier</label><select className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.verification_level || 'Standard'} onChange={(e) => setEditForm({...editForm, verification_level: e.target.value as any})}><option value="Standard">Standard</option><option value="Golden">Golden</option><option value="Hero">Hero</option><option value="Nobel">Nobel</option></select></div>
-                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Reputation Score (0-100)</label><input type="number" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.reputation_score || 0} onChange={(e) => setEditForm({...editForm, reputation_score: parseInt(e.target.value)})} /></div>
-                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Profile Image</label><div className="flex items-center space-x-3 bg-slate/50 dark:bg-navy-light/30 p-2 rounded-sm border border-dashed border-gray-200 dark:border-gray-700">{editForm.image_url ? <img src={editForm.image_url} alt="Preview" className="w-12 h-12 object-cover rounded shadow-sm" /> : <div className="w-12 h-12 bg-gray-100 dark:bg-navy flex items-center justify-center rounded text-gray-400"><ImageIcon className="w-6 h-6"/></div>}<input type="file" accept="image/*" onChange={handleImageUpload} className="text-xs file:mr-4 file:py-1.5 file:px-3 file:rounded-sm file:border-0 file:text-[10px] file:font-bold file:uppercase file:bg-navy file:text-gold cursor-pointer" /></div></div>
-                                <div className="py-2"><label className="flex items-center space-x-3 cursor-pointer group"><input type="checkbox" checked={editForm.details?.isOrganization || false} onChange={(e) => setEditForm({...editForm, details: { ...editForm.details, isOrganization: e.target.checked }})} className="h-5 w-5 rounded border-gray-300 text-gold focus:ring-gold" /><span className="text-sm font-bold text-navy-light dark:text-gray-300 group-hover:text-gold transition-colors">Is Organization or Company?</span></label></div>
-                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Short Bio / Teaser</label><textarea className="w-full border p-2.5 rounded-sm h-24 dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none resize-none" value={editForm.bio || ''} onChange={(e) => setEditForm({...editForm, bio: e.target.value})} /></div>
+                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Verification Status</label><select className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.verified ? 'Verified' : 'Unverified'} onChange={(e) => setEditForm({...editForm, verified: e.target.value === 'Verified'})}><option value="Unverified">Unverified</option><option value="Verified">Verified</option></select></div>
+                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Honors Tier</label><select className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.verificationLevel || 'Standard'} onChange={(e) => setEditForm({...editForm, verificationLevel: e.target.value as VerificationLevel})}><option value="Standard">Standard</option><option value="Golden">Golden</option><option value="Hero">Hero</option><option value="Nobel">Nobel</option></select></div>
+                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Reputation Score</label><input type="number" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.influence?.support || 0} onChange={(e) => setEditForm({...editForm, influence: { ...editForm.influence!, support: parseInt(e.target.value) }})} /></div>
+                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Profile Image</label><div className="flex items-center space-x-3 bg-slate/50 dark:bg-navy-light/30 p-2 rounded-sm border border-dashed border-gray-200 dark:border-gray-700">{editForm.imageUrl ? <img src={editForm.imageUrl} alt="Preview" className="w-12 h-12 object-cover rounded shadow-sm" /> : <div className="w-12 h-12 bg-gray-100 dark:bg-navy flex items-center justify-center rounded text-gray-400"><ImageIcon className="w-6 h-6"/></div>}<input type="file" accept="image/*" onChange={handleImageUpload} className="text-xs file:mr-4 file:py-1.5 file:px-3 file:rounded-sm file:border-0 file:text-[10px] file:font-bold file:uppercase file:bg-navy file:text-gold cursor-pointer" /></div></div>
+                                <div className="py-2"><label className="flex items-center space-x-3 cursor-pointer group"><input type="checkbox" checked={editForm.isOrganization || false} onChange={(e) => setEditForm({...editForm, isOrganization: e.target.checked})} className="h-5 w-5 rounded border-gray-300 text-gold focus:ring-gold" /><span className="text-sm font-bold text-navy-light dark:text-gray-300 group-hover:text-gold transition-colors">Is Organization/Company?</span></label></div>
+                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Short Bio</label><textarea className="w-full border p-2.5 rounded-sm h-24 dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none resize-none" value={editForm.shortBio || ''} onChange={(e) => setEditForm({...editForm, shortBio: e.target.value})} /></div>
                             </div>
-                            <div className="md:col-span-2"><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Full Dossier Biography</label><textarea className="w-full border p-3 rounded-sm h-56 font-serif dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={(editForm.details as any)?.tempFullBio || ''} onChange={(e) => setEditForm({ ...editForm, details: { ...editForm.details, tempFullBio: e.target.value } as any })} /></div>
+                            <div className="md:col-span-2"><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Full Dossier Biography</label><textarea className="w-full border p-3 rounded-sm h-56 font-serif dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.fullBio || ''} onChange={(e) => setEditForm({ ...editForm, fullBio: e.target.value })} /></div>
                         </div>
                     )}
                     {activeAdminTab === 'timeline' && (
                         <div className="space-y-6">
-                            <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-navy dark:text-white flex items-center"><Activity className="w-5 h-5 mr-2 text-gold"/> Historical Timeline</h3><button onClick={() => setEditForm(prev => ({ ...prev, details: { ...prev.details, timeline: [...(prev.details?.timeline || []), { year: '', title: '', description: '' }] } }))} className="text-xs bg-navy text-gold px-4 py-2 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"><Plus className="w-4 h-4 mr-1" /> Add Entry</button></div>
-                            <div className="space-y-4">{editForm.details?.timeline?.map((event: TimelineEvent, idx: number) => (
+                            <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-navy dark:text-white flex items-center"><Activity className="w-5 h-5 mr-2 text-gold"/> Historical Timeline</h3><button onClick={() => setEditForm(prev => ({ ...prev, timeline: [...(prev.timeline || []), { year: '', title: '', description: '' }] }))} className="text-xs bg-navy text-gold px-4 py-2 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"><Plus className="w-4 h-4 mr-1" /> Add Entry</button></div>
+                            <div className="space-y-4">{editForm.timeline?.map((event, idx) => (
                                 <div key={idx} className="flex gap-4 items-start border p-4 rounded-sm bg-slate/30 dark:bg-navy-light/40 animate-fade-in group">
-                                  <input placeholder="Year" className="w-24 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white font-mono text-sm" value={event.year} onChange={e => { const t = [...(editForm.details.timeline)]; t[idx].year = e.target.value; setEditForm({...editForm, details: {...editForm.details, timeline: t}}); }} />
-                                  <div className="flex-1 space-y-3"><input placeholder="Entry Title" className="w-full border p-2 rounded-sm font-bold dark:bg-navy dark:border-gray-600 dark:text-white text-sm" value={event.title} onChange={e => { const t = [...(editForm.details.timeline)]; t[idx].title = e.target.value; setEditForm({...editForm, details: {...editForm.details, timeline: t}}); }} /><textarea placeholder="Event description..." className="w-full border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs resize-none h-20" value={event.description} onChange={e => { const t = [...(editForm.details.timeline)]; t[idx].description = e.target.value; setEditForm({...editForm, details: {...editForm.details, timeline: t}}); }} /></div>
-                                  <button onClick={() => { const t = [...(editForm.details.timeline)]; t.splice(idx,1); setEditForm({...editForm, details: {...editForm.details, timeline: t}}); }} className="text-red-400 hover:text-red-600 p-2"><Trash2 className="w-5 h-5" /></button>
+                                  <input placeholder="Year" className="w-24 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white font-mono text-sm" value={event.year} onChange={e => { const t = [...editForm.timeline!]; t[idx].year = e.target.value; setEditForm({...editForm, timeline: t}); }} />
+                                  <div className="flex-1 space-y-3"><input placeholder="Entry Title" className="w-full border p-2 rounded-sm font-bold dark:bg-navy dark:border-gray-600 dark:text-white text-sm" value={event.title} onChange={e => { const t = [...editForm.timeline!]; t[idx].title = e.target.value; setEditForm({...editForm, timeline: t}); }} /><textarea placeholder="Event description..." className="w-full border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs resize-none h-20" value={event.description} onChange={e => { const t = [...editForm.timeline!]; t[idx].description = e.target.value; setEditForm({...editForm, timeline: t}); }} /></div>
+                                  <button onClick={() => { const t = [...editForm.timeline!]; t.splice(idx,1); setEditForm({...editForm, timeline: t}); }} className="text-red-400 hover:text-red-600 p-2"><Trash2 className="w-5 h-5" /></button>
                                 </div>
                             ))}</div>
                         </div>
                     )}
                     {activeAdminTab === 'archive' && (
                         <div className="space-y-6">
-                            <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-navy dark:text-white flex items-center"><FileText className="w-5 h-5 mr-2 text-gold"/> Archive Documents</h3><button onClick={() => setEditForm(prev => ({ ...prev, details: { ...prev.details, archives: [...(prev.details?.archives || []), { id: Date.now().toString(), type: 'PDF', title: '', date: '', size: '', url: '' }] } }))} className="text-xs bg-navy text-gold px-4 py-2 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"><Plus className="w-4 h-4 mr-1" /> Add Doc</button></div>
-                            <div className="space-y-4">{editForm.details?.archives?.map((item: ArchiveItem, idx: number) => (
+                            <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-navy dark:text-white flex items-center"><FileText className="w-5 h-5 mr-2 text-gold"/> Archive Documents</h3><button onClick={() => setEditForm(prev => ({ ...prev, archives: [...(prev.archives || []), { id: Date.now().toString(), type: 'PDF', title: '', date: '', url: '' }] }))} className="text-xs bg-navy text-gold px-4 py-2 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"><Plus className="w-4 h-4 mr-1" /> Add Doc</button></div>
+                            <div className="space-y-4">{editForm.archives?.map((item, idx) => (
                                 <div key={idx} className="flex gap-4 items-center border p-4 rounded-sm bg-slate/30 dark:bg-navy-light/40 group">
-                                    <select className="w-24 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={item.type} onChange={e => { const a = [...editForm.details.archives]; a[idx].type = e.target.value as any; setEditForm({...editForm, details: {...editForm.details, archives: a}}); }}>
+                                    <select className="w-24 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={item.type} onChange={e => { const a = [...editForm.archives!]; a[idx].type = e.target.value as any; setEditForm({...editForm, archives: a}); }}>
                                         <option value="PDF">PDF</option>
                                         <option value="IMAGE">IMAGE</option>
                                         <option value="AWARD">AWARD</option>
                                     </select>
-                                    <input placeholder="Document Title" className="flex-1 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={item.title} onChange={e => { const a = [...editForm.details.archives]; a[idx].title = e.target.value; setEditForm({...editForm, details: {...editForm.details, archives: a}}); }} />
-                                    <input placeholder="File Link" className="flex-1 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={item.url || ''} onChange={e => { const a = [...editForm.details.archives]; a[idx].url = e.target.value; setEditForm({...editForm, details: {...editForm.details, archives: a}}); }} />
-                                    <button onClick={() => { const a = [...editForm.details.archives]; a.splice(idx,1); setEditForm({...editForm, details: {...editForm.details, archives: a}}); }} className="text-red-400 p-2"><Trash2 className="w-5 h-5"/></button>
+                                    <input placeholder="Document Title" className="flex-1 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={item.title} onChange={e => { const a = [...editForm.archives!]; a[idx].title = e.target.value; setEditForm({...editForm, archives: a}); }} />
+                                    <input placeholder="File Link" className="flex-1 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={item.url || ''} onChange={e => { const a = [...editForm.archives!]; a[idx].url = e.target.value; setEditForm({...editForm, archives: a}); }} />
+                                    <button onClick={() => { const a = [...editForm.archives!]; a.splice(idx,1); setEditForm({...editForm, archives: a}); }} className="text-red-400 p-2"><Trash2 className="w-5 h-5"/></button>
                                 </div>
                             ))}</div>
                         </div>
                     )}
                     {activeAdminTab === 'news' && (
                         <div className="space-y-6">
-                            <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-navy dark:text-white flex items-center"><Newspaper className="w-5 h-5 mr-2 text-gold"/> News Reports</h3><button onClick={() => setEditForm(prev => ({ ...prev, details: { ...prev.details, news: [...(prev.details?.news || []), { id: Date.now().toString(), title: '', source: '', date: '', summary: '', url: '' }] } }))} className="text-xs bg-navy text-gold px-4 py-2 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"><Plus className="w-4 h-4 mr-1" /> Add News</button></div>
-                            <div className="space-y-4">{editForm.details?.news?.map((item: NewsItem, idx: number) => (
+                            <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-navy dark:text-white flex items-center"><Newspaper className="w-5 h-5 mr-2 text-gold"/> News Reports</h3><button onClick={() => setEditForm(prev => ({ ...prev, news: [...(prev.news || []), { id: Date.now().toString(), title: '', source: '', date: '', summary: '', url: '' }] }))} className="text-xs bg-navy text-gold px-4 py-2 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"><Plus className="w-4 h-4 mr-1" /> Add News</button></div>
+                            <div className="space-y-4">{editForm.news?.map((item, idx) => (
                                 <div key={idx} className="border p-4 rounded-sm bg-slate/30 dark:bg-navy-light/40 group space-y-3">
                                     <div className="flex gap-4">
-                                        <input placeholder="Headline" className="flex-1 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs font-bold" value={item.title} onChange={e => { const n = [...editForm.details.news]; n[idx].title = e.target.value; setEditForm({...editForm, details: {...editForm.details, news: n}}); }} />
-                                        <input placeholder="Source" className="w-40 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={item.source} onChange={e => { const n = [...editForm.details.news]; n[idx].source = e.target.value; setEditForm({...editForm, details: {...editForm.details, news: n}}); }} />
-                                        <button onClick={() => { const n = [...editForm.details.news]; n.splice(idx,1); setEditForm({...editForm, details: {...editForm.details, news: n}}); }} className="text-red-400 p-2"><Trash2 className="w-5 h-5"/></button>
+                                        <input placeholder="Headline" className="flex-1 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs font-bold" value={item.title} onChange={e => { const n = [...editForm.news!]; n[idx].title = e.target.value; setEditForm({...editForm, news: n}); }} />
+                                        <input placeholder="Source" className="w-40 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={item.source} onChange={e => { const n = [...editForm.news!]; n[idx].source = e.target.value; setEditForm({...editForm, news: n}); }} />
+                                        <button onClick={() => { const n = [...editForm.news!]; n.splice(idx,1); setEditForm({...editForm, news: n}); }} className="text-red-400 p-2"><Trash2 className="w-5 h-5"/></button>
                                     </div>
-                                    <textarea placeholder="Brief summary of the report..." className="w-full border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs h-16 resize-none" value={item.summary} onChange={e => { const n = [...editForm.details.news]; n[idx].summary = e.target.value; setEditForm({...editForm, details: {...editForm.details, news: n}}); }} />
+                                    <textarea placeholder="Summary..." className="w-full border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs h-16 resize-none" value={item.summary} onChange={e => { const n = [...editForm.news!]; n[idx].summary = e.target.value; setEditForm({...editForm, news: n}); }} />
                                 </div>
                             ))}</div>
                         </div>
                     )}
                     {activeAdminTab === 'podcast' && (
                         <div className="space-y-6">
-                            <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-navy dark:text-white flex items-center"><Headphones className="w-5 h-5 mr-2 text-gold"/> Podcast Library</h3><button onClick={() => setEditForm(prev => ({ ...prev, details: { ...prev.details, podcasts: [...(prev.details?.podcasts || []), { id: Date.now().toString(), title: '', date: '', duration: '', source: '', url: '' }] } }))} className="text-xs bg-navy text-gold px-4 py-2 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"><Plus className="w-4 h-4 mr-1" /> Add Clip</button></div>
-                            <div className="space-y-4">{editForm.details?.podcasts?.map((item: PodcastItem, idx: number) => (
+                            <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-navy dark:text-white flex items-center"><Headphones className="w-5 h-5 mr-2 text-gold"/> Podcast Library</h3><button onClick={() => setEditForm(prev => ({ ...prev, podcasts: [...(prev.podcasts || []), { id: Date.now().toString(), title: '', date: '', duration: '', source: '', url: '' }] }))} className="text-xs bg-navy text-gold px-4 py-2 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"><Plus className="w-4 h-4 mr-1" /> Add Clip</button></div>
+                            <div className="space-y-4">{editForm.podcasts?.map((item, idx) => (
                                 <div key={idx} className="border p-4 rounded-sm bg-slate/30 dark:bg-navy-light/40 group space-y-3">
                                     <div className="flex gap-4">
-                                        <input placeholder="Episode Title" className="flex-1 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs font-bold" value={item.title} onChange={e => { const p = [...editForm.details.podcasts]; p[idx].title = e.target.value; setEditForm({...editForm, details: {...editForm.details, podcasts: p}}); }} />
-                                        <input placeholder="Audio URL" className="flex-1 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={item.url || ''} onChange={e => { const p = [...editForm.details.podcasts]; p[idx].url = e.target.value; setEditForm({...editForm, details: {...editForm.details, podcasts: p}}); }} />
-                                        <button onClick={() => { const p = [...editForm.details.podcasts]; p.splice(idx,1); setEditForm({...editForm, details: {...editForm.details, podcasts: p}}); }} className="text-red-400 p-2"><Trash2 className="w-5 h-5"/></button>
+                                        <input placeholder="Episode Title" className="flex-1 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs font-bold" value={item.title} onChange={e => { const p = [...editForm.podcasts!]; p[idx].title = e.target.value; setEditForm({...editForm, podcasts: p}); }} />
+                                        <input placeholder="Audio URL" className="flex-1 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={item.url || ''} onChange={e => { const p = [...editForm.podcasts!]; p[idx].url = e.target.value; setEditForm({...editForm, podcasts: p}); }} />
+                                        <button onClick={() => { const p = [...editForm.podcasts!]; p.splice(idx,1); setEditForm({...editForm, podcasts: p}); }} className="text-red-400 p-2"><Trash2 className="w-5 h-5"/></button>
                                     </div>
                                 </div>
                             ))}</div>
@@ -683,9 +667,9 @@ const App = () => {
                     {activeAdminTab === 'positions' && (
                         <div className="space-y-6">
                              <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-navy dark:text-white flex items-center"><Layers className="w-5 h-5 mr-2 text-gold"/> Official Archive Roles</h3><button onClick={() => setEditForm(prev => ({ ...prev, archiveAssignments: [...(prev.archiveAssignments || []), { id: 0, user_id: editForm.id || '', category_id: allCategories[0]?.id || 0, start_date: '', end_date: '', title_note: '' }] }))} className="text-xs bg-navy text-gold px-4 py-2 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"><Plus className="w-4 h-4 mr-1" /> Assign Role</button></div>
-                            <div className="space-y-4">{editForm.archiveAssignments?.map((assign: ArchiveAssignment, idx: number) => (
+                            <div className="space-y-4">{editForm.archiveAssignments?.map((assign, idx) => (
                                 <div key={idx} className="border p-5 rounded-sm bg-slate/30 dark:bg-navy-light/40 space-y-4 group">
-                                    <div className="flex gap-4"><div className="flex-1"><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Category</label><select className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs font-bold" value={assign.category_id} onChange={e => { const updated = [...(editForm.archiveAssignments || [])]; updated[idx].category_id = parseInt(e.target.value); setEditForm({...editForm, archiveAssignments: updated}); }}>{Object.values(SectionType).map(sect => (<optgroup label={sect} key={sect}>{allCategories.filter(c => c.section_type === sect).map(cat => (<option key={cat.id} value={cat.id}>{cat.category_name}</option>))}</optgroup>)}</select></div><div className="flex-1"><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Specific Title</label><input placeholder="e.g. Chairman" className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={assign.title_note} onChange={e => { const updated = [...(editForm.archiveAssignments || [])]; updated[idx].title_note = e.target.value; setEditForm({...editForm, archiveAssignments: updated}); }} /></div><button onClick={() => { const updated = [...(editForm.archiveAssignments || [])]; updated.splice(idx, 1); setEditForm({...editForm, archiveAssignments: updated}); }} className="self-end p-2.5 text-red-400"><Trash2 className="w-5 h-5" /></button></div>
+                                    <div className="flex gap-4"><div className="flex-1"><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Category</label><select className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs font-bold" value={assign.category_id} onChange={e => { const updated = [...editForm.archiveAssignments!]; updated[idx].category_id = parseInt(e.target.value); setEditForm({...editForm, archiveAssignments: updated}); }}>{Object.values(SectionType).map(sect => (<optgroup label={sect} key={sect}>{allCategories.filter(c => c.section_type === sect).map(cat => (<option key={cat.id} value={cat.id}>{cat.category_name}</option>))}</optgroup>)}</select></div><div className="flex-1"><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Specific Title</label><input placeholder="e.g. Chairman" className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={assign.title_note} onChange={e => { const updated = [...editForm.archiveAssignments!]; updated[idx].title_note = e.target.value; setEditForm({...editForm, archiveAssignments: updated}); }} /></div><button onClick={() => { const updated = [...editForm.archiveAssignments!]; updated.splice(idx, 1); setEditForm({...editForm, archiveAssignments: updated}); }} className="self-end p-2.5 text-red-400"><Trash2 className="w-5 h-5" /></button></div>
                                 </div>
                             ))}</div>
                         </div>
@@ -737,11 +721,45 @@ const App = () => {
                 <div className="flex flex-wrap justify-center gap-4 mt-8">
                   <div className="relative w-full max-w-xl group"><div className="absolute inset-y-0 left-0 pl-4 rtl:pl-0 rtl:right-0 rtl:pr-4 flex items-center pointer-events-none"><Search className="h-5 w-5 text-gray-400 group-focus-within:text-navy transition-colors" /></div><input type="text" className="block w-full pl-11 pr-4 rtl:pl-4 rtl:pr-11 py-4 bg-white dark:bg-navy dark:text-white dark:border-gray-600 border-0 rounded-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gold focus:outline-none shadow-xl text-lg" placeholder={t.search_placeholder} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /></div>
                   <button onClick={() => setView('archive-explorer')} className="bg-gold hover:bg-gold-dark text-navy px-8 py-4 rounded-sm font-bold flex items-center shadow-xl transition-all"><Landmark className="w-5 h-5 mr-2" /> {t.nav_archive}</button>
-                  <button onClick={() => setView('business-archive')} className="bg-navy-light hover:bg-navy text-white px-8 py-4 rounded-sm font-bold flex items-center shadow-xl transition-all border border-gold/30"><Briefcase className="w-5 h-5 mr-2" /> Business</button>
-                  <button onClick={() => setView('arts-culture-archive')} className="bg-navy-light hover:bg-navy text-white px-8 py-4 rounded-sm font-bold flex items-center shadow-xl transition-all border border-gold/30"><Palette className="w-5 h-5 mr-2" /> Arts & Culture</button>
                 </div>
               </div>
             </section>
+
+            {/* NEW SECTOR CARDS SECTION */}
+            <section className="max-w-6xl mx-auto px-4 py-16 -mt-10 relative z-10">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {/* National Registry */}
+                <div onClick={() => setView('archive-explorer')} className="group bg-white dark:bg-navy-light p-8 rounded-sm shadow-2xl border border-gray-100 dark:border-navy cursor-pointer hover:-translate-y-2 transition-all duration-300">
+                  <div className="w-14 h-14 bg-navy dark:bg-gold text-gold dark:text-navy rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                    <Landmark className="w-7 h-7" />
+                  </div>
+                  <h3 className="text-xl font-serif font-bold text-navy dark:text-white mb-3">National Registry</h3>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm mb-6 leading-relaxed">Official directory of political leadership, judicial history, and security forces from 1960 to the present.</p>
+                  <div className="flex items-center text-xs font-bold text-gold uppercase tracking-widest group-hover:gap-2 transition-all">Explore Registry <ArrowRight className="w-4 h-4 ml-1" /></div>
+                </div>
+
+                {/* Business Archive */}
+                <div onClick={() => setView('business-archive')} className="group bg-white dark:bg-navy-light p-8 rounded-sm shadow-2xl border border-gray-100 dark:border-navy cursor-pointer hover:-translate-y-2 transition-all duration-300 border-t-4 border-t-gold">
+                  <div className="w-14 h-14 bg-gold text-navy rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                    <Briefcase className="w-7 h-7" />
+                  </div>
+                  <h3 className="text-xl font-serif font-bold text-navy dark:text-white mb-3">Business & Commerce</h3>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm mb-6 leading-relaxed">Tracking the history of Somali entrepreneurship, major corporations, banking institutions, and economic pioneers.</p>
+                  <div className="flex items-center text-xs font-bold text-gold uppercase tracking-widest group-hover:gap-2 transition-all">Explore Business <ArrowRight className="w-4 h-4 ml-1" /></div>
+                </div>
+
+                {/* Arts & Culture Archive */}
+                <div onClick={() => setView('arts-culture-archive')} className="group bg-white dark:bg-navy-light p-8 rounded-sm shadow-2xl border border-gray-100 dark:border-navy cursor-pointer hover:-translate-y-2 transition-all duration-300">
+                  <div className="w-14 h-14 bg-navy dark:bg-white text-white dark:text-navy rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                    <Palette className="w-7 h-7" />
+                  </div>
+                  <h3 className="text-xl font-serif font-bold text-navy dark:text-white mb-3">Arts & Culture</h3>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm mb-6 leading-relaxed">Preserving the legacy of Somali musicians, poets, artists, and cultural custodians who shaped our nation's identity.</p>
+                  <div className="flex items-center text-xs font-bold text-gold uppercase tracking-widest group-hover:gap-2 transition-all">Explore Culture <ArrowRight className="w-4 h-4 ml-1" /></div>
+                </div>
+              </div>
+            </section>
+
             <section className="max-w-6xl mx-auto px-4 py-12 border-b border-gray-200 dark:border-gray-700">
               <div className="flex justify-between items-end mb-8 border-b border-gray-200 dark:border-gray-700 pb-4"><h2 className="text-3xl font-serif font-bold text-navy dark:text-white flex items-center">{t.featured_dossiers}</h2></div>
               {isLoading ? (<div className="flex justify-center py-12"><div className="animate-spin h-8 w-8 border-4 border-gold border-t-transparent rounded-full"></div></div>) : (
