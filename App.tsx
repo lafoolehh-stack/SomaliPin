@@ -2,11 +2,11 @@
 import * as React from 'react';
 import { useState, useEffect, useMemo } from 'react';
 import { 
-  Search, ChevronLeft, ChevronDown, Building2, User, FileText, 
+  Search, ChevronLeft, Building2, User, FileText, 
   ImageIcon, Newspaper, Globe, Calendar, Clock, Activity, Lock, 
   Plus, Trash2, Save, X, Database, Sun, Moon, Headphones, 
   Unlock, Shield, Loader2, Briefcase, Landmark, Gavel, 
-  ShieldCheck, ChevronUp, Palette, Settings, Layers, RefreshCw, 
+  ShieldCheck, ChevronUp, ChevronDown, Palette, Settings, Layers, RefreshCw, 
   ExternalLink, Play, ArrowRight 
 } from 'lucide-react';
 import ProfileCard from './components/ProfileCard';
@@ -45,10 +45,34 @@ const App = () => {
 
   const t = UI_TEXT[language] || UI_TEXT.en;
 
-  const handleBack = () => {
-    setView('home');
-    setSelectedProfile(null);
+  // Secret Admin Routing: Access via /admin path
+  useEffect(() => {
+    const handleRouteChange = () => {
+      const path = window.location.pathname;
+      if (path === '/admin') {
+        setView('admin');
+      } else if (path === '/') {
+        // Only revert from admin to home if we are manually changing path to root
+        if (view === 'admin') setView('home');
+      }
+    };
+
+    window.addEventListener('popstate', handleRouteChange);
+    handleRouteChange(); // Initial check
+    return () => window.removeEventListener('popstate', handleRouteChange);
+  }, [view]);
+
+  const navigateTo = (newView: typeof view, path: string = '/') => {
+    if (window.location.pathname !== path) {
+      window.history.pushState({}, '', path);
+    }
+    setView(newView);
     window.scrollTo(0, 0);
+  };
+
+  const handleBack = () => {
+    setSelectedProfile(null);
+    navigateTo('home', '/');
   };
 
   const handleProfileClick = (profile: Profile) => {
@@ -449,7 +473,7 @@ const App = () => {
         <div className="max-w-6xl mx-auto">
           <div className="flex justify-between items-center mb-8">
             <h1 className="text-3xl font-serif font-bold text-navy dark:text-white">Admin Dashboard</h1>
-            <button onClick={() => setView('home')} className="text-navy dark:text-gold hover:text-gold flex items-center">
+            <button onClick={handleBack} className="text-navy dark:text-gold hover:text-gold flex items-center">
               <ChevronLeft className="w-4 h-4 mr-2" /> Back to Site
             </button>
           </div>
@@ -726,10 +750,9 @@ const App = () => {
             <div className="flex items-center space-x-3 rtl:space-x-reverse cursor-pointer group" onClick={handleBack}><BrandPin className="h-8 w-8 text-gold group-hover:text-white transition-colors" /><div className="flex flex-col"><span className="text-2xl font-serif font-bold tracking-tight">SomaliPin</span><span className="text-[10px] text-gray-400 uppercase tracking-widest">{t.subtitle}</span></div></div>
             <div className="flex items-center space-x-6 rtl:space-x-reverse">
                 <div className="hidden md:flex space-x-8 rtl:space-x-reverse text-sm font-medium text-gray-300">
-                  <span onClick={() => setView('archive-explorer')} className={`hover:text-gold cursor-pointer transition-colors flex items-center ${view === 'archive-explorer' ? 'text-gold' : ''}`}><Landmark className="w-4 h-4 mr-2" /> {t.nav_archive}</span>
-                  <span onClick={() => setView('business-archive')} className={`hover:text-gold cursor-pointer transition-colors flex items-center ${view === 'business-archive' ? 'text-gold' : ''}`}><Briefcase className="w-4 h-4 mr-2" /> {t.nav_business}</span>
-                  <span onClick={() => setView('arts-culture-archive')} className={`hover:text-gold cursor-pointer transition-colors flex items-center ${view === 'arts-culture-archive' ? 'text-gold' : ''}`}><Palette className="w-4 h-4 mr-2" /> {t.nav_arts}</span>
-                  <span onClick={() => setView('admin')} className="hover:text-gold cursor-pointer transition-colors flex items-center"><Settings className="w-4 h-4 mr-2" /> Admin</span>
+                  <span onClick={() => navigateTo('archive-explorer', '/archive')} className={`hover:text-gold cursor-pointer transition-colors flex items-center ${view === 'archive-explorer' ? 'text-gold' : ''}`}><Landmark className="w-4 h-4 mr-2" /> {t.nav_archive}</span>
+                  <span onClick={() => navigateTo('business-archive', '/business')} className={`hover:text-gold cursor-pointer transition-colors flex items-center ${view === 'business-archive' ? 'text-gold' : ''}`}><Briefcase className="w-4 h-4 mr-2" /> {t.nav_business}</span>
+                  <span onClick={() => navigateTo('arts-culture-archive', '/culture')} className={`hover:text-gold cursor-pointer transition-colors flex items-center ${view === 'arts-culture-archive' ? 'text-gold' : ''}`}><Palette className="w-4 h-4 mr-2" /> {t.nav_arts}</span>
                 </div>
                 <div className="flex items-center bg-navy-light/50 rounded-full px-1 py-1 border border-navy-light"><button onClick={() => setLanguage('en')} className={`px-3 py-1 text-xs font-bold rounded-full transition-all ${language === 'en' ? 'bg-gold text-navy shadow-sm' : 'text-gray-400 hover:text-white'}`}>EN</button><button onClick={() => setLanguage('so')} className={`px-3 py-1 text-xs font-bold rounded-full transition-all ${language === 'so' ? 'bg-gold text-navy shadow-sm' : 'text-gray-400 hover:text-white'}`}>SO</button><button onClick={() => setLanguage('ar')} className={`px-3 py-1 text-xs font-bold rounded-full transition-all ${language === 'ar' ? 'bg-gold text-navy shadow-sm' : 'text-gray-400 hover:text-white'}`}>AR</button></div>
                 <button onClick={() => setDarkMode(!darkMode)} className="p-2 text-gray-400 hover:text-gold transition-colors" title="Toggle Dark Mode">{darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}</button>
@@ -753,14 +776,14 @@ const App = () => {
                 <p className="text-gray-300 text-lg md:text-xl font-light max-w-2xl mx-auto">{t.hero_desc}</p>
                 <div className="flex flex-wrap justify-center gap-4 mt-8">
                   <div className="relative w-full max-w-xl group"><div className="absolute inset-y-0 left-0 pl-4 rtl:pl-0 rtl:right-0 rtl:pr-4 flex items-center pointer-events-none"><Search className="h-5 w-5 text-gray-400 group-focus-within:text-navy transition-colors" /></div><input type="text" className="block w-full pl-11 pr-4 rtl:pl-4 rtl:pr-11 py-4 bg-white dark:bg-navy dark:text-white dark:border-gray-600 border-0 rounded-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gold focus:outline-none shadow-xl text-lg" placeholder={t.search_placeholder} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /></div>
-                  <button onClick={() => setView('archive-explorer')} className="bg-gold hover:bg-gold-dark text-navy px-8 py-4 rounded-sm font-bold flex items-center shadow-xl transition-all"><Landmark className="w-5 h-5 mr-2" /> {t.nav_archive}</button>
+                  <button onClick={() => navigateTo('archive-explorer', '/archive')} className="bg-gold hover:bg-gold-dark text-navy px-8 py-4 rounded-sm font-bold flex items-center shadow-xl transition-all"><Landmark className="w-5 h-5 mr-2" /> {t.nav_archive}</button>
                 </div>
               </div>
             </section>
 
             <section className="max-w-6xl mx-auto px-4 py-16 -mt-10 relative z-10">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div onClick={() => setView('archive-explorer')} className="group bg-white dark:bg-navy-light p-8 rounded-sm shadow-2xl border border-gray-100 dark:border-navy cursor-pointer hover:-translate-y-2 transition-all duration-300">
+                <div onClick={() => navigateTo('archive-explorer', '/archive')} className="group bg-white dark:bg-navy-light p-8 rounded-sm shadow-2xl border border-gray-100 dark:border-navy cursor-pointer hover:-translate-y-2 transition-all duration-300">
                   <div className="w-14 h-14 bg-navy dark:bg-gold text-gold dark:text-navy rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                     <Landmark className="w-7 h-7" />
                   </div>
@@ -768,7 +791,7 @@ const App = () => {
                   <p className="text-gray-500 dark:text-gray-400 text-sm mb-6 leading-relaxed">Official directory of political leadership and security forces.</p>
                   <div className="flex items-center text-xs font-bold text-gold uppercase tracking-widest group-hover:gap-2 transition-all">Explore Registry <ArrowRight className="w-4 h-4 ml-1" /></div>
                 </div>
-                <div onClick={() => setView('business-archive')} className="group bg-white dark:bg-navy-light p-8 rounded-sm shadow-2xl border border-gray-100 dark:border-navy cursor-pointer hover:-translate-y-2 transition-all duration-300 border-t-4 border-t-gold">
+                <div onClick={() => navigateTo('business-archive', '/business')} className="group bg-white dark:bg-navy-light p-8 rounded-sm shadow-2xl border border-gray-100 dark:border-navy cursor-pointer hover:-translate-y-2 transition-all duration-300 border-t-4 border-t-gold">
                   <div className="w-14 h-14 bg-gold text-navy rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                     <Briefcase className="w-7 h-7" />
                   </div>
@@ -776,7 +799,7 @@ const App = () => {
                   <p className="text-gray-500 dark:text-gray-400 text-sm mb-6 leading-relaxed">Tracking Somali entrepreneurship and corporate pioneers.</p>
                   <div className="flex items-center text-xs font-bold text-gold uppercase tracking-widest group-hover:gap-2 transition-all">Explore Business <ArrowRight className="w-4 h-4 ml-1" /></div>
                 </div>
-                <div onClick={() => setView('arts-culture-archive')} className="group bg-white dark:bg-navy-light p-8 rounded-sm shadow-2xl border border-gray-100 dark:border-navy cursor-pointer hover:-translate-y-2 transition-all duration-300">
+                <div onClick={() => navigateTo('arts-culture-archive', '/culture')} className="group bg-white dark:bg-navy-light p-8 rounded-sm shadow-2xl border border-gray-100 dark:border-navy cursor-pointer hover:-translate-y-2 transition-all duration-300">
                   <div className="w-14 h-14 bg-navy dark:bg-white text-white dark:text-navy rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                     <Palette className="w-7 h-7" />
                   </div>
@@ -790,7 +813,7 @@ const App = () => {
             <section className="max-w-6xl mx-auto px-4 py-12 border-b border-gray-200 dark:border-gray-700">
               <div className="flex justify-between items-end mb-8 border-b border-gray-200 dark:border-gray-700 pb-4">
                 <h2 className="text-3xl font-serif font-bold text-navy dark:text-white flex items-center">
-                  {t.featured_dossiers} 
+                  Featured Dossiers (129)
                   <span className="ml-4 bg-gold/10 text-gold text-sm px-3 py-1 rounded-full border border-gold/20 font-sans tracking-widest">
                     {profiles.length > 0 ? `${profiles.length}+ RECORDS` : 'VERIFYING...'}
                   </span>
@@ -888,7 +911,7 @@ const App = () => {
       </main>
 
       <footer className="bg-navy text-white pt-16 pb-8 border-t border-gold">
-        <div className="max-w-6xl mx-auto px-4"><div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12"><div className="space-y-4"><div className="flex items-center space-x-2"><BrandPin className="h-6 w-6 text-gold" /><span className="text-xl font-serif font-bold">SomaliPin</span></div><p className="text-gray-400 text-sm leading-relaxed">{t.footer_desc}</p></div></div><div className="border-t border-white/10 pt-8 text-center text-xs text-gray-500"><p>&copy; {new Date().getFullYear()} {t.rights}</p></div></div>
+        <div className="max-w-6xl mx-auto px-4"><div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12"><div className="space-y-4"><div className="flex items-center space-x-2 cursor-pointer" onClick={handleBack}><BrandPin className="h-6 w-6 text-gold" /><span className="text-xl font-serif font-bold">SomaliPin</span></div><p className="text-gray-400 text-sm leading-relaxed">{t.footer_desc}</p></div></div><div className="border-t border-white/10 pt-8 text-center text-xs text-gray-500"><p>&copy; {new Date().getFullYear()} {t.rights}</p></div></div>
       </footer>
     </div>
   );

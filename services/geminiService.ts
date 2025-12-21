@@ -1,18 +1,11 @@
-
 import { GoogleGenAI } from "@google/genai";
 import { Language } from "../types";
 
 // Service function to query the Gemini Archive
 export const askArchive = async (query: string, lang: Language): Promise<string> => {
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) {
-    console.error("Gemini API Key is missing. Check environment variables.");
-    return "The archive intelligence service is currently not configured.";
-  }
-
   try {
-    // Initializing with the environment variable directly as per guidelines
-    const ai = new GoogleGenAI({ apiKey });
+    // Initializing with the environment variable directly as per guidelines (must use named parameter)
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
     const languageNames = {
       en: "English",
@@ -38,7 +31,7 @@ export const askArchive = async (query: string, lang: Language): Promise<string>
       }
     });
 
-    // Directly access the .text property from the response object
+    // Directly access the .text property from the response object as it is a getter, not a function.
     return response.text || "No records found in the archive at this time.";
   } catch (error) {
     console.error("Archive retrieval failed:", error);
