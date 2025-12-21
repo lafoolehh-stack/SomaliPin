@@ -658,10 +658,18 @@ const App = () => {
                                   <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">End Date (Death/Closed)</label><input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.dateEnd || ''} onChange={(e) => setEditForm({...editForm, dateEnd: e.target.value})} placeholder="e.g. 2021" /></div>
                                 </div>
                                 <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Location</label><input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.location || ''} onChange={(e) => setEditForm({...editForm, location: e.target.value})} /></div>
-                                <div className="flex items-center space-x-2 pt-2">
-                                  <input type="checkbox" id="isOrg" className="w-4 h-4 accent-gold" checked={!!editForm.isOrganization} onChange={(e) => setEditForm({...editForm, isOrganization: e.target.checked})} />
-                                  <label htmlFor="isOrg" className="text-sm font-bold text-gray-500 uppercase tracking-wide">Is Organization?</label>
+                                
+                                <div className="flex items-center space-x-8 pt-2">
+                                  <div className="flex items-center space-x-2">
+                                    <input type="checkbox" id="isVerified" className="w-4 h-4 accent-gold" checked={!!editForm.verified} onChange={(e) => setEditForm({...editForm, verified: e.target.checked})} />
+                                    <label htmlFor="isVerified" className="text-sm font-bold text-navy dark:text-gold uppercase tracking-wide">VERIFY PROFILE?</label>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <input type="checkbox" id="isOrg" className="w-4 h-4 accent-gold" checked={!!editForm.isOrganization} onChange={(e) => setEditForm({...editForm, isOrganization: e.target.checked})} />
+                                    <label htmlFor="isOrg" className="text-sm font-bold text-gray-500 uppercase tracking-wide">Is Organization?</label>
+                                  </div>
                                 </div>
+
                                 <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Lifecycle Status</label><select className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.status || 'ACTIVE'} onChange={(e) => setEditForm({...editForm, status: e.target.value as ProfileStatus})}><option value="ACTIVE">Active</option><option value="DECEASED">Deceased</option><option value="RETIRED">Retired</option><option value="CLOSED">Closed</option></select></div>
                             </div>
                             <div className="space-y-5">
@@ -699,6 +707,8 @@ const App = () => {
                             </div>
                             <div className="space-y-4">
                               {(editForm.archiveAssignments || []).filter(Boolean).map((assign, idx) => {
+                                const selectedCat = allCategories.find(c => c.id === assign.category_id);
+                                const isDatedSector = selectedCat && [SectionType.POLITICS, SectionType.JUDICIARY, SectionType.SECURITY].includes(selectedCat.section_type);
                                 return (
                                   <div key={idx} className="bg-[#F9FAFB] dark:bg-navy-light/20 p-6 border border-gray-100 dark:border-gray-800 rounded-sm relative shadow-sm">
                                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-end pr-10">
@@ -719,14 +729,18 @@ const App = () => {
                                               <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">SPECIFIC TITLE</label>
                                               <input placeholder="e.g. CEO or Minister" className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 text-sm focus:ring-1 focus:ring-gold outline-none bg-white" value={assign.title_note || ''} onChange={e => { const updated = [...(editForm.archiveAssignments || [])]; updated[idx].title_note = e.target.value; setEditForm({...editForm, archiveAssignments: updated}); }} />
                                           </div>
-                                          <div>
-                                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">START DATE</label>
-                                            <input placeholder="e.g. 2010" className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 text-sm focus:ring-1 focus:ring-gold outline-none bg-white" value={assign.start_date || ''} onChange={e => { const updated = [...(editForm.archiveAssignments || [])]; updated[idx].start_date = e.target.value; setEditForm({...editForm, archiveAssignments: updated}); }} />
-                                          </div>
-                                          <div>
-                                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">END DATE</label>
-                                            <input placeholder="e.g. 2014 or Present" className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 text-sm focus:ring-1 focus:ring-gold outline-none bg-white" value={assign.end_date || ''} onChange={e => { const updated = [...(editForm.archiveAssignments || [])]; updated[idx].end_date = e.target.value; setEditForm({...editForm, archiveAssignments: updated}); }} />
-                                          </div>
+                                          {isDatedSector && (
+                                            <>
+                                              <div>
+                                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">START DATE</label>
+                                                <input placeholder="e.g. 2010" className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 text-sm focus:ring-1 focus:ring-gold outline-none bg-white" value={assign.start_date || ''} onChange={e => { const updated = [...(editForm.archiveAssignments || [])]; updated[idx].start_date = e.target.value; setEditForm({...editForm, archiveAssignments: updated}); }} />
+                                              </div>
+                                              <div>
+                                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">END DATE</label>
+                                                <input placeholder="e.g. 2014" className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 text-sm focus:ring-1 focus:ring-gold outline-none bg-white" value={assign.end_date || ''} onChange={e => { const updated = [...(editForm.archiveAssignments || [])]; updated[idx].end_date = e.target.value; setEditForm({...editForm, archiveAssignments: updated}); }} />
+                                              </div>
+                                            </>
+                                          )}
                                       </div>
                                       <button onClick={() => { const updated = [...(editForm.archiveAssignments || [])]; updated.splice(idx, 1); setEditForm({...editForm, archiveAssignments: updated}); }} className="absolute top-1/2 -translate-y-1/2 right-4 text-red-400 hover:text-red-600"><Trash2 className="w-5 h-5"/></button>
                                   </div>
