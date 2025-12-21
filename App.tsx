@@ -287,24 +287,32 @@ const App = () => {
   };
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isAdminLoggedIn) {
+      alert('Kaliya Admin-ka ayaa sawir soo gelin kara.');
+      return;
+    }
+
     const file = event.target.files?.[0];
     if (!file) return;
 
     setIsUploadingImage(true);
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}.${fileExt}`;
-      // Just the filename for the path, as we specify the bucket in the .from() call
+      const fileName = `profile_${Date.now()}.${fileExt}`;
       const filePath = fileName; 
 
+      // Attempt upload to 'profile-pictures' bucket
       const { data, error } = await supabase.storage.from('profile-pictures').upload(filePath, file, {
         cacheControl: '3600',
         upsert: false,
       });
 
       if (error) {
+        if (error.message.includes('row-level security policy')) {
+          throw new Error('CILAD: Supabase RLS Policy ayaa celisay upload-ka. Fadlan SQL-ka aan ku siiyay ku dar SQL Editor-ka.');
+        }
         if (error.message.includes('Bucket not found')) {
-          throw new Error('Cilad: Bucket-ka "profile-pictures" lagama helin Supabase Storage. Fadlan ku dar dashboard-ka.');
+          throw new Error('CILAD: Bucket-ka "profile-pictures" lagama helin Storage. Fadlan ku dar dashboard-ka.');
         }
         throw error;
       }
@@ -676,7 +684,7 @@ const App = () => {
                                   </div>
 
                                   <div className="relative">
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">OR Upload Picture</label>
+                                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">OR Upload Picture (Admin Only)</label>
                                     <input 
                                       type="file" 
                                       accept="image/*" 
