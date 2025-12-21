@@ -777,7 +777,7 @@ const App = () => {
                                   <Layers className="w-5 h-5 mr-2 text-gold"/> Official Archive Roles
                                 </h3>
                                 <button 
-                                  onClick={() => setEditForm(prev => ({ ...prev, archiveAssignments: [...(prev.archiveAssignments || []), { id: 0, user_id: editForm.id || '', category_id: (allCategories && allCategories.length > 0) ? allCategories[0].id : 0, start_date: '', end_date: '', title_note: '' }] }))} 
+                                  onClick={() => setEditForm(prev => ({ ...prev, archiveAssignments: [...(prev.archiveAssignments || []), { id: Date.now(), user_id: editForm.id || '', category_id: (allCategories && allCategories.length > 0) ? allCategories[0].id : 0, start_date: '', end_date: '', title_note: '' }] }))} 
                                   className="text-xs bg-[#0A2647] text-white px-5 py-2.5 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"
                                 >
                                   <Plus className="w-4 h-4 mr-1.5 text-gold" /> Assign Role
@@ -787,6 +787,7 @@ const App = () => {
                             <div className="space-y-6">
                               {(editForm.archiveAssignments || []).filter(Boolean).map((assign, idx) => {
                                 const selectedCat = allCategories.find(c => c.id === assign.category_id);
+                                // Determine if sector needs dates (POLITICS, JUDICIARY, SECURITY)
                                 const isDatedSector = selectedCat && ![SectionType.BUSINESS, SectionType.ARTS_CULTURE].includes(selectedCat.section_type);
 
                                 return (
@@ -844,7 +845,7 @@ const App = () => {
                                       </div>
                                       <button 
                                         onClick={() => { const updated = [...(editForm.archiveAssignments || [])]; updated.splice(idx, 1); setEditForm({...editForm, archiveAssignments: updated}); }} 
-                                        className="absolute top-1/2 -translate-y-1/2 right-6 p-2 text-red-400 hover:text-red-600 transition-colors"
+                                        className="absolute top-1/2 -translate-y-1/2 right-6 p-2 text-red-400 hover:text-red-600 transition-colors bg-white dark:bg-navy rounded-full shadow-sm"
                                         title="Remove Role"
                                       >
                                         <Trash2 className="w-5 h-5" />
@@ -854,8 +855,8 @@ const App = () => {
                               })}
 
                             {(editForm.archiveAssignments || []).length === 0 && (
-                                <div className="text-center py-12 border-2 border-dashed border-gray-100 rounded-sm">
-                                    <Layers className="w-10 h-10 text-gray-200 mx-auto mb-3" />
+                                <div className="text-center py-16 border-2 border-dashed border-gray-100 rounded-sm">
+                                    <Layers className="w-12 h-12 text-gray-200 mx-auto mb-3" />
                                     <p className="text-gray-400 text-sm italic font-serif">No official archive roles assigned yet.</p>
                                 </div>
                             )}
