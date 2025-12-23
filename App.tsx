@@ -660,154 +660,113 @@ const App = () => {
 
           {isEditing && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
-              <div className="bg-white dark:bg-navy w-full max-w-5xl max-h-[95vh] overflow-y-auto rounded-sm flex flex-col shadow-2xl animate-fade-in border border-gray-200 dark:border-gray-700 text-gray-800">
-                <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center sticky top-0 bg-white dark:bg-navy z-10">
+              <div className="bg-white dark:bg-navy w-full max-w-5xl max-h-[95vh] overflow-hidden rounded-sm flex flex-col shadow-2xl animate-fade-in border border-gray-200 dark:border-gray-700 text-gray-800">
+                {/* Header */}
+                <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-white dark:bg-navy shrink-0">
                   <h2 className="text-2xl font-serif font-bold text-navy dark:text-white">Dossier Workspace</h2>
                   <button onClick={() => setIsEditing(false)} className="p-2 hover:bg-slate dark:hover:bg-navy-light rounded-full transition-colors"><X className="w-6 h-6 text-gray-400" /></button>
                 </div>
-                <div className="flex border-b border-gray-200 dark:border-gray-700 px-6 bg-gray-50 dark:bg-navy-light overflow-x-auto">
-                    {['basic', 'timeline', 'positions', 'archive', 'news', 'podcast'].map((tab) => (
-                         <button key={tab} className={`py-3 px-4 text-sm font-bold border-b-2 transition-colors whitespace-nowrap capitalize ${activeAdminTab === tab ? 'border-navy text-navy dark:border-gold dark:text-gold' : 'border-transparent text-gray-500 hover:text-navy dark:text-gray-400 dark:hover:text-white'}`} onClick={() => setActiveAdminTab(tab as any)}>
-                            {tab === 'positions' ? 'Registry Positions' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                
+                {/* Tabs */}
+                <div className="flex border-b border-gray-200 dark:border-gray-700 px-6 bg-gray-50 dark:bg-navy-light overflow-x-auto shrink-0">
+                    {[
+                      { id: 'basic', label: 'Basic' },
+                      { id: 'timeline', label: 'Timeline' },
+                      { id: 'positions', label: 'Registry Positions' },
+                      { id: 'archive', label: 'Archive' },
+                      { id: 'news', label: 'News' },
+                      { id: 'podcast', label: 'Podcast' }
+                    ].map((tab) => (
+                         <button 
+                            key={tab.id} 
+                            className={`py-3 px-6 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${activeAdminTab === tab.id ? 'border-navy text-navy dark:border-gold dark:text-gold' : 'border-transparent text-gray-500 hover:text-navy dark:text-gray-400 dark:hover:text-white'}`} 
+                            onClick={() => setActiveAdminTab(tab.id as any)}
+                         >
+                            {tab.label}
                         </button>
                     ))}
                 </div>
-                <div className="p-8">
+
+                {/* Content Area - Scrollable */}
+                <div className="p-8 flex-1 overflow-y-auto">
                     {activeAdminTab === 'basic' && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-gray-800">
-                            <div className="space-y-5">
-                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Full Name</label><input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.name || ''} onChange={(e) => setEditForm({...editForm, name: e.target.value})} /></div>
-                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Headline Role</label><input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.title || ''} onChange={(e) => setEditForm({...editForm, title: e.target.value})} /></div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 animate-fade-in">
+                            <div className="space-y-6">
+                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">FULL NAME</label><input type="text" className="w-full border border-gray-200 p-3 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-blue-400 outline-none" value={editForm.name || ''} onChange={(e) => setEditForm({...editForm, name: e.target.value})} /></div>
+                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">HEADLINE ROLE</label><input type="text" className="w-full border border-gray-200 p-3 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-blue-400 outline-none" value={editForm.title || ''} onChange={(e) => setEditForm({...editForm, title: e.target.value})} /></div>
                                 <div className="grid grid-cols-2 gap-4">
-                                  <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Start Date (Birth/Est)</label><input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.dateStart || ''} onChange={(e) => setEditForm({...editForm, dateStart: e.target.value})} placeholder="e.g. 1970" /></div>
-                                  <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">End Date (Death/Closed)</label><input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.dateEnd || ''} onChange={(e) => setEditForm({...editForm, dateEnd: e.target.value})} placeholder="e.g. 2021" /></div>
+                                  <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">START DATE (BIRTH/EST)</label><input type="text" className="w-full border border-gray-200 p-3 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-blue-400 outline-none" value={editForm.dateStart || ''} onChange={(e) => setEditForm({...editForm, dateStart: e.target.value})} placeholder="e.g. 1970" /></div>
+                                  <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">END DATE (DEATH/CLOSED)</label><input type="text" className="w-full border border-gray-200 p-3 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-blue-400 outline-none" value={editForm.dateEnd || ''} onChange={(e) => setEditForm({...editForm, dateEnd: e.target.value})} placeholder="e.g. 2021" /></div>
                                 </div>
-                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Location</label><input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.location || ''} onChange={(e) => setEditForm({...editForm, location: e.target.value})} /></div>
-                                
-                                <div className="flex items-center space-x-8 pt-2">
+                                <div className="flex items-center space-x-6 py-4 bg-slate/30 dark:bg-navy-light/20 p-4 rounded-sm">
                                   <div className="flex items-center space-x-2">
                                     <input type="checkbox" id="isVerified" className="w-4 h-4 accent-gold" checked={!!editForm.verified} onChange={(e) => setEditForm({...editForm, verified: e.target.checked})} />
-                                    <label htmlFor="isVerified" className="text-sm font-bold text-navy dark:text-gold uppercase tracking-wide">VERIFY PROFILE?</label>
+                                    <label htmlFor="isVerified" className="text-[11px] font-bold text-navy dark:text-gold uppercase tracking-wider">VERIFY PROFILE</label>
                                   </div>
                                   <div className="flex items-center space-x-2">
                                     <input type="checkbox" id="isOrg" className="w-4 h-4 accent-gold" checked={!!editForm.isOrganization} onChange={(e) => setEditForm({...editForm, isOrganization: e.target.checked})} />
-                                    <label htmlFor="isOrg" className="text-sm font-bold text-gray-500 uppercase tracking-wide">Is Organization?</label>
+                                    <label htmlFor="isOrg" className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Is Organization?</label>
                                   </div>
                                 </div>
-
-                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Lifecycle Status</label><select className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.status || 'ACTIVE'} onChange={(e) => setEditForm({...editForm, status: e.target.value as ProfileStatus})}><option value="ACTIVE">Active</option><option value="DECEASED">Deceased</option><option value="RETIRED">Retired</option><option value="CLOSED">Closed</option></select></div>
+                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">LIFECYCLE STATUS</label><select className="w-full border border-gray-200 p-3 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-blue-400 outline-none" value={editForm.status || 'ACTIVE'} onChange={(e) => setEditForm({...editForm, status: e.target.value as ProfileStatus})}><option value="ACTIVE">Active</option><option value="DECEASED">Deceased</option><option value="RETIRED">Retired</option><option value="CLOSED">Closed</option></select></div>
                             </div>
-                            <div className="space-y-5">
-                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Display Category</label><input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.category || ''} onChange={(e) => setEditForm({...editForm, category: e.target.value})} /></div>
-                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Honors Tier</label><select className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.verificationLevel || 'Standard'} onChange={(e) => setEditForm({...editForm, verificationLevel: e.target.value as VerificationLevel})}><option value="Standard">Standard</option><option value="Golden">Golden</option><option value="Hero">Hero</option><option value="Nobel">Nobel</option></select></div>
-                                
-                                <div className="mt-4 p-4 border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-navy/30 rounded-sm text-gray-800">
-                                  <div className="mb-4">
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Profile Image URL</label>
-                                    <input type="text" className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white text-xs font-mono" value={editForm.imageUrl || ''} onChange={(e) => setEditForm({...editForm, imageUrl: e.target.value})} />
-                                  </div>
-                                  <div className="relative">
-                                    <input type="file" accept="image/*" onChange={handleImageUpload} ref={fileInputRef} className="hidden" disabled={isUploadingImage} />
-                                    <div className="w-full h-24 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-sm flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 dark:hover:bg-navy-light" onClick={() => fileInputRef.current?.click()}>
-                                      {isUploadingImage ? <Loader2 className="w-5 h-5 animate-spin text-gold" /> : <><Upload className="w-5 h-5 mb-1 text-gray-400" /><span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Upload Photo</span></>}
-                                    </div>
-                                  </div>
-                                </div>
-                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Short Bio</label><textarea className="w-full border p-2.5 rounded-sm h-20 dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none resize-none" value={editForm.shortBio || ''} onChange={(e) => setEditForm({...editForm, shortBio: e.target.value})} /></div>
-                            </div>
-                            <div className="md:col-span-2"><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Full Biography</label><textarea className="w-full border p-3 rounded-sm h-56 font-serif dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.fullBio || ''} onChange={(e) => setEditForm({ ...editForm, fullBio: e.target.value })} /></div>
-                        </div>
-                    )}
-                    {activeAdminTab === 'timeline' && (
-                        <div className="space-y-6 text-gray-800">
-                            <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-navy dark:text-white flex items-center"><Activity className="w-5 h-5 mr-2 text-gold"/> Historical Timeline</h3><button onClick={() => setEditForm(prev => ({ ...prev, timeline: [...(prev.timeline || []), { year: '', title: '', description: '' }] }))} className="text-xs bg-navy text-gold px-4 py-2 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"><Plus className="w-4 h-4 mr-1" /> Add Entry</button></div>
-                            <div className="space-y-4">{(editForm.timeline || []).filter(Boolean).map((event, idx) => (
-                                <div key={idx} className="flex gap-4 items-start border p-4 rounded-sm bg-slate/30 dark:bg-navy-light/40 animate-fade-in group">
-                                  <input placeholder="Year" className="w-24 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white font-mono text-sm" value={event.year || ''} onChange={e => { const t = [...(editForm.timeline || [])]; t[idx].year = e.target.value; setEditForm({...editForm, timeline: t}); }} />
-                                  <div className="flex-1 space-y-3"><input placeholder="Entry Title" className="w-full border p-2 rounded-sm font-bold dark:bg-navy dark:border-gray-600 dark:text-white text-sm" value={event.title || ''} onChange={e => { const t = [...(editForm.timeline || [])]; t[idx].title = e.target.value; setEditForm({...editForm, timeline: t}); }} /><textarea placeholder="Event description..." className="w-full border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs resize-none h-20" value={event.description || ''} onChange={e => { const t = [...(editForm.timeline || [])]; t[idx].description = e.target.value; setEditForm({...editForm, timeline: t}); }} /></div>
-                                  <button onClick={() => { const t = [...(editForm.timeline || [])]; t.splice(idx,1); setEditForm({...editForm, timeline: t}); }} className="text-red-400 hover:text-red-600 p-2"><Trash2 className="w-5 h-5" /></button>
-                                </div>
-                            ))}</div>
-                        </div>
-                    )}
-                    {activeAdminTab === 'archive' && (
-                        <div className="space-y-6 text-gray-800">
-                            <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-navy dark:text-white flex items-center"><FileText className="w-5 h-5 mr-2 text-gold"/> Archive Documents</h3><button onClick={() => setEditForm(prev => ({ ...prev, archives: [...(prev.archives || []), { id: Date.now().toString(), type: 'PDF', title: '', date: '', url: '' }] }))} className="text-xs bg-navy text-gold px-4 py-2 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"><Plus className="w-4 h-4 mr-1" /> Add Doc</button></div>
-                            <div className="space-y-4">{(editForm.archives || []).filter(Boolean).map((item, idx) => (
-                                <div key={idx} className="flex gap-4 items-center border p-4 rounded-sm bg-[#F9FAFB] dark:bg-navy-light/40 group">
-                                    <select className="w-24 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={item.type} onChange={e => { const a = [...(editForm.archives || [])]; a[idx].type = e.target.value as any; setEditForm({...editForm, archives: a}); }}>
-                                        <option value="PDF">PDF</option>
-                                        <option value="IMAGE">IMAGE</option>
-                                        <option value="AWARD">AWARD</option>
-                                    </select>
-                                    <input placeholder="Document Title" className="flex-1 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={item.title || ''} onChange={e => { const a = [...(editForm.archives || [])]; a[idx].title = e.target.value; setEditForm({...editForm, archives: a}); }} />
-                                    <input placeholder="File Link" className="flex-1 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={item.url || ''} onChange={e => { const a = [...(editForm.archives || [])]; a[idx].url = e.target.value; setEditForm({...editForm, archives: a}); }} />
-                                    <button onClick={() => { const a = [...(editForm.archives || [])]; a.splice(idx,1); setEditForm({...editForm, archives: a}); }} className="text-red-400 p-2"><Trash2 className="w-5 h-5"/></button>
-                                </div>
-                            ))}</div>
-                        </div>
-                    )}
-                    {activeAdminTab === 'news' && (
-                        <div className="space-y-6 text-gray-800">
-                            <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-navy dark:text-white flex items-center"><Newspaper className="w-5 h-5 mr-2 text-gold"/> News Reports</h3><button onClick={() => setEditForm(prev => ({ ...prev, news: [...(prev.news || []), { id: Date.now().toString(), title: '', source: '', date: '', summary: '', url: '' }] }))} className="text-xs bg-navy text-gold px-4 py-2 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"><Plus className="w-4 h-4 mr-1" /> Add News</button></div>
-                            <div className="space-y-4">{(editForm.news || []).filter(Boolean).map((item, idx) => (
-                                <div key={idx} className="border p-4 rounded-sm bg-[#F9FAFB] dark:bg-navy-light/40 group space-y-3">
-                                    <div className="flex gap-4">
-                                        <input placeholder="Headline" className="flex-1 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs font-bold" value={item.title || ''} onChange={e => { const n = [...(editForm.news || [])]; n[idx].title = e.target.value; setEditForm({...editForm, news: n}); }} />
-                                        <input placeholder="Source" className="w-40 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={item.source || ''} onChange={e => { const n = [...(editForm.news || [])]; n[idx].source = e.target.value; setEditForm({...editForm, news: n}); }} />
-                                        <button onClick={() => { const n = [...(editForm.news || [])]; n.splice(idx,1); setEditForm({...editForm, news: n}); }} className="text-red-400 p-2"><Trash2 className="w-5 h-5"/></button>
-                                    </div>
-                                    <textarea placeholder="Summary..." className="w-full border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs h-16 resize-none" value={item.summary || ''} onChange={e => { const n = [...(editForm.news || [])]; n[idx].summary = e.target.value; setEditForm({...editForm, news: n}); }} />
-                                </div>
-                            ))}</div>
-                        </div>
-                    )}
-                    {activeAdminTab === 'podcast' && (
-                        <div className="space-y-6 text-gray-800">
-                            <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-navy dark:text-white flex items-center"><Headphones className="w-5 h-5 mr-2 text-gold"/> Podcast Library</h3><button onClick={() => setEditForm(prev => ({ ...prev, podcasts: [...(prev.podcasts || []), { id: Date.now().toString(), title: '', date: '', duration: '', source: '', url: '' }] }))} className="text-xs bg-navy text-gold px-4 py-2 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"><Plus className="w-4 h-4 mr-1" /> Add Clip</button></div>
-                            <div className="space-y-4">{(editForm.podcasts || []).filter(Boolean).map((item, idx) => (
-                                <div key={idx} className="border p-4 rounded-sm bg-[#F9FAFB] dark:bg-navy-light/40 group space-y-3">
-                                    <div className="flex gap-4">
-                                        <input placeholder="Episode Title" className="flex-1 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs font-bold" value={item.title || ''} onChange={e => { const p = [...(editForm.podcasts || [])]; p[idx].title = e.target.value; setEditForm({...editForm, podcasts: p}); }} />
-                                        <input placeholder="Audio URL" className="flex-1 border p-2 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={item.url || ''} onChange={e => { const p = [...(editForm.podcasts || [])]; p[idx].url = e.target.value; setEditForm({...editForm, podcasts: p}); }} />
-                                        <button onClick={() => { const p = [...(editForm.podcasts || [])]; p.splice(idx,1); setEditForm({...editForm, podcasts: p}); }} className="text-red-400 p-2"><Trash2 className="w-5 h-5"/></button>
-                                    </div>
-                                </div>
-                            ))}</div>
-                        </div>
-                    )}
-                    {activeAdminTab === 'positions' && (
-                        <div className="space-y-8 animate-fade-in text-gray-800">
-                             <div className="flex justify-between items-center">
-                                <h3 className="font-bold text-lg text-navy dark:text-white flex items-center">
-                                  <Layers className="w-5 h-5 mr-2 text-gold"/> Official Archive Roles
-                                </h3>
-                                <button 
-                                  onClick={() => setEditForm(prev => ({ ...prev, archiveAssignments: [...(prev.archiveAssignments || []), { id: Date.now(), user_id: editForm.id || '', category_id: (allCategories && allCategories.length > 0) ? allCategories[0].id : 0, start_date: '', end_date: '', title_note: '' }] }))} 
-                                  className="text-xs bg-[#0A2647] text-white px-5 py-2.5 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"
-                                >
-                                  <Plus className="w-4 h-4 mr-1.5 text-gold" /> Assign Role
-                                </button>
-                             </div>
-
                             <div className="space-y-6">
-                              {(editForm.archiveAssignments || []).filter(Boolean).map((assign, idx) => {
-                                const selectedCat = allCategories.find(c => c.id === assign.category_id);
-                                const isDatedSector = selectedCat && [SectionType.POLITICS, SectionType.JUDICIARY, SectionType.SECURITY].includes(selectedCat.section_type);
+                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">DISPLAY CATEGORY</label><input type="text" className="w-full border border-gray-200 p-3 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-blue-400 outline-none" value={editForm.category || ''} onChange={(e) => setEditForm({...editForm, category: e.target.value})} /></div>
+                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">HONORS TIER</label><select className="w-full border border-gray-200 p-3 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-blue-400 outline-none" value={editForm.verificationLevel || 'Standard'} onChange={(e) => setEditForm({...editForm, verificationLevel: e.target.value as VerificationLevel})}><option value="Standard">Standard</option><option value="Golden">Golden</option><option value="Hero">Hero</option><option value="Nobel">Nobel</option></select></div>
+                                
+                                <div className="p-4 border border-gray-100 dark:border-gray-700 bg-slate/20 dark:bg-navy/30 rounded-sm">
+                                  <div className="mb-4"><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">IMAGE URL</label><input type="text" className="w-full border border-gray-200 p-2 text-xs font-mono rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white" value={editForm.imageUrl || ''} onChange={(e) => setEditForm({...editForm, imageUrl: e.target.value})} /></div>
+                                  <div className="relative">
+                                    <input type="file" accept="image/*" onChange={handleImageUpload} ref={fileInputRef} className="hidden" />
+                                    <div className="w-full h-20 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-sm flex flex-col items-center justify-center cursor-pointer hover:bg-white dark:hover:bg-navy transition-colors" onClick={() => fileInputRef.current?.click()}>
+                                      {isUploadingImage ? <Loader2 className="w-5 h-5 animate-spin text-gold" /> : <><Upload className="w-5 h-5 mb-1 text-gray-400" /><span className="text-[10px] font-bold uppercase text-gray-400">Upload Photo</span></>}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">SHORT BIO</label><textarea className="w-full border border-gray-200 p-3 rounded-sm h-24 dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-blue-400 outline-none resize-none" value={editForm.shortBio || ''} onChange={(e) => setEditForm({...editForm, shortBio: e.target.value})} /></div>
+                            </div>
+                            <div className="md:col-span-2"><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">FULL BIOGRAPHY</label><textarea className="w-full border border-gray-200 p-4 rounded-sm h-60 font-serif text-lg dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-blue-400 outline-none" value={editForm.fullBio || ''} onChange={(e) => setEditForm({ ...editForm, fullBio: e.target.value })} /></div>
+                        </div>
+                    )}
 
+                    {activeAdminTab === 'timeline' && (
+                        <div className="space-y-8 animate-fade-in">
+                            <div className="flex justify-between items-center pb-4 border-b border-gray-100 dark:border-gray-800">
+                                <h3 className="font-bold text-lg text-navy dark:text-white flex items-center"><Activity className="w-5 h-5 mr-2 text-gold"/> Historical Timeline</h3>
+                                <button onClick={() => setEditForm(prev => ({ ...prev, timeline: [...(prev.timeline || []), { year: '', title: '', description: '' }] }))} className="text-xs bg-navy text-gold px-4 py-2 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"><Plus className="w-4 h-4 mr-1.5" /> Add Entry</button>
+                            </div>
+                            <div className="space-y-4">
+                                {(editForm.timeline || []).map((event, idx) => (
+                                    <div key={idx} className="flex gap-6 items-start border border-gray-100 p-6 rounded-sm bg-[#F9FAFB] dark:bg-navy-light/20 relative group">
+                                      <input placeholder="Year" className="w-24 border border-gray-200 p-3 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white font-mono text-sm" value={event.year || ''} onChange={e => { const t = [...(editForm.timeline || [])]; t[idx].year = e.target.value; setEditForm({...editForm, timeline: t}); }} />
+                                      <div className="flex-1 space-y-4">
+                                        <input placeholder="Entry Title" className="w-full border border-gray-200 p-3 rounded-sm font-bold dark:bg-navy dark:border-gray-600 dark:text-white" value={event.title || ''} onChange={e => { const t = [...(editForm.timeline || [])]; t[idx].title = e.target.value; setEditForm({...editForm, timeline: t}); }} />
+                                        <textarea placeholder="Event description..." className="w-full border border-gray-200 p-3 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-sm resize-none h-24" value={event.description || ''} onChange={e => { const t = [...(editForm.timeline || [])]; t[idx].description = e.target.value; setEditForm({...editForm, timeline: t}); }} />
+                                      </div>
+                                      <button onClick={() => { const t = [...(editForm.timeline || [])]; t.splice(idx,1); setEditForm({...editForm, timeline: t}); }} className="absolute top-6 right-6 text-red-400 hover:text-red-600 transition-colors"><Trash2 className="w-5 h-5"/></button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {activeAdminTab === 'positions' && (
+                        <div className="space-y-8 animate-fade-in">
+                             <div className="flex justify-between items-center pb-4 border-b border-gray-100 dark:border-gray-800">
+                                <h3 className="font-bold text-lg text-navy dark:text-white flex items-center"><Layers className="w-5 h-5 mr-2 text-gold"/> Official Archive Roles</h3>
+                                <button onClick={() => setEditForm(prev => ({ ...prev, archiveAssignments: [...(prev.archiveAssignments || []), { id: Date.now(), user_id: editForm.id || '', category_id: 0, start_date: '', end_date: '', title_note: '' }] }))} className="text-xs bg-[#0A2647] text-white px-5 py-2.5 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"><Plus className="w-4 h-4 mr-1.5 text-gold" /> Assign Role</button>
+                             </div>
+                            <div className="space-y-6">
+                              {(editForm.archiveAssignments || []).map((assign, idx) => {
                                 return (
-                                  <div key={idx} className="border border-gray-100 dark:border-gray-800 p-8 rounded-sm bg-[#F9FAFB] dark:bg-navy-light/10 group relative shadow-sm">
-                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start pr-12">
-                                          <div className="space-y-2">
-                                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">CATEGORY</label>
-                                              <select 
-                                                className="w-full border border-gray-200 p-3.5 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-sm font-medium focus:ring-1 focus:ring-blue-400 outline-none bg-white transition-shadow" 
-                                                value={assign.category_id} 
-                                                onChange={e => { const updated = [...(editForm.archiveAssignments || [])]; updated[idx].category_id = parseInt(e.target.value); setEditForm({...editForm, archiveAssignments: updated}); }}
-                                              >
+                                  <div key={idx} className="border border-gray-100 dark:border-gray-800 p-8 rounded-sm bg-[#F9FAFB] dark:bg-navy-light/10 relative shadow-sm">
+                                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-end pr-12">
+                                          <div>
+                                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">CATEGORY</label>
+                                              <select className="w-full border border-gray-200 p-3.5 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-sm focus:ring-1 focus:ring-blue-400 outline-none bg-white" value={assign.category_id} onChange={e => { const updated = [...(editForm.archiveAssignments || [])]; updated[idx].category_id = parseInt(e.target.value); setEditForm({...editForm, archiveAssignments: updated}); }}>
                                                   <option value={0}>Select Category...</option>
                                                   {Object.values(SectionType).map(sect => (
-                                                      <optgroup label={sect} key={sect} className="font-bold text-navy-light">
+                                                      <optgroup label={sect} key={sect}>
                                                           {(allCategories || []).filter(c => c && c.section_type === sect).map(cat => (
                                                               <option key={cat.id} value={cat.id}>{cat.category_name}</option>
                                                           ))}
@@ -815,65 +774,97 @@ const App = () => {
                                                   ))}
                                               </select>
                                           </div>
-                                          <div className="space-y-2">
-                                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">SPECIFIC TITLE</label>
-                                              <input 
-                                                placeholder="e.g. Chairman" 
-                                                className="w-full border border-gray-200 p-3.5 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-sm focus:ring-1 focus:ring-blue-400 outline-none bg-white placeholder-gray-300" 
-                                                value={assign.title_note || ''} 
-                                                onChange={e => { const updated = [...(editForm.archiveAssignments || [])]; updated[idx].title_note = e.target.value; setEditForm({...editForm, archiveAssignments: updated}); }} 
-                                              />
+                                          <div>
+                                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">SPECIFIC TITLE</label>
+                                              <input placeholder="e.g. Chairman" className="w-full border border-gray-200 p-3.5 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-sm focus:ring-1 focus:ring-blue-400 outline-none bg-white" value={assign.title_note || ''} onChange={e => { const updated = [...(editForm.archiveAssignments || [])]; updated[idx].title_note = e.target.value; setEditForm({...editForm, archiveAssignments: updated}); }} />
                                           </div>
-                                          
-                                          {isDatedSector && (
-                                            <>
-                                              <div className="space-y-2 animate-fade-in">
-                                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">START DATE</label>
-                                                <input 
-                                                  placeholder="e.g. 1990" 
-                                                  className="w-full border border-gray-200 p-3.5 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-sm focus:ring-1 focus:ring-blue-400 outline-none bg-white placeholder-gray-300" 
-                                                  value={assign.start_date || ''} 
-                                                  onChange={e => { const updated = [...(editForm.archiveAssignments || [])]; updated[idx].start_date = e.target.value; setEditForm({...editForm, archiveAssignments: updated}); }} 
-                                                />
-                                              </div>
-                                              <div className="space-y-2 animate-fade-in">
-                                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">END DATE</label>
-                                                <input 
-                                                  placeholder="e.g. 2004" 
-                                                  className="w-full border border-gray-200 p-3.5 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-sm focus:ring-1 focus:ring-blue-400 outline-none bg-white placeholder-gray-300" 
-                                                  value={assign.end_date || ''} 
-                                                  onChange={e => { const updated = [...(editForm.archiveAssignments || [])]; updated[idx].end_date = e.target.value; setEditForm({...editForm, archiveAssignments: updated}); }} 
-                                                />
-                                              </div>
-                                            </>
-                                          )}
+                                          <div>
+                                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">START DATE</label>
+                                              <input placeholder="e.g. 2010" className="w-full border border-gray-200 p-3.5 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-sm focus:ring-1 focus:ring-blue-400 outline-none bg-white" value={assign.start_date || ''} onChange={e => { const updated = [...(editForm.archiveAssignments || [])]; updated[idx].start_date = e.target.value; setEditForm({...editForm, archiveAssignments: updated}); }} />
+                                          </div>
+                                          <div>
+                                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">END DATE</label>
+                                              <input placeholder="e.g. 2014" className="w-full border border-gray-200 p-3.5 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-sm focus:ring-1 focus:ring-blue-400 outline-none bg-white" value={assign.end_date || ''} onChange={e => { const updated = [...(editForm.archiveAssignments || [])]; updated[idx].end_date = e.target.value; setEditForm({...editForm, archiveAssignments: updated}); }} />
+                                          </div>
                                       </div>
-                                      <button 
-                                        onClick={() => { const updated = [...(editForm.archiveAssignments || [])]; updated.splice(idx, 1); setEditForm({...editForm, archiveAssignments: updated}); }} 
-                                        className="absolute top-1/2 -translate-y-1/2 right-6 p-2 text-red-400 hover:text-red-600 transition-colors bg-white dark:bg-navy rounded-full shadow-sm"
-                                        title="Remove Role"
-                                      >
-                                        <Trash2 className="w-5 h-5" />
-                                      </button>
+                                      <button onClick={() => { const updated = [...(editForm.archiveAssignments || [])]; updated.splice(idx, 1); setEditForm({...editForm, archiveAssignments: updated}); }} className="absolute top-1/2 -translate-y-1/2 right-6 p-2 text-red-400 hover:text-red-600 transition-colors"><Trash2 className="w-5 h-5"/></button>
                                   </div>
                                 );
                               })}
-                          </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeAdminTab === 'archive' && (
+                        <div className="space-y-8 animate-fade-in">
+                            <div className="flex justify-between items-center pb-4 border-b border-gray-100 dark:border-gray-800">
+                                <h3 className="font-bold text-lg text-navy dark:text-white flex items-center"><FileText className="w-5 h-5 mr-2 text-gold"/> Archive Documents</h3>
+                                <button onClick={() => setEditForm(prev => ({ ...prev, archives: [...(prev.archives || []), { id: Date.now().toString(), type: 'PDF', title: '', date: '', url: '' }] }))} className="text-xs bg-navy text-gold px-4 py-2 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"><Plus className="w-4 h-4 mr-1.5" /> Add Doc</button>
+                            </div>
+                            <div className="grid grid-cols-1 gap-4">
+                                {(editForm.archives || []).map((item, idx) => (
+                                    <div key={idx} className="flex gap-4 items-center border border-gray-200 p-5 rounded-sm bg-[#F9FAFB] dark:bg-navy-light/20 relative pr-14">
+                                        <select className="w-32 border border-gray-200 p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs" value={item.type} onChange={e => { const a = [...(editForm.archives || [])]; a[idx].type = e.target.value as any; setEditForm({...editForm, archives: a}); }}><option value="PDF">PDF</option><option value="IMAGE">IMAGE</option><option value="AWARD">AWARD</option></select>
+                                        <input placeholder="Document Title" className="flex-1 border border-gray-200 p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-sm" value={item.title || ''} onChange={e => { const a = [...(editForm.archives || [])]; a[idx].title = e.target.value; setEditForm({...editForm, archives: a}); }} />
+                                        <input placeholder="https://..." className="flex-1 border border-gray-200 p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white font-mono text-xs" value={item.url || ''} onChange={e => { const a = [...(editForm.archives || [])]; a[idx].url = e.target.value; setEditForm({...editForm, archives: a}); }} />
+                                        <button onClick={() => { const a = [...(editForm.archives || [])]; a.splice(idx,1); setEditForm({...editForm, archives: a}); }} className="absolute top-1/2 -translate-y-1/2 right-4 text-red-400 hover:text-red-600 p-2"><Trash2 className="w-5 h-5"/></button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {activeAdminTab === 'news' && (
+                        <div className="space-y-8 animate-fade-in">
+                            <div className="flex justify-between items-center pb-4 border-b border-gray-100 dark:border-gray-800">
+                                <h3 className="font-bold text-lg text-navy dark:text-white flex items-center"><Newspaper className="w-5 h-5 mr-2 text-gold"/> Related News</h3>
+                                <button onClick={() => setEditForm(prev => ({ ...prev, news: [...(prev.news || []), { id: Date.now().toString(), title: '', source: '', date: '', summary: '', url: '' }] }))} className="text-xs bg-navy text-gold px-4 py-2 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"><Plus className="w-4 h-4 mr-1.5" /> Add News</button>
+                            </div>
+                            <div className="space-y-4">
+                                {(editForm.news || []).map((item, idx) => (
+                                    <div key={idx} className="border border-gray-200 p-6 rounded-sm bg-[#F9FAFB] dark:bg-navy-light/20 space-y-4 relative pr-14">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">HEADLINE</label><input className="w-full border border-gray-200 p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-sm font-bold" value={item.title || ''} onChange={e => { const n = [...(editForm.news || [])]; n[idx].title = e.target.value; setEditForm({...editForm, news: n}); }} /></div>
+                                            <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">SOURCE</label><input className="w-full border border-gray-200 p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-sm" value={item.source || ''} onChange={e => { const n = [...(editForm.news || [])]; n[idx].source = e.target.value; setEditForm({...editForm, news: n}); }} /></div>
+                                        </div>
+                                        <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">SUMMARY</label><textarea className="w-full border border-gray-200 p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-xs resize-none h-16" value={item.summary || ''} onChange={e => { const n = [...(editForm.news || [])]; n[idx].summary = e.target.value; setEditForm({...editForm, news: n}); }} /></div>
+                                        <button onClick={() => { const n = [...(editForm.news || [])]; n.splice(idx,1); setEditForm({...editForm, news: n}); }} className="absolute top-6 right-4 text-red-400 hover:text-red-600 p-2"><Trash2 className="w-5 h-5"/></button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {activeAdminTab === 'podcast' && (
+                        <div className="space-y-8 animate-fade-in">
+                            <div className="flex justify-between items-center pb-4 border-b border-gray-100 dark:border-gray-800">
+                                <h3 className="font-bold text-lg text-navy dark:text-white flex items-center"><Headphones className="w-5 h-5 mr-2 text-gold"/> Podcast Media</h3>
+                                <button onClick={() => setEditForm(prev => ({ ...prev, podcasts: [...(prev.podcasts || []), { id: Date.now().toString(), title: '', date: '', duration: '', source: '', url: '' }] }))} className="text-xs bg-navy text-gold px-4 py-2 rounded-sm font-bold flex items-center shadow-md hover:bg-navy-light transition-all"><Plus className="w-4 h-4 mr-1.5" /> Add Clip</button>
+                            </div>
+                            <div className="space-y-4">
+                                {(editForm.podcasts || []).map((item, idx) => (
+                                    <div key={idx} className="flex gap-4 items-center border border-gray-200 p-5 rounded-sm bg-[#F9FAFB] dark:bg-navy-light/20 relative pr-14">
+                                        <div className="flex-1 space-y-2">
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">EPISODE TITLE</label>
+                                            <input className="w-full border border-gray-200 p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-sm font-bold" value={item.title || ''} onChange={e => { const p = [...(editForm.podcasts || [])]; p[idx].title = e.target.value; setEditForm({...editForm, podcasts: p}); }} />
+                                        </div>
+                                        <div className="flex-1 space-y-2">
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">AUDIO URL</label>
+                                            <input className="w-full border border-gray-200 p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 dark:text-white text-sm font-mono" value={item.url || ''} onChange={e => { const p = [...(editForm.podcasts || [])]; p[idx].url = e.target.value; setEditForm({...editForm, podcasts: p}); }} />
+                                        </div>
+                                        <button onClick={() => { const p = [...(editForm.podcasts || [])]; p.splice(idx,1); setEditForm({...editForm, podcasts: p}); }} className="absolute top-1/2 -translate-y-1/2 right-4 text-red-400 hover:text-red-600 p-2"><Trash2 className="w-5 h-5"/></button>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     )}
                 </div>
-                <div className="p-6 border-t border-gray-100 dark:border-gray-700 flex justify-end items-center space-x-12 sticky bottom-0 bg-white dark:bg-navy z-20">
-                    <button 
-                      onClick={() => setIsEditing(false)} 
-                      className="text-sm font-bold text-gray-400 hover:text-navy transition-colors tracking-widest uppercase"
-                    >
-                      Discard
-                    </button>
-                    <button 
-                      onClick={handleSaveDossier} 
-                      className="bg-[#0A2647] dark:bg-gold text-white dark:text-navy px-12 py-3 rounded-sm font-bold flex items-center shadow-lg transform active:scale-95 transition-all"
-                    >
-                      <Save className="w-4 h-4 mr-2.5" /> Save Dossier
+
+                {/* Footer */}
+                <div className="p-6 border-t border-gray-100 dark:border-gray-700 flex justify-end items-center space-x-12 shrink-0 bg-white dark:bg-navy">
+                    <button onClick={() => setIsEditing(false)} className="text-sm font-bold text-gray-400 hover:text-navy transition-colors tracking-widest uppercase">Discard</button>
+                    <button onClick={handleSaveDossier} className="bg-[#0A2647] dark:bg-gold text-white dark:text-navy px-12 py-3 rounded-sm font-bold flex items-center shadow-lg transform active:scale-95 transition-all">
+                        <Save className="w-4 h-4 mr-2.5" /> Save Dossier
                     </button>
                 </div>
               </div>
