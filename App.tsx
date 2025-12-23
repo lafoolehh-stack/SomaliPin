@@ -908,9 +908,9 @@ const App = () => {
         {view === 'archive-explorer' ? (
           <ArchiveExplorer sectionsToShow={[SectionType.POLITICS, SectionType.JUDICIARY, SectionType.SECURITY]} title={t.archive_explorer_title} description={t.archive_explorer_desc} />
         ) : view === 'business-archive' ? (
-          <ArchiveExplorer sectionsToShow={[SectionType.BUSINESS]} title={`🏛️ ${t.sec_business} Archive`} description={`Explore a comprehensive directory of Somali commercial history and innovative business entities.`} />
+          <ArchiveExplorer sectionsToShow={[SectionType.BUSINESS]} title={`🏛️ Business (Ganacsiga) Archive`} description={`Explore a comprehensive directory of Somali commercial history and innovative business entities.`} />
         ) : view === 'arts-culture-archive' ? (
-          <ArchiveExplorer sectionsToShow={[SectionType.ARTS_CULTURE]} title={`🏛️ ${t.sec_arts_culture} Archive`} description={`Celebrating the creators and scholars who have shaped the rich cultural tapestry of the Somali people.`} />
+          <ArchiveExplorer sectionsToShow={[SectionType.ARTS_CULTURE]} title={`🏛️ Arts & Culture (Dhaqanka) Archive`} description={`Celebrating the creators and scholars who have shaped the rich cultural tapestry of the Somali people.`} />
         ) : view === 'home' ? (
           <>
             <section className="bg-navy pb-16 pt-10 px-4 text-center border-b border-gold/20">
