@@ -7,14 +7,14 @@ import {
   Plus, Trash2, Save, X, Database, Sun, Moon, Headphones, 
   Unlock, Shield, Loader2, Briefcase, Landmark, Gavel, 
   ShieldCheck, ChevronUp, ChevronDown, Palette, Settings, Layers, RefreshCw, 
-  ExternalLink, Play, ArrowRight, Upload, Edit3, Check
+  ExternalLink, Play, ArrowRight, Upload, Edit3, Check, Link as LinkIcon
 } from 'lucide-react';
 import ProfileCard from './components/ProfileCard';
 import Timeline from './components/Timeline';
 import VerificationCertificate from './components/VerificationCertificate';
 import { BrandPin, GoldenBadge, HeroBadge, StandardBadge, NobelBadge, VerifiedBadge } from './components/Icons';
 import { UI_TEXT } from './constants';
-import { Profile, VerificationLevel, Language, DossierDB, ProfileStatus, SectionType, ArchiveCategory, ArchiveAssignment } from './types';
+import { Profile, VerificationLevel, Language, DossierDB, ProfileStatus, SectionType, ArchiveCategory, ArchiveAssignment, Partner } from './types';
 import { supabase, isSupabaseConfigured } from './services/supabaseClient';
 
 const App = () => {
@@ -28,12 +28,13 @@ const App = () => {
   const [showCertificate, setShowCertificate] = useState(false);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [allCategories, setAllCategories] = useState<ArchiveCategory[]>([]);
+  const [partners, setPartners] = useState<Partner[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [displayLimit, setDisplayLimit] = useState(12);
 
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
-  const [adminSubView, setAdminSubView] = useState<'dossiers' | 'categories'>('dossiers');
+  const [adminSubView, setAdminSubView] = useState<'dossiers' | 'categories' | 'partners'>('dossiers');
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<Partial<Profile>>({});
   const [activeAdminTab, setActiveAdminTab] = useState<'basic' | 'timeline' | 'positions' | 'archive' | 'news' | 'podcast'>('basic');
@@ -45,6 +46,10 @@ const App = () => {
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [editingCatId, setEditingCatId] = useState<number | null>(null);
   const [editingCatName, setEditingCatName] = useState('');
+
+  const [newPartnerName, setNewPartnerName] = useState('');
+  const [newPartnerLogo, setNewPartnerLogo] = useState('');
+  const [isAddingPartner, setIsAddingPartner] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -124,6 +129,9 @@ const App = () => {
 
       const { data: categoriesData, error: categoriesError } = await supabase.from('archive_categories').select('*').order('section_type', { ascending: true }).order('category_name', { ascending: true });
       if (!categoriesError && categoriesData) setAllCategories(categoriesData);
+
+      const { data: partnersData, error: partnersError } = await supabase.from('partners').select('*').order('name', { ascending: true });
+      if (!partnersError && partnersData) setPartners(partnersData);
 
       const { data: assignmentsData, error: assignmentsError } = await supabase
         .from('archive_assignments')
@@ -294,6 +302,29 @@ const App = () => {
     } catch (err: any) {
       alert('Update failed: ' + err.message);
     }
+  };
+
+  const handleAddPartner = async () => {
+    if (!newPartnerName.trim() || !newPartnerLogo.trim()) return;
+    setIsAddingPartner(true);
+    try {
+      const { error } = await supabase.from('partners').insert([{ name: newPartnerName.trim(), logo_url: newPartnerLogo.trim() }]);
+      if (error) throw error;
+      setNewPartnerName('');
+      setNewPartnerLogo('');
+      await fetchDossiers();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setIsAddingPartner(false);
+    }
+  };
+
+  const handleDeletePartner = async (id: string) => {
+    if (!window.confirm('Delete this partner?')) return;
+    const { error } = await supabase.from('partners').delete().eq('id', id);
+    if (error) alert(error.message);
+    else await fetchDossiers();
   };
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -538,6 +569,9 @@ const App = () => {
                 <button onClick={() => setAdminSubView('categories')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-sm font-bold transition-all ${adminSubView === 'categories' ? 'bg-navy text-white dark:bg-gold dark:text-navy' : 'bg-white dark:bg-navy text-gray-500 hover:bg-gray-50'}`}>
                   <Layers className="w-5 h-5" /> <span>Registry Structure</span>
                 </button>
+                <button onClick={() => setAdminSubView('partners')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-sm font-bold transition-all ${adminSubView === 'partners' ? 'bg-navy text-white dark:bg-gold dark:text-navy' : 'bg-white dark:bg-navy text-gray-500 hover:bg-gray-50'}`}>
+                  <LinkIcon className="w-5 h-5" /> <span>Partners</span>
+                </button>
               </div>
 
               <div className="flex-1 bg-white dark:bg-navy rounded-sm shadow-sm p-6 overflow-hidden min-h-[60vh]">
@@ -587,7 +621,7 @@ const App = () => {
                       </table>
                     </div>
                   </>
-                ) : (
+                ) : adminSubView === 'categories' ? (
                   <div className="space-y-8 text-gray-800">
                     <div className="flex justify-between items-center mb-2">
                       <h2 className="text-xl font-bold text-gray-800 dark:text-white">Archive Categories Manager</h2>
@@ -653,6 +687,35 @@ const App = () => {
                       })}
                     </div>
                   </div>
+                ) : (
+                  <div className="space-y-8 text-gray-800">
+                    <h2 className="text-xl font-bold text-gray-800 dark:text-white">Partner Management</h2>
+                    <div className="bg-slate dark:bg-navy-light p-6 rounded-sm border border-gray-200 dark:border-gray-800 shadow-inner">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="flex-1">
+                          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Partner Name</label>
+                          <input className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 text-sm" value={newPartnerName} onChange={e => setNewPartnerName(e.target.value)} placeholder="e.g. IBS Bank" />
+                        </div>
+                        <div className="flex-1">
+                          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Logo URL</label>
+                          <input className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 text-sm font-mono" value={newPartnerLogo} onChange={e => setNewPartnerLogo(e.target.value)} placeholder="https://..." />
+                        </div>
+                        <button onClick={handleAddPartner} disabled={isAddingPartner} className="self-end bg-navy dark:bg-gold text-white dark:text-navy h-[42px] px-6 rounded-sm font-bold flex items-center justify-center transition-all disabled:opacity-50">
+                          {isAddingPartner ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />} 
+                          Add Partner
+                        </button>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                      {partners.map(p => (
+                        <div key={p.id} className="bg-white dark:bg-navy-light/30 border border-gray-100 dark:border-gray-800 p-4 rounded-sm relative group">
+                          <img src={p.logo_url} alt={p.name} className="h-12 w-full object-contain mb-2 filter dark:brightness-200" />
+                          <p className="text-xs font-bold text-center text-navy dark:text-white">{p.name}</p>
+                          <button onClick={() => handleDeletePartner(p.id)} className="absolute top-2 right-2 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-white/80 rounded-full"><Trash2 className="w-3.5 h-3.5" /></button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
@@ -711,7 +774,7 @@ const App = () => {
                                 <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">LIFECYCLE STATUS</label><select className="w-full border border-gray-200 p-3 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-blue-400 outline-none" value={editForm.status || 'ACTIVE'} onChange={(e) => setEditForm({...editForm, status: e.target.value as ProfileStatus})}><option value="ACTIVE">Active</option><option value="DECEASED">Deceased</option><option value="RETIRED">Retired</option><option value="CLOSED">Closed</option></select></div>
                             </div>
                             <div className="space-y-6">
-                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">DISPLAY CATEGORY</label><input type="text" className="w-full border border-gray-200 p-3 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-blue-400 outline-none" value={editForm.category || ''} onChange={(e) => setEditForm({...editForm, category: e.target.value})} /></div>
+                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">DISPLAY CATEGORY</label><input type="text" className="w-full border border-gray-200 p-3 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.category || ''} onChange={(e) => setEditForm({...editForm, category: e.target.value})} /></div>
                                 <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">HONORS TIER</label><select className="w-full border border-gray-200 p-3 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-blue-400 outline-none" value={editForm.verificationLevel || 'Standard'} onChange={(e) => setEditForm({...editForm, verificationLevel: e.target.value as VerificationLevel})}><option value="Standard">Standard</option><option value="Golden">Golden</option><option value="Hero">Hero</option><option value="Nobel">Nobel</option></select></div>
                                 
                                 <div className="p-4 border border-gray-100 dark:border-gray-700 bg-slate/20 dark:bg-navy/30 rounded-sm">
@@ -1042,10 +1105,45 @@ const App = () => {
             ) : <div className="text-center py-20 text-gray-400 italic">No profile selected.</div>}
           </div>
         )}
+
+        {/* Partners Section (Screenshot Inspired) */}
+        <section className="bg-navy py-16 border-t border-gold/20 overflow-hidden">
+          <div className="max-w-6xl mx-auto px-4">
+             <div className="flex flex-col items-center mb-10">
+                <h2 className="text-2xl font-serif font-bold text-white mb-2 uppercase tracking-widest relative inline-block">
+                   Our Partners
+                   <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-white/20"></div>
+                </h2>
+             </div>
+             
+             <div className="bg-white p-8 md:p-12 rounded-sm shadow-2xl flex flex-wrap justify-center items-center gap-12 md:gap-20">
+                {partners.length > 0 ? partners.map((p) => (
+                  <div key={p.id} className="h-12 md:h-16 flex items-center justify-center filter grayscale hover:grayscale-0 transition-all duration-500 opacity-80 hover:opacity-100 transform hover:scale-105" title={p.name}>
+                    <img src={p.logo_url} alt={p.name} className="max-h-full max-w-[180px] object-contain" />
+                  </div>
+                )) : (
+                  <p className="text-gray-300 italic text-sm">Partners Registry Loading...</p>
+                )}
+             </div>
+          </div>
+        </section>
       </main>
 
-      <footer className="bg-navy text-white pt-16 pb-8 border-t border-gold">
-        <div className="max-w-6xl mx-auto px-4"><div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12"><div className="space-y-4"><div className="flex items-center space-x-2 cursor-pointer" onClick={handleBack}><BrandPin className="h-6 w-6 text-gold" /><span className="text-xl font-serif font-bold">SomaliPin</span></div><p className="text-gray-400 text-sm leading-relaxed">{t.footer_desc}</p></div></div><div className="border-t border-white/10 pt-8 text-center text-xs text-gray-500"><p>&copy; {new Date().getFullYear()} {t.rights}</p></div></div>
+      <footer className="bg-navy text-white pt-16 pb-8 border-t border-gold/10">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2 cursor-pointer" onClick={handleBack}>
+                <BrandPin className="h-6 w-6 text-gold" />
+                <span className="text-xl font-serif font-bold">SomaliPin</span>
+              </div>
+              <p className="text-gray-400 text-sm leading-relaxed">{t.footer_desc}</p>
+            </div>
+          </div>
+          <div className="border-t border-white/5 pt-8 text-center text-[10px] text-gray-500 uppercase tracking-widest">
+            <p>&copy; {new Date().getFullYear()} {t.rights}</p>
+          </div>
+        </div>
       </footer>
     </div>
   );

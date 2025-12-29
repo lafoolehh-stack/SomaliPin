@@ -80,6 +80,12 @@ export enum Category {
     category?: ArchiveCategory; 
   }
 
+  export interface Partner {
+    id: string;
+    name: string;
+    logo_url: string;
+  }
+
   export interface Profile {
     id: string;
     name: string;
