@@ -16,11 +16,26 @@ export const supabase = createClient(supabaseUrl, supabaseKey);
 
 /*
 -- ==========================================================
--- XALKA TOOSKA AH (DIRECT FIX): "Row-level security policy"
+-- XALKA TOOSKA AH (DIRECT FIX): "public.partners" ERROR
 -- ==========================================================
--- 1. Aad Supabase Dashboard -> Storage
--- 2. Abuur Bucket cusub: profile-pictures (ka dhig Public)
--- 3. Nuqul ka qaado koodhkan hoose, ku shub SQL Editor si aad u oggolaato upload-ka:
+-- 1. Aad Supabase Dashboard -> SQL Editor
+-- 2. Ku shub koodhkan hoose si aad u abuurto miiska Partners:
+
+CREATE TABLE IF NOT EXISTS public.partners (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    name TEXT NOT NULL,
+    logo_url TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.partners ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public View Partners" ON public.partners FOR SELECT USING (true);
+CREATE POLICY "Admin All Partners" ON public.partners FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+
+-- ==========================================================
+-- STORAGE POLICIES (Loogu talagalay sawirrada):
+-- ==========================================================
+-- Abuur Bucket cusub: profile-pictures (ka dhig Public)
 
 -- Oggolow in sawirrada la arki karo
 CREATE POLICY "Allow Public View" ON storage.objects FOR SELECT USING (bucket_id = 'profile-pictures');
@@ -33,7 +48,7 @@ CREATE POLICY "Allow Admin Update" ON storage.objects FOR UPDATE USING (bucket_i
 CREATE POLICY "Allow Admin Delete" ON storage.objects FOR DELETE USING (bucket_id = 'profile-pictures');
 
 -- ==========================================================
--- SQL FOR TABLES (Haddii loo baahdo):
+-- SQL FOR DOSSIERS:
 -- ==========================================================
 CREATE TABLE IF NOT EXISTS public.dossiers (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -50,5 +65,5 @@ CREATE TABLE IF NOT EXISTS public.dossiers (
 );
 
 ALTER TABLE public.dossiers ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Admin All" ON public.dossiers FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Admin All Dossiers" ON public.dossiers FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 */

@@ -40,6 +40,7 @@ const App = () => {
   const [activeAdminTab, setActiveAdminTab] = useState<'basic' | 'timeline' | 'positions' | 'archive' | 'news' | 'podcast'>('basic');
   const [isLocking, setIsLocking] = useState(false); 
   const [isUploadingImage, setIsUploadingImage] = useState(false); 
+  const [isUploadingPartnerLogo, setIsUploadingPartnerLogo] = useState(false);
 
   const [newCatName, setNewCatName] = useState('');
   const [newCatSection, setNewCatSection] = useState<SectionType>(SectionType.BUSINESS);
@@ -48,10 +49,11 @@ const App = () => {
   const [editingCatName, setEditingCatName] = useState('');
 
   const [newPartnerName, setNewPartnerName] = useState('');
-  const [newPartnerLogo, setNewPartnerLogo] = useState('');
+  const [newPartnerLogoUrl, setNewPartnerLogoUrl] = useState('');
   const [isAddingPartner, setIsAddingPartner] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const partnerLogoInputRef = useRef<HTMLInputElement>(null);
 
   const t = UI_TEXT[language] || UI_TEXT.en;
 
@@ -304,17 +306,47 @@ const App = () => {
     }
   };
 
+  const handlePartnerLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingPartnerLogo(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `partner_${Date.now()}.${fileExt}`;
+      const filePath = fileName;
+
+      const { data, error } = await supabase.storage.from('profile-pictures').upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+      if (error) throw error;
+
+      const { data: publicUrlData } = supabase.storage.from('profile-pictures').getPublicUrl(filePath);
+      setNewPartnerLogoUrl(publicUrlData.publicUrl);
+    } catch (error: any) {
+      alert('Upload failed: ' + error.message);
+    } finally {
+      setIsUploadingPartnerLogo(false);
+    }
+  };
+
   const handleAddPartner = async () => {
-    if (!newPartnerName.trim() || !newPartnerLogo.trim()) return;
+    if (!newPartnerName.trim() || !newPartnerLogoUrl.trim()) {
+      alert("Fadlan geli magaca iyo Logo-da.");
+      return;
+    }
     setIsAddingPartner(true);
     try {
-      const { error } = await supabase.from('partners').insert([{ name: newPartnerName.trim(), logo_url: newPartnerLogo.trim() }]);
+      const { error } = await supabase.from('partners').insert([{ name: newPartnerName.trim(), logo_url: newPartnerLogoUrl.trim() }]);
       if (error) throw error;
       setNewPartnerName('');
-      setNewPartnerLogo('');
+      setNewPartnerLogoUrl('');
       await fetchDossiers();
+      alert('Partner-ka waa lagu daray!');
     } catch (err: any) {
-      alert(err.message);
+      alert('Cillad: ' + err.message);
     } finally {
       setIsAddingPartner(false);
     }
@@ -691,27 +723,31 @@ const App = () => {
                   <div className="space-y-8 text-gray-800">
                     <h2 className="text-xl font-bold text-gray-800 dark:text-white">Partner Management</h2>
                     <div className="bg-slate dark:bg-navy-light p-6 rounded-sm border border-gray-200 dark:border-gray-800 shadow-inner">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-end">
                         <div className="flex-1">
-                          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Partner Name</label>
-                          <input className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 text-sm" value={newPartnerName} onChange={e => setNewPartnerName(e.target.value)} placeholder="e.g. IBS Bank" />
+                          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">PARTNER NAME</label>
+                          <input className="w-full border border-gray-200 p-3 rounded-sm dark:bg-navy dark:border-gray-600 text-sm focus:ring-1 focus:ring-blue-400 outline-none" value={newPartnerName} onChange={e => setNewPartnerName(e.target.value)} placeholder="e.g. Hormuud Telecom" />
                         </div>
                         <div className="flex-1">
-                          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Logo URL</label>
-                          <input className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 text-sm font-mono" value={newPartnerLogo} onChange={e => setNewPartnerLogo(e.target.value)} placeholder="https://..." />
+                          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">LOGO UPLOAD</label>
+                          <div className="flex items-center space-x-4">
+                            <input type="file" accept="image/*" onChange={handlePartnerLogoUpload} ref={partnerLogoInputRef} className="hidden" />
+                            <button onClick={() => partnerLogoInputRef.current?.click()} className="flex items-center justify-center space-x-2 border border-dashed border-gray-300 p-3 rounded-sm w-full hover:bg-white dark:hover:bg-navy transition-colors text-xs font-bold text-gray-400">
+                              {isUploadingPartnerLogo ? <Loader2 className="w-4 h-4 animate-spin text-gold" /> : (newPartnerLogoUrl ? <><Check className="w-4 h-4 text-green-500" /> <span>Logo Ready</span></> : <><Upload className="w-4 h-4" /> <span>Choose Logo</span></>)}
+                            </button>
+                            <button onClick={handleAddPartner} disabled={isAddingPartner || !newPartnerLogoUrl} className="bg-[#0A2647] dark:bg-gold text-white dark:text-navy h-[42px] px-8 rounded-sm font-bold flex items-center justify-center transition-all disabled:opacity-50">
+                              {isAddingPartner ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : 'Add Partner'}
+                            </button>
+                          </div>
                         </div>
-                        <button onClick={handleAddPartner} disabled={isAddingPartner} className="self-end bg-navy dark:bg-gold text-white dark:text-navy h-[42px] px-6 rounded-sm font-bold flex items-center justify-center transition-all disabled:opacity-50">
-                          {isAddingPartner ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />} 
-                          Add Partner
-                        </button>
                       </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                       {partners.map(p => (
                         <div key={p.id} className="bg-white dark:bg-navy-light/30 border border-gray-100 dark:border-gray-800 p-4 rounded-sm relative group">
                           <img src={p.logo_url} alt={p.name} className="h-12 w-full object-contain mb-2 filter dark:brightness-200" />
-                          <p className="text-xs font-bold text-center text-navy dark:text-white">{p.name}</p>
-                          <button onClick={() => handleDeletePartner(p.id)} className="absolute top-2 right-2 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-white/80 rounded-full"><Trash2 className="w-3.5 h-3.5" /></button>
+                          <p className="text-xs font-bold text-center text-navy dark:text-white truncate">{p.name}</p>
+                          <button onClick={() => handleDeletePartner(p.id)} className="absolute top-2 right-2 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-white/80 rounded-full shadow-sm"><Trash2 className="w-3.5 h-3.5" /></button>
                         </div>
                       ))}
                     </div>
