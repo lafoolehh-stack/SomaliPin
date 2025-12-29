@@ -16,11 +16,30 @@ export const supabase = createClient(supabaseUrl, supabaseKey);
 
 /*
 -- ==========================================================
--- XALKA TOOSKA AH (DIRECT FIX): "public.partners" ERROR
+-- SQL TO CREATE SECTORS TABLE (Labada Qaybood)
 -- ==========================================================
--- 1. Aad Supabase Dashboard -> SQL Editor
--- 2. Ku shub koodhkan hoose si aad u abuurto miiska Partners:
+-- Ku shub koodhkan SQL Editor-ka Supabase si aad u abuurto:
 
+CREATE TABLE IF NOT EXISTS public.archive_sectors (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Seed default values
+INSERT INTO public.archive_sectors (id, title, description) VALUES 
+('business', 'Business (Ganacsiga)', 'Tracking Somali entrepreneurship and corporate pioneers.'),
+('arts_culture', 'Arts & Culture', 'Preserving the legacy of Somali artists and custodians.')
+ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE public.archive_sectors ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public View Sectors" ON public.archive_sectors FOR SELECT USING (true);
+CREATE POLICY "Admin All Sectors" ON public.archive_sectors FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+
+-- ==========================================================
+-- PARTNERS TABLE (Haddii aadan hore u abuurin)
+-- ==========================================================
 CREATE TABLE IF NOT EXISTS public.partners (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     name TEXT NOT NULL,
@@ -33,37 +52,8 @@ CREATE POLICY "Public View Partners" ON public.partners FOR SELECT USING (true);
 CREATE POLICY "Admin All Partners" ON public.partners FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 
 -- ==========================================================
--- STORAGE POLICIES (Loogu talagalay sawirrada):
+-- STORAGE POLICIES
 -- ==========================================================
 -- Abuur Bucket cusub: profile-pictures (ka dhig Public)
-
--- Oggolow in sawirrada la arki karo
-CREATE POLICY "Allow Public View" ON storage.objects FOR SELECT USING (bucket_id = 'profile-pictures');
-
--- Oggolow in Interface-ka Admin-ka uu sawirro soo geliyo
-CREATE POLICY "Allow Admin Upload" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'profile-pictures');
-
--- Oggolow in la beddelo ama la tirtiro
-CREATE POLICY "Allow Admin Update" ON storage.objects FOR UPDATE USING (bucket_id = 'profile-pictures');
-CREATE POLICY "Allow Admin Delete" ON storage.objects FOR DELETE USING (bucket_id = 'profile-pictures');
-
--- ==========================================================
--- SQL FOR DOSSIERS:
--- ==========================================================
-CREATE TABLE IF NOT EXISTS public.dossiers (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    full_name TEXT NOT NULL,
-    role TEXT,
-    bio TEXT,
-    status TEXT DEFAULT 'Unverified',
-    reputation_score INTEGER DEFAULT 0,
-    image_url TEXT,
-    category TEXT,
-    verification_level TEXT DEFAULT 'Standard',
-    details JSONB DEFAULT '{}'::jsonb,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
-ALTER TABLE public.dossiers ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Admin All Dossiers" ON public.dossiers FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+-- SQL for storage policies can be found in previous versions or Supabase UI.
 */

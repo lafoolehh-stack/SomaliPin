@@ -7,7 +7,7 @@ import {
   Plus, Trash2, Save, X, Database, Sun, Moon, Headphones, 
   Unlock, Shield, Loader2, Briefcase, Landmark, Gavel, 
   ShieldCheck, ChevronUp, ChevronDown, Palette, Settings, Layers, RefreshCw, 
-  ExternalLink, Play, ArrowRight, Upload, Edit3, Check, Link as LinkIcon
+  ExternalLink, Play, ArrowRight, Upload, Edit3, Check, Link as LinkIcon, Monitor
 } from 'lucide-react';
 import ProfileCard from './components/ProfileCard';
 import Timeline from './components/Timeline';
@@ -29,12 +29,16 @@ const App = () => {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [allCategories, setAllCategories] = useState<ArchiveCategory[]>([]);
   const [partners, setPartners] = useState<Partner[]>([]);
+  const [sectorConfigs, setSectorConfigs] = useState<Record<string, {title: string, desc: string}>>({
+    business: { title: 'Business (Ganacsiga)', desc: 'Tracking Somali entrepreneurship and corporate pioneers.' },
+    arts_culture: { title: 'Arts & Culture', desc: 'Preserving the legacy of Somali artists and custodians.' }
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [displayLimit, setDisplayLimit] = useState(12);
 
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
-  const [adminSubView, setAdminSubView] = useState<'dossiers' | 'categories' | 'partners'>('dossiers');
+  const [adminSubView, setAdminSubView] = useState<'dossiers' | 'categories' | 'partners' | 'sectors'>('dossiers');
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<Partial<Profile>>({});
   const [activeAdminTab, setActiveAdminTab] = useState<'basic' | 'timeline' | 'positions' | 'archive' | 'news' | 'podcast'>('basic');
@@ -51,6 +55,8 @@ const App = () => {
   const [newPartnerName, setNewPartnerName] = useState('');
   const [newPartnerLogoUrl, setNewPartnerLogoUrl] = useState('');
   const [isAddingPartner, setIsAddingPartner] = useState(false);
+
+  const [isSavingSectors, setIsSavingSectors] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const partnerLogoInputRef = useRef<HTMLInputElement>(null);
@@ -132,8 +138,14 @@ const App = () => {
       const { data: categoriesData, error: categoriesError } = await supabase.from('archive_categories').select('*').order('section_type', { ascending: true }).order('category_name', { ascending: true });
       if (!categoriesError && categoriesData) setAllCategories(categoriesData);
 
-      const { data: partnersData, error: partnersError } = await supabase.from('partners').select('*').order('name', { ascending: true });
+      const { data: partnersData, error: partnersError } = await supabase.from('partners').select('*').order('created_at', { ascending: false });
       if (!partnersError && partnersData) setPartners(partnersData);
+
+      const { data: sectorsData } = await supabase.from('archive_sectors').select('*');
+      if (sectorsData) {
+        const configs = sectorsData.reduce((acc, s) => ({ ...acc, [s.id]: { title: s.title, desc: s.description } }), {});
+        setSectorConfigs(prev => ({ ...prev, ...configs }));
+      }
 
       const { data: assignmentsData, error: assignmentsError } = await supabase
         .from('archive_assignments')
@@ -326,37 +338,61 @@ const App = () => {
       const { data: publicUrlData } = supabase.storage.from('profile-pictures').getPublicUrl(filePath);
       setNewPartnerLogoUrl(publicUrlData.publicUrl);
     } catch (error: any) {
-      alert('Upload failed: ' + error.message);
+      alert('Logo upload-ka waa fashilmay: ' + error.message);
     } finally {
       setIsUploadingPartnerLogo(false);
     }
   };
 
   const handleAddPartner = async () => {
-    if (!newPartnerName.trim() || !newPartnerLogoUrl.trim()) {
-      alert("Fadlan geli magaca iyo Logo-da.");
+    if (!newPartnerName.trim()) {
+      alert("Fadlan geli magaca shirkadda.");
       return;
     }
+    if (!newPartnerLogoUrl) {
+      alert("Fadlan upload-garee Logo-da shirkadda.");
+      return;
+    }
+
     setIsAddingPartner(true);
     try {
-      const { error } = await supabase.from('partners').insert([{ name: newPartnerName.trim(), logo_url: newPartnerLogoUrl.trim() }]);
+      const { error } = await supabase.from('partners').insert([
+        { name: newPartnerName.trim(), logo_url: newPartnerLogoUrl }
+      ]);
+      
       if (error) throw error;
+      
       setNewPartnerName('');
       setNewPartnerLogoUrl('');
       await fetchDossiers();
-      alert('Partner-ka waa lagu daray!');
+      alert('Bahwadaaga (Partner) waa lagu daray!');
     } catch (err: any) {
-      alert('Cillad: ' + err.message);
+      alert('Cillad aya dhacday: ' + err.message);
     } finally {
       setIsAddingPartner(false);
     }
   };
 
   const handleDeletePartner = async (id: string) => {
-    if (!window.confirm('Delete this partner?')) return;
+    if (!window.confirm('Ma hubtaa inaad tirtirto bahwadaaga?')) return;
     const { error } = await supabase.from('partners').delete().eq('id', id);
     if (error) alert(error.message);
     else await fetchDossiers();
+  };
+
+  const handleSaveSector = async (id: string) => {
+    const config = sectorConfigs[id];
+    if (!config) return;
+    setIsSavingSectors(true);
+    try {
+      const { error } = await supabase.from('archive_sectors').upsert({ id, title: config.title, description: config.desc });
+      if (error) throw error;
+      alert(`Sector-ka ${config.title} waa la keydiyay!`);
+    } catch (err: any) {
+      alert('Cillad: ' + err.message);
+    } finally {
+      setIsSavingSectors(false);
+    }
   };
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -601,6 +637,9 @@ const App = () => {
                 <button onClick={() => setAdminSubView('categories')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-sm font-bold transition-all ${adminSubView === 'categories' ? 'bg-navy text-white dark:bg-gold dark:text-navy' : 'bg-white dark:bg-navy text-gray-500 hover:bg-gray-50'}`}>
                   <Layers className="w-5 h-5" /> <span>Registry Structure</span>
                 </button>
+                <button onClick={() => setAdminSubView('sectors')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-sm font-bold transition-all ${adminSubView === 'sectors' ? 'bg-navy text-white dark:bg-gold dark:text-navy' : 'bg-white dark:bg-navy text-gray-500 hover:bg-gray-50'}`}>
+                  <Monitor className="w-5 h-5" /> <span>Home Sectors</span>
+                </button>
                 <button onClick={() => setAdminSubView('partners')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-sm font-bold transition-all ${adminSubView === 'partners' ? 'bg-navy text-white dark:bg-gold dark:text-navy' : 'bg-white dark:bg-navy text-gray-500 hover:bg-gray-50'}`}>
                   <LinkIcon className="w-5 h-5" /> <span>Partners</span>
                 </button>
@@ -717,6 +756,40 @@ const App = () => {
                           </div>
                         );
                       })}
+                    </div>
+                  </div>
+                ) : adminSubView === 'sectors' ? (
+                  <div className="space-y-8 text-gray-800 animate-fade-in">
+                    <h2 className="text-xl font-bold text-gray-800 dark:text-white">Home Sectors Management</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      {['business', 'arts_culture'].map((sid) => (
+                        <div key={sid} className="bg-slate dark:bg-navy-light p-6 rounded-sm border border-gray-200 dark:border-gray-800 shadow-sm space-y-4">
+                          <h3 className="text-xs font-bold uppercase tracking-widest text-gold">{sid === 'business' ? 'Business Sector' : 'Arts & Culture Sector'}</h3>
+                          <div>
+                            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Title</label>
+                            <input 
+                              className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 text-sm font-bold" 
+                              value={sectorConfigs[sid]?.title || ''} 
+                              onChange={e => setSectorConfigs(prev => ({ ...prev, [sid]: { ...prev[sid], title: e.target.value } }))} 
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Description</label>
+                            <textarea 
+                              className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 text-sm h-24 resize-none" 
+                              value={sectorConfigs[sid]?.desc || ''} 
+                              onChange={e => setSectorConfigs(prev => ({ ...prev, [sid]: { ...prev[sid], desc: e.target.value } }))} 
+                            />
+                          </div>
+                          <button 
+                            onClick={() => handleSaveSector(sid)} 
+                            disabled={isSavingSectors}
+                            className="bg-navy dark:bg-gold text-white dark:text-navy px-6 py-2 rounded-sm font-bold text-xs flex items-center"
+                          >
+                            {isSavingSectors ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : <Save className="w-3 h-3 mr-2" />} Save Changes
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ) : (
@@ -998,9 +1071,9 @@ const App = () => {
         {view === 'archive-explorer' ? (
           <ArchiveExplorer sectionsToShow={[SectionType.POLITICS, SectionType.JUDICIARY, SectionType.SECURITY]} title={t.archive_explorer_title} description={t.archive_explorer_desc} />
         ) : view === 'business-archive' ? (
-          <ArchiveExplorer sectionsToShow={[SectionType.BUSINESS]} title={`🏛️ Business (Ganacsiga) Archive`} description={`Explore a comprehensive directory of Somali commercial history and innovative business entities.`} />
+          <ArchiveExplorer sectionsToShow={[SectionType.BUSINESS]} title={`🏛️ ${sectorConfigs.business.title} Archive`} description={sectorConfigs.business.desc} />
         ) : view === 'arts-culture-archive' ? (
-          <ArchiveExplorer sectionsToShow={[SectionType.ARTS_CULTURE]} title={`🏛️ Arts & Culture (Dhaqanka) Archive`} description={`Celebrating the creators and scholars who have shaped the rich cultural tapestry of the Somali people.`} />
+          <ArchiveExplorer sectionsToShow={[SectionType.ARTS_CULTURE]} title={`🏛️ ${sectorConfigs.arts_culture.title} Archive`} description={sectorConfigs.arts_culture.desc} />
         ) : view === 'home' ? (
           <>
             <section className="bg-navy pb-16 pt-10 px-4 text-center border-b border-gold/20">
@@ -1028,16 +1101,16 @@ const App = () => {
                   <div className="w-14 h-14 bg-gold text-navy rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                     <Briefcase className="w-7 h-7" />
                   </div>
-                  <h3 className="text-xl font-serif font-bold text-navy dark:text-white mb-3">Business (Ganacsiga)</h3>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm mb-6 leading-relaxed">Tracking Somali entrepreneurship and corporate pioneers.</p>
+                  <h3 className="text-xl font-serif font-bold text-navy dark:text-white mb-3">{sectorConfigs.business.title}</h3>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm mb-6 leading-relaxed">{sectorConfigs.business.desc}</p>
                   <div className="flex items-center text-xs font-bold text-gold uppercase tracking-widest group-hover:gap-2 transition-all">Explore Business <ArrowRight className="w-4 h-4 ml-1" /></div>
                 </div>
                 <div onClick={() => navigateTo('arts-culture-archive', '/culture')} className="group bg-white dark:bg-navy-light p-8 rounded-sm shadow-2xl border border-gray-100 dark:border-navy cursor-pointer hover:-translate-y-2 transition-all duration-300">
                   <div className="w-14 h-14 bg-navy dark:bg-white text-white dark:text-navy rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                     <Palette className="w-7 h-7" />
                   </div>
-                  <h3 className="text-xl font-serif font-bold text-navy dark:text-white mb-3">Arts & Culture</h3>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm mb-6 leading-relaxed">Preserving the legacy of Somali artists and custodians.</p>
+                  <h3 className="text-xl font-serif font-bold text-navy dark:text-white mb-3">{sectorConfigs.arts_culture.title}</h3>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm mb-6 leading-relaxed">{sectorConfigs.arts_culture.desc}</p>
                   <div className="flex items-center text-xs font-bold text-gold uppercase tracking-widest group-hover:gap-2 transition-all">Explore Culture <ArrowRight className="w-4 h-4 ml-1" /></div>
                 </div>
               </div>
