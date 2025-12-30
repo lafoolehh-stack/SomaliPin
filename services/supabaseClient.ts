@@ -16,9 +16,9 @@ export const supabase = createClient(supabaseUrl, supabaseKey);
 
 /*
 -- ==========================================================
--- SQL TO CREATE SECTORS TABLE (Labada Qaybood)
+-- SQL TO FIX 'public.archive_sectors' ERROR
 -- ==========================================================
--- Ku shub koodhkan SQL Editor-ka Supabase si aad u abuurto:
+-- Copy and run this in your Supabase SQL Editor:
 
 CREATE TABLE IF NOT EXISTS public.archive_sectors (
     id TEXT PRIMARY KEY,
@@ -27,33 +27,16 @@ CREATE TABLE IF NOT EXISTS public.archive_sectors (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Seed default values
 INSERT INTO public.archive_sectors (id, title, description) VALUES 
 ('business', 'Business (Ganacsiga)', 'Tracking Somali entrepreneurship and corporate pioneers.'),
 ('arts_culture', 'Arts & Culture', 'Preserving the legacy of Somali artists and custodians.')
 ON CONFLICT (id) DO NOTHING;
 
 ALTER TABLE public.archive_sectors ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Public View Sectors" ON public.archive_sectors FOR SELECT USING (true);
-CREATE POLICY "Admin All Sectors" ON public.archive_sectors FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 
--- ==========================================================
--- PARTNERS TABLE (Haddii aadan hore u abuurin)
--- ==========================================================
-CREATE TABLE IF NOT EXISTS public.partners (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    name TEXT NOT NULL,
-    logo_url TEXT NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
+CREATE POLICY "Public View Sectors" ON public.archive_sectors 
+FOR SELECT USING (true);
 
-ALTER TABLE public.partners ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Public View Partners" ON public.partners FOR SELECT USING (true);
-CREATE POLICY "Admin All Partners" ON public.partners FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-
--- ==========================================================
--- STORAGE POLICIES
--- ==========================================================
--- Abuur Bucket cusub: profile-pictures (ka dhig Public)
--- SQL for storage policies can be found in previous versions or Supabase UI.
+CREATE POLICY "Admin All Sectors" ON public.archive_sectors 
+FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 */

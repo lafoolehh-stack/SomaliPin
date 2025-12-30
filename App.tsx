@@ -145,9 +145,10 @@ const App = () => {
       const { data: partnersData, error: partnersError } = await supabase.from('partners').select('*').order('created_at', { ascending: false });
       if (!partnersError && partnersData) setPartners(partnersData);
 
-      const { data: sectorsData } = await supabase.from('archive_sectors').select('*');
-      if (sectorsData) {
-        const configs = sectorsData.reduce((acc, s) => ({ ...acc, [s.id]: { title: s.title, desc: s.description } }), {});
+      // Silently fetch sectors to avoid popup crash if table is missing
+      const { data: sectorsData, error: sectorsError } = await supabase.from('archive_sectors').select('*');
+      if (!sectorsError && sectorsData) {
+        const configs = sectorsData.reduce((acc: any, s: any) => ({ ...acc, [s.id]: { title: s.title, desc: s.description } }), {});
         setSectorConfigs(prev => ({ ...prev, ...configs }));
       }
 
