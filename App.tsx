@@ -7,7 +7,7 @@ import {
   Plus, Trash2, Save, X, Database, Sun, Moon, Headphones, 
   Unlock, Shield, Loader2, Briefcase, Landmark, Gavel, 
   ShieldCheck, ChevronUp, ChevronDown, Palette, Settings, Layers, RefreshCw, 
-  ExternalLink, Play, ArrowRight, Upload, Edit3, Check, Link as LinkIcon, Monitor
+  ExternalLink, Play, ArrowRight, Upload, Edit3, Check, Link as LinkIcon, Monitor, UserPlus, UserMinus
 } from 'lucide-react';
 import ProfileCard from './components/ProfileCard';
 import Timeline from './components/Timeline';
@@ -57,6 +57,10 @@ const App = () => {
   const [isAddingPartner, setIsAddingPartner] = useState(false);
 
   const [isSavingSectors, setIsSavingSectors] = useState(false);
+  const [sectorAssignForm, setSectorAssignForm] = useState<Record<string, { dossierId: string, categoryId: number }>>({
+    business: { dossierId: '', categoryId: 0 },
+    arts_culture: { dossierId: '', categoryId: 0 }
+  });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const partnerLogoInputRef = useRef<HTMLInputElement>(null);
@@ -375,7 +379,7 @@ const App = () => {
 
   const handleDeletePartner = async (id: string) => {
     if (!window.confirm('Ma hubtaa inaad tirtirto bahwadaaga?')) return;
-    const { error } = await supabase.from('partners').delete().eq('id', id);
+    const { error = null } = await supabase.from('partners').delete().eq('id', id);
     if (error) alert(error.message);
     else await fetchDossiers();
   };
@@ -392,6 +396,41 @@ const App = () => {
       alert('Cillad: ' + err.message);
     } finally {
       setIsSavingSectors(false);
+    }
+  };
+
+  const handleAddAssignmentToSector = async (sid: string) => {
+    const form = sectorAssignForm[sid];
+    if (!form.dossierId || !form.categoryId) return alert("Fadlan dooro Profile iyo Category.");
+    
+    setIsSavingSectors(true);
+    try {
+        const profile = profiles.find(p => p.id === form.dossierId);
+        const { error } = await supabase.from('archive_assignments').insert([{
+            user_id: form.dossierId,
+            category_id: form.categoryId,
+            title_note: profile?.title || 'Archive Record',
+            start_date: profile?.dateStart || ''
+        }]);
+        if (error) throw error;
+        setSectorAssignForm(prev => ({ ...prev, [sid]: { ...prev[sid], dossierId: '' } }));
+        await fetchDossiers();
+        alert('Profile-ka waa lagu daray sector-ka!');
+    } catch (err: any) {
+        alert('Add failed: ' + err.message);
+    } finally {
+        setIsSavingSectors(false);
+    }
+  };
+
+  const handleRemoveAssignment = async (assignmentId: number) => {
+    if (!window.confirm('Ma hubtaa inaad profile-kan ka saarto sector-ka?')) return;
+    try {
+        const { error } = await supabase.from('archive_assignments').delete().eq('id', assignmentId);
+        if (error) throw error;
+        await fetchDossiers();
+    } catch (err: any) {
+        alert('Remove failed: ' + err.message);
     }
   };
 
@@ -761,35 +800,109 @@ const App = () => {
                 ) : adminSubView === 'sectors' ? (
                   <div className="space-y-8 text-gray-800 animate-fade-in">
                     <h2 className="text-xl font-bold text-gray-800 dark:text-white">Home Sectors Management</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      {['business', 'arts_culture'].map((sid) => (
-                        <div key={sid} className="bg-slate dark:bg-navy-light p-6 rounded-sm border border-gray-200 dark:border-gray-800 shadow-sm space-y-4">
-                          <h3 className="text-xs font-bold uppercase tracking-widest text-gold">{sid === 'business' ? 'Business Sector' : 'Arts & Culture Sector'}</h3>
-                          <div>
-                            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Title</label>
-                            <input 
-                              className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 text-sm font-bold" 
-                              value={sectorConfigs[sid]?.title || ''} 
-                              onChange={e => setSectorConfigs(prev => ({ ...prev, [sid]: { ...prev[sid], title: e.target.value } }))} 
-                            />
+                    <div className="grid grid-cols-1 gap-8">
+                      {['business', 'arts_culture'].map((sid) => {
+                        const sectionType = sid === 'business' ? SectionType.BUSINESS : SectionType.ARTS_CULTURE;
+                        const sectorCategories = allCategories.filter(c => c && c.section_type === sectionType);
+                        
+                        const assignedProfiles = profiles.filter(p => 
+                          p.archiveAssignments?.some(a => a.category?.section_type === sectionType)
+                        );
+
+                        return (
+                          <div key={sid} className="bg-white dark:bg-navy-light p-8 rounded-sm border border-gray-100 dark:border-gray-800 shadow-md space-y-6">
+                            <div className="flex justify-between items-start border-b border-gray-100 dark:border-gray-700 pb-4">
+                                <h3 className="text-lg font-serif font-bold uppercase tracking-widest text-navy dark:text-gold">{sid === 'business' ? 'Business Sector' : 'Arts & Culture Sector'}</h3>
+                                <button 
+                                    onClick={() => handleSaveSector(sid)} 
+                                    disabled={isSavingSectors}
+                                    className="bg-navy dark:bg-gold text-white dark:text-navy px-6 py-2 rounded-sm font-bold text-xs flex items-center shadow-sm"
+                                >
+                                    {isSavingSectors ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : <Save className="w-3 h-3 mr-2" />} Save Core Info
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                              <div className="space-y-4">
+                                  <div>
+                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Display Title</label>
+                                    <input 
+                                      className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 text-sm font-bold focus:ring-1 focus:ring-gold outline-none" 
+                                      value={sectorConfigs[sid]?.title || ''} 
+                                      onChange={e => setSectorConfigs(prev => ({ ...prev, [sid]: { ...prev[sid], title: e.target.value } }))} 
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Display Description</label>
+                                    <textarea 
+                                      className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 text-sm h-24 resize-none focus:ring-1 focus:ring-gold outline-none" 
+                                      value={sectorConfigs[sid]?.desc || ''} 
+                                      onChange={e => setSectorConfigs(prev => ({ ...prev, [sid]: { ...prev[sid], desc: e.target.value } }))} 
+                                    />
+                                  </div>
+                              </div>
+
+                              <div className="bg-slate dark:bg-navy p-6 rounded-sm border border-gray-200 dark:border-gray-700">
+                                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-4 flex items-center"><UserPlus className="w-3 h-3 mr-1.5" /> Quick Assign Profile</h4>
+                                  <div className="space-y-4">
+                                      <select 
+                                        className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 text-xs focus:ring-1 focus:ring-gold outline-none"
+                                        value={sectorAssignForm[sid].dossierId}
+                                        onChange={e => setSectorAssignForm(prev => ({ ...prev, [sid]: { ...prev[sid], dossierId: e.target.value } }))}
+                                      >
+                                          <option value="">Select Profile...</option>
+                                          {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                      </select>
+                                      <select 
+                                        className="w-full border p-2.5 rounded-sm dark:bg-navy-light dark:border-gray-600 text-xs focus:ring-1 focus:ring-gold outline-none"
+                                        value={sectorAssignForm[sid].categoryId}
+                                        onChange={e => setSectorAssignForm(prev => ({ ...prev, [sid]: { ...prev[sid], categoryId: parseInt(e.target.value) } }))}
+                                      >
+                                          <option value={0}>Select Category...</option>
+                                          {sectorCategories.map(c => <option key={c.id} value={c.id}>{c.category_name}</option>)}
+                                      </select>
+                                      <button 
+                                        onClick={() => handleAddAssignmentToSector(sid)}
+                                        className="w-full bg-navy-light dark:bg-gold-dark text-white py-2.5 rounded-sm font-bold text-xs hover:brightness-110 transition-all flex items-center justify-center"
+                                      >
+                                          <Plus className="w-3 h-3 mr-2" /> Add to Sector
+                                      </button>
+                                  </div>
+                              </div>
+                            </div>
+
+                            <div className="mt-8">
+                                <h4 className="text-xs font-bold uppercase text-navy dark:text-gray-300 mb-4 border-b border-gray-100 dark:border-gray-700 pb-2">Profiles in this Sector ({assignedProfiles.length})</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                    {assignedProfiles.length === 0 ? (
+                                        <p className="text-xs text-gray-400 italic">No profiles assigned yet.</p>
+                                    ) : assignedProfiles.map(p => {
+                                        // Find the specific assignment for this profile in this section
+                                        const assignment = p.archiveAssignments?.find(a => a.category?.section_type === sectionType);
+                                        return (
+                                            <div key={p.id} className="flex items-center justify-between p-3 bg-white dark:bg-navy border border-gray-100 dark:border-gray-800 rounded-sm group hover:shadow-sm transition-all">
+                                                <div className="flex items-center space-x-3">
+                                                    <img src={p.imageUrl} className="w-8 h-8 rounded-full object-cover" />
+                                                    <div>
+                                                        <p className="text-xs font-bold truncate max-w-[120px]">{p.name}</p>
+                                                        <p className="text-[10px] text-gray-400">{assignment?.category?.category_name}</p>
+                                                    </div>
+                                                </div>
+                                                <button 
+                                                    onClick={() => assignment && handleRemoveAssignment(assignment.id)}
+                                                    className="p-1.5 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    title="Remove from Sector"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
                           </div>
-                          <div>
-                            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Description</label>
-                            <textarea 
-                              className="w-full border p-2.5 rounded-sm dark:bg-navy dark:border-gray-600 text-sm h-24 resize-none" 
-                              value={sectorConfigs[sid]?.desc || ''} 
-                              onChange={e => setSectorConfigs(prev => ({ ...prev, [sid]: { ...prev[sid], desc: e.target.value } }))} 
-                            />
-                          </div>
-                          <button 
-                            onClick={() => handleSaveSector(sid)} 
-                            disabled={isSavingSectors}
-                            className="bg-navy dark:bg-gold text-white dark:text-navy px-6 py-2 rounded-sm font-bold text-xs flex items-center"
-                          >
-                            {isSavingSectors ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : <Save className="w-3 h-3 mr-2" />} Save Changes
-                          </button>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 ) : (
