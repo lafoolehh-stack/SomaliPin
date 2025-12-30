@@ -117,7 +117,10 @@ const App = () => {
           
           if (sType && sections[sType]) {
             if (!sections[sType][cName]) sections[sType][cName] = [];
-            sections[sType][cName].push({ ...assignment, user: p } as any);
+            // Prevent duplicate entries of the same profile in the same category
+            if (!sections[sType][cName].some(a => a.user_id === p.id)) {
+              sections[sType][cName].push({ ...assignment, user: p } as any);
+            }
           }
         }
       });
@@ -163,6 +166,8 @@ const App = () => {
       (assignmentsData || []).forEach((assignment: any) => {
         if (!assignment || !assignment.user_id) return;
         
+        // Handle cases where archive_categories join might be null
+        const catData = assignment.archive_categories;
         const mappedAssignment: ArchiveAssignment = {
           id: assignment.id,
           user_id: assignment.user_id,
@@ -170,12 +175,13 @@ const App = () => {
           start_date: assignment.start_date || '',
           end_date: assignment.end_date || '',
           title_note: assignment.title_note || '',
-          category: assignment.archive_categories ? {
-            id: assignment.archive_categories.id,
-            category_name: assignment.archive_categories.category_name,
-            section_type: assignment.archive_categories.section_type
+          category: catData ? {
+            id: catData.id,
+            category_name: catData.category_name,
+            section_type: catData.section_type
           } : undefined,
         };
+        
         if (!profileAssignmentsMap.has(assignment.user_id)) profileAssignmentsMap.set(assignment.user_id, []);
         profileAssignmentsMap.get(assignment.user_id)?.push(mappedAssignment);
       });
@@ -806,7 +812,8 @@ const App = () => {
                         const sectionType = sid === 'business' ? SectionType.BUSINESS : SectionType.ARTS_CULTURE;
                         const sectorCategories = allCategories.filter(c => c && c.section_type === sectionType);
                         
-                        const assignedProfiles = profiles.filter(p => 
+                        // Use a consistent profile check that matches the groupedArchive logic
+                        const assignedProfilesInThisSector = profiles.filter(p => 
                           p.archiveAssignments?.some(a => a.category?.section_type === sectionType)
                         );
 
@@ -873,20 +880,19 @@ const App = () => {
                             </div>
 
                             <div className="mt-8">
-                                <h4 className="text-xs font-bold uppercase text-navy dark:text-gray-300 mb-4 border-b border-gray-100 dark:border-gray-700 pb-2">Profiles in this Sector ({assignedProfiles.length})</h4>
+                                <h4 className="text-xs font-bold uppercase text-navy dark:text-gray-300 mb-4 border-b border-gray-100 dark:border-gray-700 pb-2">Profiles in this Sector ({assignedProfilesInThisSector.length})</h4>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                    {assignedProfiles.length === 0 ? (
+                                    {assignedProfilesInThisSector.length === 0 ? (
                                         <p className="text-xs text-gray-400 italic">No profiles assigned yet.</p>
-                                    ) : assignedProfiles.map(p => {
-                                        // Find the specific assignment for this profile in this section
+                                    ) : assignedProfilesInThisSector.map(p => {
                                         const assignment = p.archiveAssignments?.find(a => a.category?.section_type === sectionType);
                                         return (
                                             <div key={p.id} className="flex items-center justify-between p-3 bg-white dark:bg-navy border border-gray-100 dark:border-gray-800 rounded-sm group hover:shadow-sm transition-all">
                                                 <div className="flex items-center space-x-3">
                                                     <img src={p.imageUrl} className="w-8 h-8 rounded-full object-cover" />
-                                                    <div>
+                                                    <div className="min-w-0">
                                                         <p className="text-xs font-bold truncate max-w-[120px]">{p.name}</p>
-                                                        <p className="text-[10px] text-gray-400">{assignment?.category?.category_name}</p>
+                                                        <p className="text-[10px] text-gray-400 truncate">{assignment?.category?.category_name || 'Unassigned'}</p>
                                                     </div>
                                                 </div>
                                                 <button 
