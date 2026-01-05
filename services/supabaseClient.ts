@@ -25,13 +25,13 @@ DROP CONSTRAINT IF EXISTS archive_categories_section_type_check;
 
 ALTER TABLE public.archive_categories 
 ADD CONSTRAINT archive_categories_section_type_check 
-CHECK (section_type IN ('POLITICS', 'JUDICIARY', 'SECURITY', 'BUSINESS', 'ARTS_CULTURE'));
+CHECK (section_type IN ('POLITICS', 'JUDICIARY', 'SECURITY', 'BUSINESS', 'ARTS_CULTURE', 'THE_SCHOLARS', 'THE_PIONEERS'));
 
 INSERT INTO public.archive_categories (category_name, section_type) VALUES 
-('Commercial Banks', 'BUSINESS'),
-('Telecommunications', 'BUSINESS'),
-('Traditional Music', 'ARTS_CULTURE'),
-('Somali Literature', 'ARTS_CULTURE')
+('Academic Research', 'THE_SCHOLARS'),
+('Higher Education', 'THE_SCHOLARS'),
+('National Founders', 'THE_PIONEERS'),
+('Civil Rights Pioneers', 'THE_PIONEERS')
 ON CONFLICT DO NOTHING;
 
 -- ==========================================================
@@ -46,7 +46,9 @@ CREATE TABLE IF NOT EXISTS public.archive_sectors (
 
 INSERT INTO public.archive_sectors (id, title, description) VALUES 
 ('business', 'Business (Ganacsiga)', 'Tracking Somali entrepreneurship and corporate pioneers.'),
-('arts_culture', 'Arts & Culture', 'Preserving the legacy of Somali artists and custodians.')
+('arts_culture', 'Arts & Culture', 'Preserving the legacy of Somali artists and custodians.'),
+('scholars', 'The Scholars (Aqoonyahanno)', 'Celebrating academic excellence and intellectual contributions.'),
+('pioneers', 'The Pioneers', 'Honoring the trailblazers who laid the foundation of the nation.')
 ON CONFLICT (id) DO NOTHING;
 
 ALTER TABLE public.archive_sectors ENABLE ROW LEVEL SECURITY;

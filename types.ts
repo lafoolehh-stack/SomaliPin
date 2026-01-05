@@ -61,7 +61,9 @@ export enum Category {
     JUDICIARY = 'JUDICIARY',
     SECURITY = 'SECURITY',
     BUSINESS = 'BUSINESS',
-    ARTS_CULTURE = 'ARTS_CULTURE'
+    ARTS_CULTURE = 'ARTS_CULTURE',
+    THE_SCHOLARS = 'THE_SCHOLARS',
+    THE_PIONEERS = 'THE_PIONEERS'
   }
 
   export interface ArchiveCategory {
