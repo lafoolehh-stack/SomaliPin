@@ -24,7 +24,7 @@ export const supabase = createClient(supabaseUrl, supabaseKey);
 ALTER TABLE public.archive_categories 
 DROP CONSTRAINT IF EXISTS archive_categories_section_type_check;
 
--- 2. Add the updated constraint including THE_SCHOLARS and THE_PIONEERS
+-- 2. Add the updated constraint including ALL sectors
 ALTER TABLE public.archive_categories 
 ADD CONSTRAINT archive_categories_section_type_check 
 CHECK (section_type IN (
@@ -34,15 +34,17 @@ CHECK (section_type IN (
   'BUSINESS', 
   'ARTS_CULTURE', 
   'THE_SCHOLARS', 
-  'THE_PIONEERS'
+  'THE_PIONEERS',
+  'PUBLIC_INSTITUTIONS',
+  'ENTREPRENEURS'
 ));
 
 -- 3. Insert initial categories for the new sectors
 INSERT INTO public.archive_categories (category_name, section_type) VALUES 
-('Academic Research', 'THE_SCHOLARS'),
-('Higher Education', 'THE_SCHOLARS'),
-('National Founders', 'THE_PIONEERS'),
-('Civil Rights Pioneers', 'THE_PIONEERS')
+('National Ministries', 'PUBLIC_INSTITUTIONS'),
+('State Agencies', 'PUBLIC_INSTITUTIONS'),
+('Tech Founders', 'ENTREPRENEURS'),
+('Retail Pioneers', 'ENTREPRENEURS')
 ON CONFLICT DO NOTHING;
 
 -- 4. Update the archive_sectors table for homepage metadata
@@ -50,7 +52,9 @@ INSERT INTO public.archive_sectors (id, title, description) VALUES
 ('business', 'Business (Ganacsiga)', 'Tracking Somali entrepreneurship and corporate pioneers.'),
 ('arts_culture', 'Arts & Culture', 'Preserving the legacy of Somali artists and custodians.'),
 ('scholars', 'The Scholars (Aqoonyahanno)', 'Celebrating academic excellence and intellectual contributions.'),
-('pioneers', 'The Pioneers', 'Honoring the trailblazers who laid the foundation of the nation.')
+('pioneers', 'The Pioneers', 'Honoring the trailblazers who laid the foundation of the nation.'),
+('public_institutions', 'Public Institutions', 'Registry of national agencies, ministries, and state organizations.'),
+('entrepreneurs', 'Entrepreneurs', 'Focusing on individual founders and visionary business leaders.')
 ON CONFLICT (id) DO UPDATE SET 
   title = EXCLUDED.title, 
   description = EXCLUDED.description;

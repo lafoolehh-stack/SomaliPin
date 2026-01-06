@@ -89,6 +89,8 @@ export const UI_TEXT = {
     sec_security: "Security (Ciidamada)",
     sec_business: "Business (Ganacsiga)",
     sec_arts_culture: "Arts & Culture (Dhaqanka)",
+    sec_public_institutions: "Public Institutions",
+    sec_entrepreneurs: "Entrepreneurs",
     archive_positions: "Archive Positions",
     no_archive_positions: "No archive positions recorded for this profile.",
     empty_archive: "No records found in this category."
@@ -180,6 +182,8 @@ export const UI_TEXT = {
     sec_security: "Amniga & Ciidanka",
     sec_business: "Ganacsiga & Shirkadaha",
     sec_arts_culture: "Farshaxanka & Dhaqanka",
+    sec_public_institutions: "Hay'adaha Dawladda",
+    sec_entrepreneurs: "Hal-abuurka Ganacsiga",
     archive_positions: "Jagooyinka Kaydka",
     no_archive_positions: "Ma jiraan jagooyin kayd ah oo loo diiwaan geliyay profile-kan.",
     empty_archive: "Ma jiraan xog lagu hayo qaybtan."
@@ -271,14 +275,14 @@ export const UI_TEXT = {
     sec_security: "الأمن والدفاع",
     sec_business: "الأعمال والشركات",
     sec_arts_culture: "الفنون والثقافة",
+    sec_public_institutions: "المؤسسات العامة",
+    sec_entrepreneurs: "رواد الأعمال",
     archive_positions: "المناصب الأرشيفية",
     no_archive_positions: "لم يتم تسجيل أي مناصب أرشيفية لهذا الملف الشخصي.",
-    empty_archive: "لم يتم العثور على سجلات في هذه الفئة."
+    empty_archive: "لم يتم العور على سجلات في هذه الفئة."
   }
 };
 
 export const getProfiles = (lang: Language): Profile[] => {
-    // This is a placeholder since data now comes from Supabase.
-    // In a real scenario, this would return the static 'featured' data if needed.
     return [];
 };
