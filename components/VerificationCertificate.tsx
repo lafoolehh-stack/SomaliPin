@@ -38,6 +38,14 @@ const VerificationCertificate: React.FC<Props> = ({ profile, lang, onClose }) =>
           sealColor: 'text-gold',
           title: 'Gold Tier Verification'
         };
+      case VerificationLevel.SILVER:
+        return {
+          border: 'border-[#8E9AAF]',
+          text: 'text-slate-700',
+          bg: 'bg-slate-50',
+          sealColor: 'text-[#8E9AAF]',
+          title: 'Silver Tier Verification'
+        };
       case VerificationLevel.STANDARD:
       default:
         return {

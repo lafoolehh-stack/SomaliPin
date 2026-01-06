@@ -16,14 +16,15 @@ export const supabase = createClient(supabaseUrl, supabaseKey);
 
 /*
 -- ==========================================================
--- FINAL SQL TO SYNC ALL SECTORS (Scholars & Pioneers)
+-- FINAL SQL TO FIX CHECK CONSTRAINT ERROR & ADD NEW SECTORS
 -- ==========================================================
--- Run this in Supabase SQL Editor to update your database:
+-- Run this in Supabase SQL Editor:
 
--- 1. Update the category constraint to allow all 7 sectors
+-- 1. Drop the old constraint
 ALTER TABLE public.archive_categories 
 DROP CONSTRAINT IF EXISTS archive_categories_section_type_check;
 
+-- 2. Add the updated constraint including THE_SCHOLARS and THE_PIONEERS
 ALTER TABLE public.archive_categories 
 ADD CONSTRAINT archive_categories_section_type_check 
 CHECK (section_type IN (
@@ -36,24 +37,15 @@ CHECK (section_type IN (
   'THE_PIONEERS'
 ));
 
--- 2. Insert initial categories for the new sectors
+-- 3. Insert initial categories for the new sectors
 INSERT INTO public.archive_categories (category_name, section_type) VALUES 
 ('Academic Research', 'THE_SCHOLARS'),
-('Science & Technology', 'THE_SCHOLARS'),
 ('Higher Education', 'THE_SCHOLARS'),
 ('National Founders', 'THE_PIONEERS'),
-('Civil Rights Pioneers', 'THE_PIONEERS'),
-('Sports Pioneers', 'THE_PIONEERS')
+('Civil Rights Pioneers', 'THE_PIONEERS')
 ON CONFLICT DO NOTHING;
 
--- 3. Ensure the home sectors table exists and is populated
-CREATE TABLE IF NOT EXISTS public.archive_sectors (
-    id TEXT PRIMARY KEY,
-    title TEXT NOT NULL,
-    description TEXT NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
+-- 4. Update the archive_sectors table for homepage metadata
 INSERT INTO public.archive_sectors (id, title, description) VALUES 
 ('business', 'Business (Ganacsiga)', 'Tracking Somali entrepreneurship and corporate pioneers.'),
 ('arts_culture', 'Arts & Culture', 'Preserving the legacy of Somali artists and custodians.'),
@@ -62,11 +54,4 @@ INSERT INTO public.archive_sectors (id, title, description) VALUES
 ON CONFLICT (id) DO UPDATE SET 
   title = EXCLUDED.title, 
   description = EXCLUDED.description;
-
--- 4. Enable RLS for public viewing
-ALTER TABLE public.archive_sectors ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Public View Sectors" ON public.archive_sectors;
-CREATE POLICY "Public View Sectors" ON public.archive_sectors FOR SELECT USING (true);
-DROP POLICY IF EXISTS "Admin All Sectors" ON public.archive_sectors;
-CREATE POLICY "Admin All Sectors" ON public.archive_sectors FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 */

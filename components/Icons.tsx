@@ -1,3 +1,4 @@
+
 import * as React from 'react';
 
 // Using a custom SVG for the Pin to ensure specific branding
@@ -33,6 +34,18 @@ export const GoldenBadge: React.FC<{ className?: string }> = ({ className }) => 
     xmlns="http://www.w3.org/2000/svg"
   >
     <path d="M23 12l-2.44-2.79.34-3.69-3.61-.82-1.89-3.2L12 2.96 8.6 1.5 6.71 4.69 3.1 5.5l.34 3.7L1 12l2.44 2.79-.34 3.7 3.61.82L8.6 22.5l3.4-1.47 3.4 1.46 1.89-3.19 3.61-.82-.34-3.69L23 12zm-12.91 4.72l-3.8-3.81 1.48-1.48 2.32 2.33 5.85-5.87 1.48 1.48-7.33 7.35z"/>
+  </svg>
+);
+
+// SILVER LEVEL: Wavy star burst as per user image
+export const SilverBadge: React.FC<{ className?: string }> = ({ className }) => (
+  <svg 
+    viewBox="0 0 1024 1024" 
+    fill="currentColor" 
+    className={className}
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path d="M960.543 416.793l-81.564-92.837 11.238-122.97-120.301-27.14-63.136-106.885-113.155 48.775-113.154-48.775-63.136 106.885-120.301 27.14 11.238 122.97-81.564 92.837 81.564 92.837-11.238 122.97 120.301 27.14 63.136 106.885 113.154-48.775 113.155 48.775 63.136-106.885 120.301-27.14-11.238-122.97 81.564-92.837zm-531.42 157.387L302.26 447.318l49.261-49.261 77.602 77.602 195.148-195.148 49.261 49.261-244.409 244.408z"/>
   </svg>
 );
 

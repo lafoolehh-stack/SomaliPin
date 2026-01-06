@@ -12,7 +12,7 @@ import {
 import ProfileCard from './components/ProfileCard';
 import Timeline from './components/Timeline';
 import VerificationCertificate from './components/VerificationCertificate';
-import { BrandPin, GoldenBadge, HeroBadge, StandardBadge, NobelBadge, VerifiedBadge } from './components/Icons';
+import { BrandPin, GoldenBadge, HeroBadge, StandardBadge, NobelBadge, VerifiedBadge, SilverBadge } from './components/Icons';
 import { UI_TEXT } from './constants';
 import { Profile, VerificationLevel, Language, DossierDB, ProfileStatus, SectionType, ArchiveCategory, ArchiveAssignment, Partner } from './types';
 import { supabase, isSupabaseConfigured } from './services/supabaseClient';
@@ -544,6 +544,7 @@ const App = () => {
       case VerificationLevel.NOBEL: return <NobelBadge className="h-8 w-8 text-purple-700" />;
       case VerificationLevel.HERO: return <HeroBadge className="h-8 w-8 text-red-700" />;
       case VerificationLevel.GOLDEN: return <GoldenBadge className="h-8 w-8 text-gold" />;
+      case VerificationLevel.SILVER: return <SilverBadge className="h-8 w-8 text-[#8E9AAF]" />;
       case VerificationLevel.STANDARD: return <StandardBadge className="h-8 w-8 text-navy-light" />;
       default: return <VerifiedBadge className="h-8 w-8 text-gray-400" />;
     }
@@ -555,6 +556,7 @@ const App = () => {
       case VerificationLevel.NOBEL: return t.lvl_nobel;
       case VerificationLevel.HERO: return t.lvl_hero;
       case VerificationLevel.GOLDEN: return t.lvl_golden;
+      case VerificationLevel.SILVER: return t.lvl_silver;
       case VerificationLevel.STANDARD: return t.lvl_standard;
       default: return t.lvl_standard;
     }
@@ -1011,7 +1013,7 @@ const App = () => {
                             </div>
                             <div className="space-y-6">
                                 <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">DISPLAY CATEGORY</label><input type="text" className="w-full border border-gray-200 p-3 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-gold outline-none" value={editForm.category || ''} onChange={(e) => setEditForm({...editForm, category: e.target.value})} /></div>
-                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">HONORS TIER</label><select className="w-full border border-gray-200 p-3 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-blue-400 outline-none" value={editForm.verificationLevel || 'Standard'} onChange={(e) => setEditForm({...editForm, verificationLevel: e.target.value as VerificationLevel})}><option value="Standard">Standard</option><option value="Golden">Golden</option><option value="Hero">Hero</option><option value="Nobel">Nobel</option></select></div>
+                                <div><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">HONORS TIER</label><select className="w-full border border-gray-200 p-3 rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-blue-400 outline-none" value={editForm.verificationLevel || 'Standard'} onChange={(e) => setEditForm({...editForm, verificationLevel: e.target.value as VerificationLevel})}><option value="Standard">Standard</option><option value="Golden">Golden</option><option value="Silver">Silver</option><option value="Hero">Hero</option><option value="Nobel">Nobel</option></select></div>
                                 
                                 <div className="p-4 border border-gray-100 dark:border-gray-700 bg-slate/20 dark:bg-navy/30 rounded-sm">
                                   <div className="mb-4"><label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">IMAGE URL</label><input type="text" className="w-full border border-gray-200 p-2 text-xs font-mono rounded-sm dark:bg-navy-light dark:border-gray-600 dark:text-white" value={editForm.imageUrl || ''} onChange={(e) => setEditForm({...editForm, imageUrl: e.target.value})} /></div>
@@ -1219,7 +1221,7 @@ const App = () => {
 
             <section className="max-w-6xl mx-auto px-4 py-16 -mt-10 relative z-10 text-gray-800">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                <div onClick={() => navigateTo('archive-explorer', '/archive')} className="group bg-white dark:bg-navy-light p-8 rounded-sm shadow-2xl border border-gray-100 dark:border-navy cursor-pointer hover:-translate-y-2 transition-all duration-300">
+                <div onClick={() => navigateTo('archive-explorer', '/archive')} className="group bg-white dark:bg-navy p-8 rounded-sm shadow-2xl border border-gray-100 dark:border-navy cursor-pointer hover:-translate-y-2 transition-all duration-300">
                   <div className="w-14 h-14 bg-navy dark:bg-gold text-gold dark:text-navy rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                     <Landmark className="w-7 h-7" />
                   </div>

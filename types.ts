@@ -9,6 +9,7 @@ export enum Category {
   export enum VerificationLevel {
     NOBEL = 'Nobel',   // Highest Honor/Nobel Level
     GOLDEN = 'Golden', // High-level elite
+    SILVER = 'Silver', // Silver Level
     HERO = 'Hero',     // Martyrs and Heroes (Halgamaayaal)
     STANDARD = 'Standard' // Standard verification
   }
