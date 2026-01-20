@@ -66,7 +66,8 @@ export enum Category {
     THE_SCHOLARS = 'THE_SCHOLARS',
     THE_PIONEERS = 'THE_PIONEERS',
     PUBLIC_INSTITUTIONS = 'PUBLIC_INSTITUTIONS',
-    ENTREPRENEURS = 'ENTREPRENEURS'
+    ENTREPRENEURS = 'ENTREPRENEURS',
+    NGOS = 'NGOS'
   }
 
   export interface ArchiveCategory {

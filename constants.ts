@@ -91,6 +91,7 @@ export const UI_TEXT = {
     sec_arts_culture: "Arts & Culture (Dhaqanka)",
     sec_public_institutions: "Public Institutions",
     sec_entrepreneurs: "Entrepreneurs",
+    sec_ngos: "NGOs (Ururada)",
     archive_positions: "Archive Positions",
     no_archive_positions: "No archive positions recorded for this profile.",
     empty_archive: "No records found in this category."
@@ -165,7 +166,7 @@ export const UI_TEXT = {
     lvl_silver: "Heerka Silver",
     lvl_hero: "Halyey Qaran",
     lvl_standard: "Rasmi",
-    lvl_unverified: "Lama Xaqiijin",
+    lvl_unverified: "Lama Xaqiijijin",
     lbl_status: "Xaaladda",
     lbl_born: "Dhalashada",
     lbl_died: "Dhimashada",
@@ -184,6 +185,7 @@ export const UI_TEXT = {
     sec_arts_culture: "Farshaxanka & Dhaqanka",
     sec_public_institutions: "Hay'adaha Dawladda",
     sec_entrepreneurs: "Hal-abuurka Ganacsiga",
+    sec_ngos: "NGOs (Ururada)",
     archive_positions: "Jagooyinka Kaydka",
     no_archive_positions: "Ma jiraan jagooyin kayd ah oo loo diiwaan geliyay profile-kan.",
     empty_archive: "Ma jiraan xog lagu hayo qaybtan."
@@ -203,7 +205,7 @@ export const UI_TEXT = {
     search_btn: "بحث",
     archive_result: "نتيجة بحث الأرشيف",
     generated_by: "تم الإنشاء بواسطة ذكاء الصومال بن",
-    no_profiles: "لم يتم العثور على ملفات تعريف في الدليل.",
+    no_profiles: "لم يتم العور على ملفات تعريف في الدليل.",
     click_search: "انقر فوق \"بحث\" للاستعلام في أرشيف الاستخبارات.",
     featured_dossiers: "ملفات مميزة",
     section_what_we_do: "ماذا نقدم؟",
@@ -277,6 +279,7 @@ export const UI_TEXT = {
     sec_arts_culture: "الفنون والثقافة",
     sec_public_institutions: "المؤسسات العامة",
     sec_entrepreneurs: "رواد الأعمال",
+    sec_ngos: "المنظمات غير الحكومية",
     archive_positions: "المناصب الأرشيفية",
     no_archive_positions: "لم يتم تسجيل أي مناصب أرشيفية لهذا الملف الشخصي.",
     empty_archive: "لم يتم العور على سجلات في هذه الفئة."

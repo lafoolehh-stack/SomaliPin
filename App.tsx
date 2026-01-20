@@ -7,7 +7,7 @@ import {
   Plus, Trash2, Save, X, Database, Sun, Moon, Headphones, 
   Unlock, Shield, Loader2, Briefcase, Landmark, Gavel, 
   ShieldCheck, ChevronUp, ChevronDown, Palette, Settings, Layers, RefreshCw, 
-  ExternalLink, Play, ArrowRight, Upload, Edit3, Check, Link as LinkIcon, Monitor, UserPlus, UserMinus, GraduationCap, Award, Zap
+  ExternalLink, Play, ArrowRight, Upload, Edit3, Check, Link as LinkIcon, Monitor, UserPlus, UserMinus, GraduationCap, Award, Zap, Heart
 } from 'lucide-react';
 import ProfileCard from './components/ProfileCard';
 import Timeline from './components/Timeline';
@@ -18,7 +18,7 @@ import { Profile, VerificationLevel, Language, DossierDB, ProfileStatus, Section
 import { supabase, isSupabaseConfigured } from './services/supabaseClient';
 
 const App = () => {
-  const [view, setView] = useState<'home' | 'profile' | 'admin' | 'archive-explorer' | 'business-archive' | 'arts-culture-archive' | 'scholars-archive' | 'pioneers-archive' | 'public-institutions-archive' | 'entrepreneurs-archive'>('home');
+  const [view, setView] = useState<'home' | 'profile' | 'admin' | 'archive-explorer' | 'business-archive' | 'arts-culture-archive' | 'scholars-archive' | 'pioneers-archive' | 'public-institutions-archive' | 'entrepreneurs-archive' | 'ngos-archive'>('home');
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'archive' | 'news' | 'podcast'>('archive');
@@ -35,7 +35,8 @@ const App = () => {
     scholars: { title: 'The Scholars (Aqoonyahanno)', desc: 'Celebrating academic excellence and intellectual contributions.' },
     pioneers: { title: 'The Pioneers', desc: 'Honoring the trailblazers who laid the foundation of the nation.' },
     public_institutions: { title: 'Public Institutions', desc: 'Registry of national agencies, ministries, and state organizations.' },
-    entrepreneurs: { title: 'Entrepreneurs', desc: 'Focusing on individual founders and visionary business leaders.' }
+    entrepreneurs: { title: 'Entrepreneurs', desc: 'Focusing on individual founders and visionary business leaders.' },
+    ngos: { title: 'NGOs (Ururada)', desc: 'Highlighting the contributions of Local and International non-governmental organizations.' }
   });
   const [isLoading, setIsLoading] = useState(true);
   const [displayLimit, setDisplayLimit] = useState(12);
@@ -67,7 +68,8 @@ const App = () => {
     scholars: { dossierId: '', categoryId: 0 },
     pioneers: { dossierId: '', categoryId: 0 },
     public_institutions: { dossierId: '', categoryId: 0 },
-    entrepreneurs: { dossierId: '', categoryId: 0 }
+    entrepreneurs: { dossierId: '', categoryId: 0 },
+    ngos: { dossierId: '', categoryId: 0 }
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -118,7 +120,8 @@ const App = () => {
       [SectionType.THE_SCHOLARS]: {},
       [SectionType.THE_PIONEERS]: {},
       [SectionType.PUBLIC_INSTITUTIONS]: {},
-      [SectionType.ENTREPRENEURS]: {}
+      [SectionType.ENTREPRENEURS]: {},
+      [SectionType.NGOS]: {}
     };
 
     (profiles || []).filter(Boolean).forEach(p => {
@@ -150,21 +153,39 @@ const App = () => {
       setIsLoading(true);
       if (!isSupabaseConfigured) return;
 
-      const { data: dossiersData, error: dossiersError } = await supabase.from('dossiers').select('*').order('created_at', { ascending: false });
+      // Primary Dossiers Fetch
+      const { data: dossiersData, error: dossiersError } = await supabase
+        .from('dossiers')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
       if (dossiersError) throw dossiersError;
 
-      const { data: categoriesData, error: categoriesError } = await supabase.from('archive_categories').select('*').order('section_type', { ascending: true }).order('category_name', { ascending: true });
+      // Categories Fetch
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('archive_categories')
+        .select('*')
+        .order('section_type', { ascending: true })
+        .order('category_name', { ascending: true });
       if (!categoriesError && categoriesData) setAllCategories(categoriesData);
 
-      const { data: partnersData, error: partnersError } = await supabase.from('partners').select('*').order('created_at', { ascending: false });
+      // Partners Fetch
+      const { data: partnersData, error: partnersError } = await supabase
+        .from('partners')
+        .select('*')
+        .order('created_at', { ascending: false });
       if (!partnersError && partnersData) setPartners(partnersData);
 
-      const { data: sectorsData, error: sectorsError } = await supabase.from('archive_sectors').select('*');
+      // Sector Configs Fetch
+      const { data: sectorsData, error: sectorsError } = await supabase
+        .from('archive_sectors')
+        .select('*');
       if (!sectorsError && sectorsData) {
         const configs = sectorsData.reduce((acc: any, s: any) => ({ ...acc, [s.id]: { title: s.title, desc: s.description } }), {});
         setSectorConfigs(prev => ({ ...prev, ...configs }));
       }
 
+      // Assignments Join Fetch
       const { data: assignmentsData, error: assignmentsError } = await supabase
         .from('archive_assignments')
         .select(`
@@ -232,8 +253,14 @@ const App = () => {
         };
       });
       setProfiles(mappedProfiles);
-    } catch (err) {
-      console.error('fetchDossiers error:', err);
+    } catch (err: any) {
+      // Improved error logging
+      console.error('fetchDossiers error details:', {
+        message: err.message,
+        details: err.details,
+        hint: err.hint,
+        code: err.code
+      });
     } finally {
       setIsLoading(false);
     }
@@ -617,7 +644,9 @@ const App = () => {
               section === SectionType.ARTS_CULTURE ? t.sec_arts_culture :
               section === SectionType.THE_SCHOLARS ? sectorConfigs.scholars.title : 
               section === SectionType.THE_PIONEERS ? sectorConfigs.pioneers.title :
-              section === SectionType.PUBLIC_INSTITUTIONS ? sectorConfigs.public_institutions.title : sectorConfigs.entrepreneurs.title;
+              section === SectionType.PUBLIC_INSTITUTIONS ? sectorConfigs.public_institutions.title : 
+              section === SectionType.ENTREPRENEURS ? sectorConfigs.entrepreneurs.title :
+              sectorConfigs.ngos.title;
               
             const icon = 
               section === SectionType.POLITICS ? <Landmark className="w-6 h-6" /> : 
@@ -627,7 +656,9 @@ const App = () => {
               section === SectionType.ARTS_CULTURE ? <Palette className="w-6 h-6" /> :
               section === SectionType.THE_SCHOLARS ? <GraduationCap className="w-6 h-6" /> : 
               section === SectionType.THE_PIONEERS ? <Award className="w-6 h-6" /> :
-              section === SectionType.PUBLIC_INSTITUTIONS ? <Building2 className="w-6 h-6" /> : <Zap className="w-6 h-6" />;
+              section === SectionType.PUBLIC_INSTITUTIONS ? <Building2 className="w-6 h-6" /> : 
+              section === SectionType.ENTREPRENEURS ? <Zap className="w-6 h-6" /> :
+              <Heart className="w-6 h-6" />;
 
             return (
               <div key={section} className="bg-white dark:bg-navy shadow-sm rounded-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
@@ -827,14 +858,15 @@ const App = () => {
                   <div className="space-y-8 text-gray-800 animate-fade-in">
                     <h2 className="text-xl font-bold text-gray-800 dark:text-white">Home Sectors Management</h2>
                     <div className="grid grid-cols-1 gap-8">
-                      {['business', 'arts_culture', 'scholars', 'pioneers', 'public_institutions', 'entrepreneurs'].map((sid) => {
+                      {['business', 'arts_culture', 'scholars', 'pioneers', 'public_institutions', 'entrepreneurs', 'ngos'].map((sid) => {
                         let sectionType: SectionType;
                         if (sid === 'business') sectionType = SectionType.BUSINESS;
                         else if (sid === 'arts_culture') sectionType = SectionType.ARTS_CULTURE;
                         else if (sid === 'scholars') sectionType = SectionType.THE_SCHOLARS;
                         else if (sid === 'pioneers') sectionType = SectionType.THE_PIONEERS;
                         else if (sid === 'public_institutions') sectionType = SectionType.PUBLIC_INSTITUTIONS;
-                        else sectionType = SectionType.ENTREPRENEURS;
+                        else if (sid === 'entrepreneurs') sectionType = SectionType.ENTREPRENEURS;
+                        else sectionType = SectionType.NGOS;
 
                         const sectorCategories = allCategories.filter(c => c && c.section_type === sectionType);
                         const assignedProfilesInThisSector = profiles.filter(p => 
@@ -1222,6 +1254,8 @@ const App = () => {
           <ArchiveExplorer sectionsToShow={[SectionType.PUBLIC_INSTITUTIONS]} title={`🏛️ ${sectorConfigs.public_institutions.title} Archive`} description={sectorConfigs.public_institutions.desc} />
         ) : view === 'entrepreneurs-archive' ? (
           <ArchiveExplorer sectionsToShow={[SectionType.ENTREPRENEURS]} title={`🏛️ ${sectorConfigs.entrepreneurs.title} Archive`} description={sectorConfigs.entrepreneurs.desc} />
+        ) : view === 'ngos-archive' ? (
+          <ArchiveExplorer sectionsToShow={[SectionType.NGOS]} title={`🏛️ ${sectorConfigs.ngos.title} Archive`} description={sectorConfigs.ngos.desc} />
         ) : view === 'home' ? (
           <>
             <section className="bg-navy pb-16 pt-10 px-4 text-center border-b border-gold/20">
@@ -1237,7 +1271,7 @@ const App = () => {
 
             <section className="max-w-6xl mx-auto px-4 py-16 -mt-10 relative z-10 text-gray-800">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                <div onClick={() => navigateTo('archive-explorer', '/archive')} className="group bg-white dark:bg-navy-light p-8 rounded-sm shadow-2xl border border-gray-100 dark:border-navy cursor-pointer hover:-translate-y-2 transition-all duration-300">
+                <div onClick={() => navigateTo('archive-explorer', '/archive')} className="group bg-white dark:bg-navy p-8 rounded-sm shadow-2xl border border-gray-100 dark:border-navy cursor-pointer hover:-translate-y-2 transition-all duration-300">
                   <div className="w-14 h-14 bg-navy dark:bg-gold text-gold dark:text-navy rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                     <Landmark className="w-7 h-7" />
                   </div>
@@ -1276,6 +1310,14 @@ const App = () => {
                   <h3 className="text-xl font-serif font-bold text-navy dark:text-white mb-3">{sectorConfigs.entrepreneurs.title}</h3>
                   <p className="text-gray-500 dark:text-gray-400 text-sm mb-6 leading-relaxed">{sectorConfigs.entrepreneurs.desc}</p>
                   <div className="flex items-center text-xs font-bold text-gold uppercase tracking-widest group-hover:gap-2 transition-all">Explore Entrepreneurs <ArrowRight className="w-4 h-4 ml-1" /></div>
+                </div>
+                <div onClick={() => navigateTo('ngos-archive', '/ngos')} className="group bg-white dark:bg-navy-light p-8 rounded-sm shadow-2xl border border-gray-100 dark:border-navy cursor-pointer hover:-translate-y-2 transition-all duration-300">
+                  <div className="w-14 h-14 bg-navy-light text-white rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                    <Heart className="w-7 h-7" />
+                  </div>
+                  <h3 className="text-xl font-serif font-bold text-navy dark:text-white mb-3">{sectorConfigs.ngos.title}</h3>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm mb-6 leading-relaxed">{sectorConfigs.ngos.desc}</p>
+                  <div className="flex items-center text-xs font-bold text-gold uppercase tracking-widest group-hover:gap-2 transition-all">EXPLORE NGOs <ArrowRight className="w-4 h-4 ml-1" /></div>
                 </div>
                 <div onClick={() => navigateTo('scholars-archive', '/scholars')} className="group bg-white dark:bg-navy-light p-8 rounded-sm shadow-2xl border border-gray-100 dark:border-navy cursor-pointer hover:-translate-y-2 transition-all duration-300">
                   <div className="w-14 h-14 bg-navy-light text-white rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
